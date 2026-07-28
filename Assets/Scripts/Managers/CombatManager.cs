@@ -31,6 +31,7 @@ namespace DimensionLooter.Managers
 
         private MonsterHealth _currentMonster;
         private Coroutine _combatCoroutine;
+        private Vector3 _lastCombatPosition = new Vector3(3, 3, 0);
         
         public bool IsInCombat => _currentMonster != null;
 
@@ -48,6 +49,7 @@ namespace DimensionLooter.Managers
             if (IsInCombat || !_playerHealth.IsAlive) return;
 
             _currentMonster = monster;
+            _lastCombatPosition = monster.transform.position;
             _combatUI.ShowCombat(monster);
             
             // 전투 시작 (코루틴 FSM)
@@ -89,6 +91,7 @@ namespace DimensionLooter.Managers
             }
 
             bool isVictory = _currentMonster != null && !_currentMonster.IsAlive;
+            GameObject deadMonsterObj = _currentMonster != null ? _currentMonster.gameObject : null;
             
             // 코루틴 내부에서 EndCombat을 부르면 StopCoroutine이 실행되어 이 아래 로직이 무시되는 버그 수정
             _currentMonster = null;
@@ -96,7 +99,9 @@ namespace DimensionLooter.Managers
 
             if (isVictory)
             {
-                Debug.Log("[CombatManager] 전투 승리! 듀얼 보상 UI를 엽니다.");
+                Debug.Log("[CombatManager] 전투 승리! 몬스터 객체를 파괴하고 듀얼 보상 UI를 엽니다.");
+                if (deadMonsterObj != null) Destroy(deadMonsterObj);
+
                 List<ItemData> dummyDrops = new List<ItemData>()
                 {
                     new ItemData { Id = 1, Name = "초보자의 검(1x2)", Width = 1, Height = 2 },
@@ -146,8 +151,8 @@ namespace DimensionLooter.Managers
             GameObject pouchPrefab = Resources.Load<GameObject>("Prefabs/Pouch");
             if (pouchPrefab != null)
             {
-                // 이전 몬스터가 죽은 위치(또는 플레이어 근처)에 스폰
-                Vector3 spawnPos = _currentMonster != null ? _currentMonster.transform.position : new Vector3(3, 3, 0);
+                // 이전 몬스터가 죽은 위치(또는 전투를 시작했던 위치)에 스폰
+                Vector3 spawnPos = _lastCombatPosition;
                 GameObject pouch = Instantiate(pouchPrefab, spawnPos, Quaternion.identity);
                 var interactable = pouch.GetComponent<DimensionLooter.Gameplay.Inventory.PouchInteractable>();
                 if (interactable != null)
