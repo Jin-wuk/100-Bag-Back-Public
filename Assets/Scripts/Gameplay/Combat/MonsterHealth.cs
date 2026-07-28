@@ -13,12 +13,18 @@ namespace DimensionLooter.Gameplay.Combat
     /// </summary>
     public class MonsterHealth : MonoBehaviour, IDamageable, IInteractable
     {
-        private int _maxHealth = 20;
+        [Header("Stats")]
+        [SerializeField] private int _maxHealth = 20;
+        [SerializeField] private int _attackPower = 5;
+        [SerializeField] private float _speed = 40f;
+
         private int _currentHealth;
 
         public bool IsAlive => _currentHealth > 0;
         public int CurrentHealth => _currentHealth;
         public int MaxHealth => _maxHealth;
+        public int AttackPower => _attackPower;
+        public float Speed => _speed;
 
         public event Action<int, int> OnHealthChanged;
         

@@ -71,30 +71,42 @@ namespace DimensionLooter.UI.Inventory
                 _secureInventoryUI.Init(InventoryManager.Instance.SecureGrid);
             }
 
-            // 보상 인벤토리(그리드) 생성 (임시 크기: 6x4)
-            _rewardGrid = new InventoryGrid(6, 4);
-            _rewardInventoryUI.Init(_rewardGrid);
-
-            // 아이템 배치
-            foreach (var itemData in drops)
+            if (drops == null)
             {
-                var invItem = new InventoryItem(itemData);
-                bool placed = false;
-                for (int y = 0; y < _rewardGrid.Height; y++)
+                // 보상 목록이 없을 경우 (수동으로 가방을 열었을 때) 보상 UI를 숨김
+                if (_rewardInventoryUI != null) _rewardInventoryUI.gameObject.SetActive(false);
+                _rewardGrid = null;
+            }
+            else
+            {
+                // 파우치나 몬스터 드랍으로 열렸을 때
+                if (_rewardInventoryUI != null) _rewardInventoryUI.gameObject.SetActive(true);
+
+                // 보상 인벤토리(그리드) 생성 (임시 크기: 6x4)
+                _rewardGrid = new InventoryGrid(6, 4);
+                _rewardInventoryUI.Init(_rewardGrid);
+
+                // 아이템 배치
+                foreach (var itemData in drops)
                 {
-                    for (int x = 0; x < _rewardGrid.Width; x++)
+                    var invItem = new InventoryItem(itemData);
+                    bool placed = false;
+                    for (int y = 0; y < _rewardGrid.Height; y++)
                     {
-                        if (_rewardGrid.PlaceItem(invItem, x, y))
+                        for (int x = 0; x < _rewardGrid.Width; x++)
                         {
-                            placed = true;
-                            GameObject uiObj = Instantiate(_itemPrefab);
-                            DraggableItemUI itemUI = uiObj.GetComponent<DraggableItemUI>();
-                            itemUI.Init(invItem, _rewardInventoryUI);
-                            _rewardInventoryUI.RegisterItemUI(invItem, itemUI);
-                            break;
+                            if (_rewardGrid.PlaceItem(invItem, x, y))
+                            {
+                                placed = true;
+                                GameObject uiObj = Instantiate(_itemPrefab);
+                                DraggableItemUI itemUI = uiObj.GetComponent<DraggableItemUI>();
+                                itemUI.Init(invItem, _rewardInventoryUI);
+                                _rewardInventoryUI.RegisterItemUI(invItem, itemUI);
+                                break;
+                            }
                         }
+                        if (placed) break;
                     }
-                    if (placed) break;
                 }
             }
         }
@@ -103,19 +115,22 @@ namespace DimensionLooter.UI.Inventory
         {
             if (_panelRoot != null) _panelRoot.SetActive(false);
 
-            var remainingItems = _rewardGrid.GetAllItems();
-            if (remainingItems.Count > 0)
+            if (_rewardGrid != null)
             {
-                List<ItemData> leftovers = new List<ItemData>();
-                foreach(var i in remainingItems) leftovers.Add(i.Data);
-                
-                Debug.Log($"[DualUIPanel] 보상 {leftovers.Count}개가 남아 바닥에 Pouch를 생성합니다.");
-                
-                // CombatManager를 통해 현재 몬스터가 죽은 위치에 파우치 스폰
-                var cm = FindObjectOfType<CombatManager>();
-                if (cm != null)
+                var remainingItems = _rewardGrid.GetAllItems();
+                if (remainingItems.Count > 0)
                 {
-                    cm.SpawnPouch(leftovers);
+                    List<ItemData> leftovers = new List<ItemData>();
+                    foreach(var i in remainingItems) leftovers.Add(i.Data);
+                    
+                    Debug.Log($"[DualUIPanel] 보상 {leftovers.Count}개가 남아 바닥에 Pouch를 생성합니다.");
+                    
+                    // CombatManager를 통해 현재 몬스터가 죽은 위치에 파우치 스폰
+                    var cm = FindObjectOfType<CombatManager>();
+                    if (cm != null)
+                    {
+                        cm.SpawnPouch(leftovers);
+                    }
                 }
             }
 
@@ -125,6 +140,20 @@ namespace DimensionLooter.UI.Inventory
                 _rewardInventoryUI.Clear();
             }
             _rewardGrid = null;
+        }
+
+        public void ToggleInventory()
+        {
+            if (_panelRoot == null) return;
+            
+            if (_panelRoot.activeSelf)
+            {
+                ClosePanel();
+            }
+            else
+            {
+                Show(null);
+            }
         }
     }
 }

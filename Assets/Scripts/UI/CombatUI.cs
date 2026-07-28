@@ -15,12 +15,15 @@ namespace DimensionLooter.UI
         [SerializeField] private GameObject _popupPanel;
 
         [Header("Player HUD (임시 연결)")]
-        [SerializeField] private PlayerHealth _playerHealth;
+        [SerializeField] private PlayerStats _playerStats;
         [SerializeField] private Slider _playerHpBar;
+        [SerializeField] private Slider _playerMpBar;
         
         [Header("Monster Info")]
         [SerializeField] private Slider _monsterHpBar;
+        [SerializeField] private Slider _monsterCastBar;
         [SerializeField] private Text _monsterNameText;
+        [SerializeField] private Text _monsterCastWarningText;
 
         private MonsterHealth _currentMonster;
 
@@ -31,12 +34,20 @@ namespace DimensionLooter.UI
 
         private void OnEnable()
         {
-            if (_playerHealth != null) _playerHealth.OnHealthChanged += UpdatePlayerHealthBar;
+            if (_playerStats != null)
+            {
+                _playerStats.OnHealthChanged += UpdatePlayerHealthBar;
+                _playerStats.OnManaChanged += UpdatePlayerManaBar;
+            }
         }
 
         private void OnDisable()
         {
-            if (_playerHealth != null) _playerHealth.OnHealthChanged -= UpdatePlayerHealthBar;
+            if (_playerStats != null)
+            {
+                _playerStats.OnHealthChanged -= UpdatePlayerHealthBar;
+                _playerStats.OnManaChanged -= UpdatePlayerManaBar;
+            }
             if (_currentMonster != null) _currentMonster.OnHealthChanged -= UpdateMonsterHealthBar;
         }
 
@@ -48,6 +59,13 @@ namespace DimensionLooter.UI
             // UI 초기화
             if (_monsterNameText != null) _monsterNameText.text = monster.name;
             UpdateMonsterHealthBar(monster.CurrentHealth, monster.MaxHealth);
+            UpdateMonsterCastBar(0f); // 초기화
+
+            if (_playerStats != null)
+            {
+                UpdatePlayerHealthBar(_playerStats.CurrentHealth, _playerStats.MaxHealth);
+                UpdatePlayerManaBar(_playerStats.CurrentMana, _playerStats.MaxMana);
+            }
 
             // 팝업 열기 (Raycast Target이 켜져있어야 뒷면의 맵 클릭 이동이 차단됨)
             if (_popupPanel != null) _popupPanel.SetActive(true);
@@ -69,9 +87,29 @@ namespace DimensionLooter.UI
             if (_playerHpBar != null) _playerHpBar.value = (float)currentHealth / maxHealth;
         }
 
+        private void UpdatePlayerManaBar(int currentMana, int maxMana)
+        {
+            if (_playerMpBar != null) _playerMpBar.value = (float)currentMana / maxMana;
+        }
+
         private void UpdateMonsterHealthBar(int currentHealth, int maxHealth)
         {
             if (_monsterHpBar != null) _monsterHpBar.value = (float)currentHealth / maxHealth;
+        }
+
+        public void UpdateMonsterCastBar(float fillAmount)
+        {
+            if (_monsterCastBar != null)
+            {
+                bool isCasting = fillAmount > 0f;
+                _monsterCastBar.gameObject.SetActive(isCasting);
+                _monsterCastBar.value = fillAmount;
+            }
+
+            if (_monsterCastWarningText != null)
+            {
+                _monsterCastWarningText.gameObject.SetActive(fillAmount > 0f);
+            }
         }
     }
 }

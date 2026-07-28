@@ -17,21 +17,22 @@ namespace DimensionLooter.Managers
         public static CombatManager Instance { get; private set; }
 
         [Header("References")]
-        [Tooltip("플레이어 체력 (Inspector 할당)")]
-        [SerializeField] private PlayerHealth _playerHealth;
+        [Tooltip("플레이어 스탯 (Inspector 할당)")]
+        [SerializeField] private PlayerStats _playerStats;
         
         [Tooltip("화면 중앙을 덮는 전투 팝업 패널")]
         [SerializeField] private CombatUI _combatUI;
 
-        [Header("MVP Temporary Base Stats")]
-        [SerializeField] private int _playerAtk = 10;
-        [SerializeField] private float _playerAtkSpeed = 1.0f; // 초당 1회 공격
-        [SerializeField] private int _monsterAtk = 5;
-        [SerializeField] private float _monsterAtkSpeed = 1.0f;
-
         private MonsterHealth _currentMonster;
         private Coroutine _combatCoroutine;
         private Vector3 _lastCombatPosition = new Vector3(3, 3, 0);
+        
+        // 전투 내부 상태
+        private float _playerGauge = 0f;
+        private float _monsterGauge = 0f;
+        private float _monsterCastTimer = 0f;
+        private float _monsterCastDuration = 3f;
+        private bool _isMonsterCasting = false;
         
         public bool IsInCombat => _currentMonster != null;
 
@@ -41,65 +42,93 @@ namespace DimensionLooter.Managers
             else Destroy(gameObject);
         }
 
-        /// <summary>
-        /// 몬스터와 사거리 내로 접촉했을 때 1대1 전투 팝업을 엽니다.
-        /// </summary>
         public void BeginCombat(MonsterHealth monster)
         {
-            if (IsInCombat || !_playerHealth.IsAlive) return;
+            if (IsInCombat || !_playerStats.IsAlive) return;
 
             _currentMonster = monster;
             _lastCombatPosition = monster.transform.position;
+            
+            // 게이지 초기화
+            _playerGauge = 0f;
+            _monsterGauge = 0f;
+            _isMonsterCasting = false;
+            _monsterCastTimer = 0f;
+
             _combatUI.ShowCombat(monster);
             
-            // 전투 시작 (코루틴 FSM)
             _combatCoroutine = StartCoroutine(CombatRoutine());
             Debug.Log($"[CombatManager] 전투 시작! 적: {monster.name}");
         }
 
         private IEnumerator CombatRoutine()
         {
-            float playerTimer = 0f;
-            float monsterTimer = 0f;
+            float maxGauge = 100f;
 
-            float playerCooldown = 1.0f / _playerAtkSpeed;
-            float monsterCooldown = 1.0f / _monsterAtkSpeed;
-
-            while (IsInCombat && _playerHealth.IsAlive && _currentMonster.IsAlive)
+            while (IsInCombat && _playerStats.IsAlive && _currentMonster.IsAlive)
             {
-                // GDD 명세에 따라 0.1초 틱 단위 연산이 이상적이나, MVP에서는 프레임 단위 처리
                 yield return null; 
                 
-                playerTimer += Time.deltaTime;
-                monsterTimer += Time.deltaTime;
-
-                if (playerTimer >= playerCooldown)
+                // 플레이어 ATB
+                _playerGauge += _playerStats.Speed * Time.deltaTime;
+                if (_playerGauge >= maxGauge)
                 {
-                    playerTimer -= playerCooldown;
-                    _currentMonster.TakeDamage(_playerAtk);
-                    Debug.Log($"[CombatManager] 플레이어 -> 몬스터 공격 ({_playerAtk} 데미지)");
+                    _playerGauge -= maxGauge;
+                    _currentMonster.TakeDamage(_playerStats.AttackPower);
+                    Debug.Log($"[CombatManager] 플레이어 일반 공격 ({_playerStats.AttackPower} 데미지)");
                     if (!_currentMonster.IsAlive) break;
                 }
 
-                if (monsterTimer >= monsterCooldown)
+                // 몬스터 ATB 및 캐스팅
+                if (_isMonsterCasting)
                 {
-                    monsterTimer -= monsterCooldown;
-                    _playerHealth.TakeDamage(_monsterAtk);
-                    Debug.Log($"[CombatManager] 몬스터 -> 플레이어 공격 ({_monsterAtk} 데미지)");
-                    if (!_playerHealth.IsAlive) break;
+                    _monsterCastTimer += Time.deltaTime;
+                    _combatUI.UpdateMonsterCastBar(_monsterCastTimer / _monsterCastDuration);
+
+                    if (_monsterCastTimer >= _monsterCastDuration)
+                    {
+                        // 특수 패턴 발동
+                        _isMonsterCasting = false;
+                        _combatUI.UpdateMonsterCastBar(0f);
+                        int heavyDamage = _currentMonster.AttackPower * 3;
+                        _playerStats.TakeDamage(heavyDamage);
+                        Debug.Log($"[CombatManager] 몬스터 특수 패턴 작렬! ({heavyDamage} 데미지)");
+                        if (!_playerStats.IsAlive) break;
+                    }
+                }
+                else
+                {
+                    _monsterGauge += _currentMonster.Speed * Time.deltaTime;
+                    if (_monsterGauge >= maxGauge)
+                    {
+                        _monsterGauge -= maxGauge;
+                        
+                        // 30% 확률로 특수 패턴 진입
+                        if (Random.value < 0.3f)
+                        {
+                            _isMonsterCasting = true;
+                            _monsterCastTimer = 0f;
+                            Debug.Log($"[CombatManager] 몬스터 강공격 준비 중!");
+                        }
+                        else
+                        {
+                            _playerStats.TakeDamage(_currentMonster.AttackPower);
+                            Debug.Log($"[CombatManager] 몬스터 일반 공격 ({_currentMonster.AttackPower} 데미지)");
+                            if (!_playerStats.IsAlive) break;
+                        }
+                    }
                 }
             }
 
             bool isVictory = _currentMonster != null && !_currentMonster.IsAlive;
             GameObject deadMonsterObj = _currentMonster != null ? _currentMonster.gameObject : null;
             
-            // 코루틴 내부에서 EndCombat을 부르면 StopCoroutine이 실행되어 이 아래 로직이 무시되는 버그 수정
             _currentMonster = null;
             if (_combatUI != null) _combatUI.HideCombat();
 
             if (isVictory)
             {
-                Debug.Log("[CombatManager] 전투 승리! 몬스터 객체를 파괴하고 듀얼 보상 UI를 엽니다.");
+                Debug.Log("[CombatManager] 전투 승리!");
                 if (deadMonsterObj != null) Destroy(deadMonsterObj);
 
                 List<ItemData> dummyDrops = new List<ItemData>()
@@ -117,18 +146,61 @@ namespace DimensionLooter.Managers
             _combatCoroutine = null;
         }
 
-        /// <summary>
-        /// HUD의 도주 버튼 클릭 시 호출됩니다.
-        /// </summary>
+        // --- 플레이어 스킬 로직 ---
+
+        public void UseSkillStun()
+        {
+            if (!IsInCombat || !_playerStats.IsAlive) return;
+
+            int manaCost = 30;
+            if (_playerStats.ConsumeMana(manaCost))
+            {
+                Debug.Log($"[CombatManager] 기절 스킬 사용! (MP -{manaCost})");
+                if (_isMonsterCasting)
+                {
+                    Debug.Log($"[CombatManager] 몬스터의 캐스팅을 끊었습니다! (인터럽트 성공)");
+                    _isMonsterCasting = false;
+                    _monsterCastTimer = 0f;
+                    _combatUI.UpdateMonsterCastBar(0f);
+                    
+                    // 기절 데미지 (옵션)
+                    _currentMonster.TakeDamage(_playerStats.AttackPower);
+                }
+                else
+                {
+                    Debug.Log($"[CombatManager] 몬스터 캐스팅 중이 아니어서 큰 의미는 없었지만 약간의 데미지 발동.");
+                    _currentMonster.TakeDamage(_playerStats.AttackPower);
+                }
+            }
+            else
+            {
+                Debug.Log($"[CombatManager] 마나가 부족하여 스킬을 사용할 수 없습니다.");
+            }
+        }
+
+        public void UseSkillHeal()
+        {
+            if (!IsInCombat || !_playerStats.IsAlive) return;
+
+            int manaCost = 20;
+            if (_playerStats.ConsumeMana(manaCost))
+            {
+                int healAmount = 30;
+                Debug.Log($"[CombatManager] 회복 스킬 사용! (MP -{manaCost})");
+                _playerStats.Heal(healAmount);
+            }
+            else
+            {
+                Debug.Log($"[CombatManager] 마나가 부족하여 스킬을 사용할 수 없습니다.");
+            }
+        }
+
         public void Flee()
         {
             if (!IsInCombat) return;
 
             Debug.Log("[CombatManager] 도주 버튼 클릭! 몬스터 체력이 100% 리셋됩니다.");
-            
-            // GDD 페널티: 도주 시 몬스터 체력 리셋
             _currentMonster.Init(_currentMonster.MaxHealth);
-            
             EndCombat();
         }
 
@@ -146,12 +218,9 @@ namespace DimensionLooter.Managers
 
         public void SpawnPouch(List<ItemData> leftovers)
         {
-            Debug.Log($"[CombatManager] 남은 전리품 {leftovers.Count}개를 포함한 파우치(Pouch)가 바닥에 떨어졌습니다!");
-            
             GameObject pouchPrefab = Resources.Load<GameObject>("Prefabs/Pouch");
             if (pouchPrefab != null)
             {
-                // 이전 몬스터가 죽은 위치(또는 전투를 시작했던 위치)에 스폰
                 Vector3 spawnPos = _lastCombatPosition;
                 GameObject pouch = Instantiate(pouchPrefab, spawnPos, Quaternion.identity);
                 var interactable = pouch.GetComponent<DimensionLooter.Gameplay.Inventory.PouchInteractable>();
@@ -159,10 +228,6 @@ namespace DimensionLooter.Managers
                 {
                     interactable.Init(leftovers);
                 }
-            }
-            else
-            {
-                Debug.LogError("[CombatManager] Pouch 프리팹을 찾을 수 없습니다. (Resources/Prefabs/Pouch.prefab)");
             }
         }
     }
