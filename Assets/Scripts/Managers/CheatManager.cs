@@ -22,11 +22,11 @@ namespace DimensionLooter.Managers
                 }
             }
 
-            // [치트 2] F2 키: 슬라임 몬스터 즉시 소환
+            // [치트 2] F2 키: 슬라임 몬스터 즉시 소환 (Sprint 2 구조 변경으로 임시 비활성화)
             if (Input.GetKeyDown(KeyCode.F2))
             {
-                Debug.Log("[CheatManager] F2 누름: 슬라임 강제 소환", this);
-                CombatManager.Instance.SpawnMonster(1);
+                Debug.Log("[CheatManager] F2 누름: 몬스터 스폰 치트는 현재 비활성화됨", this);
+                // CombatManager.Instance.SpawnMonster(1);
             }
 
             // [치트 3] F3 키: 게임 상태 강제 전환 (Combat)

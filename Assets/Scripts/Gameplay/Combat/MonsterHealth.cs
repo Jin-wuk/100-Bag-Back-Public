@@ -3,6 +3,7 @@ using System;
 using UnityEngine;
 using DimensionLooter.Core;
 using DimensionLooter.UI; // TooltipUI 접근용
+using DimensionLooter.Managers;
 
 namespace DimensionLooter.Gameplay.Combat
 {
