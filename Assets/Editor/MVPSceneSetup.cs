@@ -296,7 +296,7 @@ public class MVPSceneSetup : EditorWindow
         GameObject savedItemPrefab = PrefabUtility.SaveAsPrefabAsset(itemPrefab, "Assets/Resources/Prefabs/DraggableItem_Dummy.prefab");
         DestroyImmediate(itemPrefab);
 
-        DualUIPanel dualUI = dualUIPanelObj.AddComponent<DualUIPanel>();
+        DualUIPanel dualUI = canvasObj.AddComponent<DualUIPanel>(); // Rule 12: 항상 활성화된 Canvas에 붙여서 Awake가 보장되도록 함
         SerializedObject dualSo = new SerializedObject(dualUI);
         dualSo.FindProperty("_panelRoot").objectReferenceValue = dualUIPanelObj;
         dualSo.FindProperty("_mainInventoryUI").objectReferenceValue = mainGridUI;
