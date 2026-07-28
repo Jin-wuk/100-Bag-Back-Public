@@ -6,6 +6,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.Tilemaps;
 using DimensionLooter.Managers;
 using DimensionLooter.Gameplay.Combat;
+using DimensionLooter.Gameplay;
 using DimensionLooter.UI;
 using DimensionLooter.UI.Inventory;
 
