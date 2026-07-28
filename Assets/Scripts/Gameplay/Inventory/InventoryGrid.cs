@@ -90,5 +90,38 @@ namespace DimensionLooter.Gameplay.Inventory
         }
 
         public IReadOnlyList<InventoryItem> GetAllItems() => _items.AsReadOnly();
+
+        /// <summary>
+        /// 그리드 크기를 변경하고, 새 바운더리를 벗어나는 아이템들을 리스트로 반환(제거)합니다.
+        /// </summary>
+        public List<InventoryItem> Resize(int newWidth, int newHeight)
+        {
+            List<InventoryItem> overflows = new List<InventoryItem>();
+            
+            // 1. 기존 아이템들을 모두 임시 리스트에 복사
+            List<InventoryItem> allItems = new List<InventoryItem>(_items);
+            
+            // 2. 그리드 초기화
+            Width = newWidth;
+            Height = newHeight;
+            _grid = new InventoryItem[Width, Height];
+            _items.Clear();
+            
+            // 3. 아이템 재배치 시도
+            foreach (var item in allItems)
+            {
+                if (CanPlaceItem(item, item.GridX, item.GridY))
+                {
+                    PlaceItem(item, item.GridX, item.GridY);
+                }
+                else
+                {
+                    // 바운더리를 벗어나는 아이템은 오버플로우로 처리
+                    overflows.Add(item);
+                }
+            }
+            
+            return overflows;
+        }
     }
 }

@@ -13,6 +13,7 @@ namespace DimensionLooter.UI.Inventory
 
         [SerializeField] private GameObject _panelRoot;
         [SerializeField] private InventoryGridUI _mainInventoryUI;
+        [SerializeField] private InventoryGridUI _secureInventoryUI; // 보안 파우치 추가
         [SerializeField] private InventoryGridUI _rewardInventoryUI;
         [SerializeField] private GameObject _itemPrefab; // DraggableItemUI 프리팹
 
@@ -24,6 +25,10 @@ namespace DimensionLooter.UI.Inventory
             {
                 Instance = this;
                 Hide();
+                if (InventoryManager.Instance != null)
+                {
+                    InventoryManager.Instance.OnGridResized += HandleGridResized;
+                }
             }
             else
             {
@@ -36,6 +41,20 @@ namespace DimensionLooter.UI.Inventory
             if (_panelRoot != null) _panelRoot.SetActive(false);
         }
 
+        private void OnDestroy()
+        {
+            if (InventoryManager.Instance != null)
+            {
+                InventoryManager.Instance.OnGridResized -= HandleGridResized;
+            }
+        }
+
+        private void HandleGridResized()
+        {
+            if (_mainInventoryUI != null) _mainInventoryUI.RefreshSize();
+            if (_secureInventoryUI != null) _secureInventoryUI.RefreshSize();
+        }
+
         public void Show(List<ItemData> drops)
         {
             if (_panelRoot != null) _panelRoot.SetActive(true);
@@ -44,6 +63,12 @@ namespace DimensionLooter.UI.Inventory
             if (_mainInventoryUI.GridLogic == null)
             {
                 _mainInventoryUI.Init(InventoryManager.Instance.MainGrid);
+            }
+
+            // 보안 파우치 연동
+            if (_secureInventoryUI != null && _secureInventoryUI.GridLogic == null)
+            {
+                _secureInventoryUI.Init(InventoryManager.Instance.SecureGrid);
             }
 
             // 보상 인벤토리(그리드) 생성 (임시 크기: 6x4)

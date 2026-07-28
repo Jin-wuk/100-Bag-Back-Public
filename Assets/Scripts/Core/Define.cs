@@ -26,6 +26,7 @@ namespace DimensionLooter.Core
         {
             Weapon,
             Armor,
+            Backpack,
             Consumable,
             ReturnStone,    // 귀환석
             Misc            // 재화/잡템

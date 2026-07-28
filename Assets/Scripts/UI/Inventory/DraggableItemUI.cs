@@ -169,7 +169,7 @@ namespace DimensionLooter.UI.Inventory
                         PointerEventData dropEvent = new PointerEventData(EventSystem.current) { position = Input.mousePosition };
                         Drop(dropEvent);
                     }
-                    else if (Input.GetMouseButtonDown(1))
+                    else if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.R))
                     {
                         Item.IsRotated = !Item.IsRotated;
                         UpdateSizeAndRotation(CurrentGridUI.CellSize);

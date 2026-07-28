@@ -25,7 +25,15 @@ namespace DimensionLooter.UI.Inventory
             _rectTransform = GetComponent<RectTransform>();
 
             // 그리드 크기에 맞춰 패널 크기 조정 (Pivot은 Top-Left: 0, 1 가정)
-            _rectTransform.sizeDelta = new Vector2(gridLogic.Width * _cellSize, gridLogic.Height * _cellSize);
+            RefreshSize();
+        }
+
+        public void RefreshSize()
+        {
+            if (GridLogic != null && _rectTransform != null)
+            {
+                _rectTransform.sizeDelta = new Vector2(GridLogic.Width * _cellSize, GridLogic.Height * _cellSize);
+            }
 
             if (_drawGridLines)
             {

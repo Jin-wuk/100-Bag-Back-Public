@@ -231,6 +231,27 @@ public class MVPSceneSetup : EditorWindow
         mainGridSo.FindProperty("_itemsContainer").objectReferenceValue = mItems;
         mainGridSo.ApplyModifiedProperties();
 
+        // 보안 파우치 UI (메인 인벤토리 아래)
+        GameObject secureInvObj = new GameObject("SecureInventoryUI");
+        secureInvObj.transform.SetParent(dualUIPanelObj.transform, false);
+        Image sBg = secureInvObj.AddComponent<Image>();
+        sBg.color = new Color(0.8f, 0.6f, 0.2f, 0.9f); // 구별을 위해 금색 계열
+        RectTransform sRect = secureInvObj.GetComponent<RectTransform>();
+        sRect.anchoredPosition = new Vector2(-200, -250); // 메인 인벤토리 아래
+        sRect.sizeDelta = new Vector2(100, 100); // 2x2 (50x50 cell)
+        InventoryGridUI secureGridUI = secureInvObj.AddComponent<InventoryGridUI>();
+        
+        GameObject sItems = new GameObject("Items");
+        sItems.transform.SetParent(secureInvObj.transform, false);
+        RectTransform sItemsRect = sItems.AddComponent<RectTransform>();
+        sItemsRect.anchorMin = new Vector2(0, 1); sItemsRect.anchorMax = new Vector2(0, 1);
+        sItemsRect.pivot = new Vector2(0, 1);
+        sItemsRect.anchoredPosition = Vector2.zero;
+        
+        SerializedObject secureGridSo = new SerializedObject(secureGridUI);
+        secureGridSo.FindProperty("_itemsContainer").objectReferenceValue = sItems;
+        secureGridSo.ApplyModifiedProperties();
+
         // 보상 인벤토리 UI
         GameObject rewardInvObj = new GameObject("RewardInventoryUI");
         rewardInvObj.transform.SetParent(dualUIPanelObj.transform, false);
@@ -296,6 +317,7 @@ public class MVPSceneSetup : EditorWindow
         SerializedObject dualSo = new SerializedObject(dualUI);
         dualSo.FindProperty("_panelRoot").objectReferenceValue = dualUIPanelObj;
         dualSo.FindProperty("_mainInventoryUI").objectReferenceValue = mainGridUI;
+        dualSo.FindProperty("_secureInventoryUI").objectReferenceValue = secureGridUI;
         dualSo.FindProperty("_rewardInventoryUI").objectReferenceValue = rewardGridUI;
         dualSo.FindProperty("_itemPrefab").objectReferenceValue = savedItemPrefab;
         dualSo.ApplyModifiedProperties();

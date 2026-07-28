@@ -18,6 +18,10 @@ namespace DimensionLooter.Data
         public int Width { get; set; } = 1;
         public int Height { get; set; } = 1;
         
+        // 가방(Backpack) 아이템일 경우, 장착 시 제공하는 인벤토리 타일 크기
+        public int BagWidth { get; set; } = 0;
+        public int BagHeight { get; set; } = 0;
+        
         // 추가 기획 속성들은 CSV 컬럼명에 맞춰 나중에 확장 가능합니다.
     }
 }
