@@ -17,6 +17,7 @@ namespace DimensionLooter.Gameplay.Combat
 
         public bool IsAlive => _currentHealth > 0;
         public int CurrentHealth => _currentHealth;
+        public int MaxHealth => _maxHealth;
 
         public event Action<int, int> OnHealthChanged;
         
@@ -52,7 +53,10 @@ namespace DimensionLooter.Gameplay.Combat
         public void Interact(GameObject interactor)
         {
             Debug.Log($"[MonsterHealth] 플레이어와 상호작용 성공! 전투 팝업 열기 시작!");
-            // TODO: (Sprint 2) CombatManager.Instance.BeginCombat(this);
+            if (CombatManager.Instance != null)
+            {
+                CombatManager.Instance.BeginCombat(this);
+            }
         }
 
         private void OnMouseEnter()

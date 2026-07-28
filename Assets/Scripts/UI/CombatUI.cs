@@ -6,48 +6,72 @@ using DimensionLooter.Gameplay.Combat;
 namespace DimensionLooter.UI
 {
     /// <summary>
-    /// 전투 중 발생하는 정보(체력바, 데미지 팝업 등)를 렌더링하는 UI View입니다.
+    /// 1대1 전투 시 화면 중앙을 덮는 팝업 UI 패널입니다. (탐험 뷰 클릭 차단)
     /// </summary>
     public class CombatUI : MonoBehaviour
     {
-        [Header("Player UI")]
-        [Tooltip("플레이어 체력 컴포넌트 (MVP 단계이므로 인스펙터에 직접 연결)")]
+        [Header("Popup Canvas & Panels")]
+        [Tooltip("전투 팝업 패널 전체 (평소엔 SetActive(false))")]
+        [SerializeField] private GameObject _popupPanel;
+
+        [Header("Player HUD (임시 연결)")]
         [SerializeField] private PlayerHealth _playerHealth;
-        
-        [Tooltip("플레이어 체력바 슬라이더")]
         [SerializeField] private Slider _playerHpBar;
         
-        // 몬스터 체력바나 팝업은 월드 캔버스(World Canvas) 형태로 몬스터 프리팹 자체에 붙거나 
-        // PoolManager를 통해 동적으로 위치를 잡아주는 방식으로 구현할 예정입니다.
+        [Header("Monster Info")]
+        [SerializeField] private Slider _monsterHpBar;
+        [SerializeField] private Text _monsterNameText;
 
-        private void Start()
+        private MonsterHealth _currentMonster;
+
+        private void Awake()
         {
-            Debug.Assert(_playerHealth != null, "[CombatUI] _playerHealth 할당 누락!", this);
-            Debug.Assert(_playerHpBar != null, "[CombatUI] _playerHpBar 할당 누락!", this);
+            HideCombat(); // 시작 시 숨김
         }
 
         private void OnEnable()
         {
-            if (_playerHealth != null)
-            {
-                _playerHealth.OnHealthChanged += UpdatePlayerHealthBar;
-            }
+            if (_playerHealth != null) _playerHealth.OnHealthChanged += UpdatePlayerHealthBar;
         }
 
         private void OnDisable()
         {
-            if (_playerHealth != null)
+            if (_playerHealth != null) _playerHealth.OnHealthChanged -= UpdatePlayerHealthBar;
+            if (_currentMonster != null) _currentMonster.OnHealthChanged -= UpdateMonsterHealthBar;
+        }
+
+        public void ShowCombat(MonsterHealth monster)
+        {
+            _currentMonster = monster;
+            _currentMonster.OnHealthChanged += UpdateMonsterHealthBar;
+
+            // UI 초기화
+            if (_monsterNameText != null) _monsterNameText.text = monster.name;
+            UpdateMonsterHealthBar(monster.CurrentHealth, monster.MaxHealth);
+
+            // 팝업 열기 (Raycast Target이 켜져있어야 뒷면의 맵 클릭 이동이 차단됨)
+            if (_popupPanel != null) _popupPanel.SetActive(true);
+        }
+
+        public void HideCombat()
+        {
+            if (_currentMonster != null)
             {
-                _playerHealth.OnHealthChanged -= UpdatePlayerHealthBar;
+                _currentMonster.OnHealthChanged -= UpdateMonsterHealthBar;
+                _currentMonster = null;
             }
+
+            if (_popupPanel != null) _popupPanel.SetActive(false);
         }
 
         private void UpdatePlayerHealthBar(int currentHealth, int maxHealth)
         {
-            if (_playerHpBar != null)
-            {
-                _playerHpBar.value = (float)currentHealth / maxHealth;
-            }
+            if (_playerHpBar != null) _playerHpBar.value = (float)currentHealth / maxHealth;
+        }
+
+        private void UpdateMonsterHealthBar(int currentHealth, int maxHealth)
+        {
+            if (_monsterHpBar != null) _monsterHpBar.value = (float)currentHealth / maxHealth;
         }
     }
 }

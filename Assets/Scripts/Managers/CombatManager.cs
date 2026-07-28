@@ -1,78 +1,119 @@
 // File: Assets/Scripts/Managers/CombatManager.cs
+using System.Collections;
 using UnityEngine;
-using DimensionLooter.Data;
 using DimensionLooter.Gameplay.Combat;
+using DimensionLooter.UI;
 
 namespace DimensionLooter.Managers
 {
     /// <summary>
-    /// 반자동 전투(Auto-Battler) 시스템의 웨이브와 몬스터 스폰을 총괄하는 매니저입니다.
+    /// 반자동 전투(Auto-Battler) 시스템의 상태와 연산을 총괄하는 매니저입니다.
     /// </summary>
     public class CombatManager : MonoBehaviour
     {
         public static CombatManager Instance { get; private set; }
 
-        [Header("Combat Settings")]
-        [Tooltip("몬스터가 소환될 위치 좌표")]
-        [SerializeField] private Transform _monsterSpawnPoint;
+        [Header("References")]
+        [Tooltip("플레이어 체력 (Inspector 할당)")]
+        [SerializeField] private PlayerHealth _playerHealth;
         
-        [Tooltip("임시 몬스터 프리팹 (향후 Addressables로 대체)")]
-        [SerializeField] private GameObject _monsterPrefab;
+        [Tooltip("화면 중앙을 덮는 전투 팝업 패널")]
+        [SerializeField] private CombatUI _combatUI;
+
+        [Header("MVP Temporary Base Stats")]
+        [SerializeField] private int _playerAtk = 10;
+        [SerializeField] private float _playerAtkSpeed = 1.0f; // 초당 1회 공격
+        [SerializeField] private int _monsterAtk = 5;
+        [SerializeField] private float _monsterAtkSpeed = 1.0f;
+
+        private MonsterHealth _currentMonster;
+        private Coroutine _combatCoroutine;
+        
+        public bool IsInCombat => _currentMonster != null;
 
         private void Awake()
         {
-            if (Instance == null)
-            {
-                Instance = this;
-            }
-            else
-            {
-                Destroy(gameObject);
-            }
-        }
-
-        private void Start()
-        {
-            // Fail-Fast 방어막
-            Debug.Assert(_monsterSpawnPoint != null, "[CombatManager] _monsterSpawnPoint가 할당되지 않았습니다!", this);
-            Debug.Assert(_monsterPrefab != null, "[CombatManager] _monsterPrefab이 할당되지 않았습니다!", this);
+            if (Instance == null) Instance = this;
+            else Destroy(gameObject);
         }
 
         /// <summary>
-        /// ID를 기반으로 몬스터 데이터를 로드하여 소환합니다.
+        /// 몬스터와 사거리 내로 접촉했을 때 1대1 전투 팝업을 엽니다.
         /// </summary>
-        public void SpawnMonster(int monsterId)
+        public void BeginCombat(MonsterHealth monster)
         {
-            if (!DataManager.Instance.MonsterDict.TryGetValue(monsterId, out MonsterData data))
-            {
-                Debug.LogError($"[CombatManager] 몬스터 데이터({monsterId})를 DataManager에서 찾을 수 없습니다.", this);
-                return;
-            }
+            if (IsInCombat || !_playerHealth.IsAlive) return;
 
-            // TODO: 추후 PoolManager.SpawnFromPool로 변경
-            GameObject monsterObj = Instantiate(_monsterPrefab, _monsterSpawnPoint.position, Quaternion.identity);
+            _currentMonster = monster;
+            _combatUI.ShowCombat(monster);
             
-            if (monsterObj.TryGetComponent<MonsterHealth>(out var health))
-            {
-                health.Init(data.MaxHealth);
-                // 구독해제는 MonsterHealth 자체나 사망 시 매니저가 담당
-                health.OnDied += HandleMonsterDeath; 
-            }
-            
-            Debug.Log($"[CombatManager] {data.Name} 소환 완료!", this);
+            // 전투 시작 (코루틴 FSM)
+            _combatCoroutine = StartCoroutine(CombatRoutine());
+            Debug.Log($"[CombatManager] 전투 시작! 적: {monster.name}");
         }
 
-        private void HandleMonsterDeath(GameObject deadMonster)
+        private IEnumerator CombatRoutine()
         {
-            Debug.Log($"[CombatManager] 몬스터 처치! 보상 지급 및 다음 웨이브 준비", this);
-            
-            if (deadMonster.TryGetComponent<MonsterHealth>(out var health))
+            float playerTimer = 0f;
+            float monsterTimer = 0f;
+
+            float playerCooldown = 1.0f / _playerAtkSpeed;
+            float monsterCooldown = 1.0f / _monsterAtkSpeed;
+
+            while (IsInCombat && _playerHealth.IsAlive && _currentMonster.IsAlive)
             {
-                health.OnDied -= HandleMonsterDeath;
+                // GDD 명세에 따라 0.1초 틱 단위 연산이 이상적이나, MVP에서는 프레임 단위 처리
+                yield return null; 
+                
+                playerTimer += Time.deltaTime;
+                monsterTimer += Time.deltaTime;
+
+                if (playerTimer >= playerCooldown)
+                {
+                    playerTimer -= playerCooldown;
+                    _currentMonster.TakeDamage(_playerAtk);
+                    Debug.Log($"[CombatManager] 플레이어 -> 몬스터 공격 ({_playerAtk} 데미지)");
+                    if (!_currentMonster.IsAlive) break;
+                }
+
+                if (monsterTimer >= monsterCooldown)
+                {
+                    monsterTimer -= monsterCooldown;
+                    _playerHealth.TakeDamage(_monsterAtk);
+                    Debug.Log($"[CombatManager] 몬스터 -> 플레이어 공격 ({_monsterAtk} 데미지)");
+                    if (!_playerHealth.IsAlive) break;
+                }
             }
+
+            // 승리 또는 패배 시 팝업 닫기
+            EndCombat();
+        }
+
+        /// <summary>
+        /// HUD의 도주 버튼 클릭 시 호출됩니다.
+        /// </summary>
+        public void Flee()
+        {
+            if (!IsInCombat) return;
+
+            Debug.Log("[CombatManager] 도주 버튼 클릭! 몬스터 체력이 100% 리셋됩니다.");
             
-            // TODO: PoolManager.ReturnToPool로 변경
-            Destroy(deadMonster);
+            // GDD 페널티: 도주 시 몬스터 체력 리셋
+            _currentMonster.Init(_currentMonster.MaxHealth);
+            
+            EndCombat();
+        }
+
+        private void EndCombat()
+        {
+            if (_combatCoroutine != null)
+            {
+                StopCoroutine(_combatCoroutine);
+                _combatCoroutine = null;
+            }
+
+            _currentMonster = null;
+            if (_combatUI != null) _combatUI.HideCombat();
         }
     }
 }
