@@ -14,6 +14,10 @@ namespace DimensionLooter.Data
         public int DefensePower { get; set; }
         public int Price { get; set; }
         
+        // 인벤토리(테트리스)에서 차지하는 타일 크기
+        public int Width { get; set; } = 1;
+        public int Height { get; set; } = 1;
+        
         // 추가 기획 속성들은 CSV 컬럼명에 맞춰 나중에 확장 가능합니다.
     }
 }
