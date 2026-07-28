@@ -26,7 +26,7 @@ namespace DimensionLooter.UI.Inventory
             Item = item;
             CurrentGridUI = initialGridUI;
             _rectTransform = GetComponent<RectTransform>();
-            _canvas = GetComponentInParent<Canvas>();
+            _canvas = initialGridUI.GetComponentInParent<Canvas>(); // 생성 직후에는 부모가 없으므로 GridUI를 통해 캔버스를 찾음
 
             // Pivot을 Top-Left로 고정
             _rectTransform.pivot = new Vector2(0, 1);
