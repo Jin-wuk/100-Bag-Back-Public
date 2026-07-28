@@ -138,7 +138,7 @@ public class MVPSceneSetup : EditorWindow
         cpRect.anchorMin = Vector2.zero; cpRect.anchorMax = Vector2.one;
         cpRect.offsetMin = cpRect.offsetMax = Vector2.zero;
 
-        CombatUI combatUI = combatPanel.AddComponent<CombatUI>();
+        CombatUI combatUI = canvasObj.AddComponent<CombatUI>(); // 룰 적용: Canvas에 부착
 
         Slider CreateSlider(string name, Transform parent, Color color, Vector2 anchoredPos)
         {
