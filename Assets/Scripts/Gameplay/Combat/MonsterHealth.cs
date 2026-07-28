@@ -2,14 +2,15 @@
 using System;
 using UnityEngine;
 using DimensionLooter.Core;
+using DimensionLooter.UI; // TooltipUI 접근용
 
 namespace DimensionLooter.Gameplay.Combat
 {
     /// <summary>
-    /// 몬스터의 체력을 관리하며, IDamageable을 구현합니다.
+    /// 몬스터의 체력을 관리하며, IDamageable과 IInteractable을 구현합니다.
     /// [Why] 몬스터마다 체력이 다르므로 Init 메서드를 통해 DataManager에서 로드한 스탯을 주입받습니다.
     /// </summary>
-    public class MonsterHealth : MonoBehaviour, IDamageable
+    public class MonsterHealth : MonoBehaviour, IDamageable, IInteractable
     {
         private int _maxHealth = 20;
         private int _currentHealth;
@@ -43,6 +44,32 @@ namespace DimensionLooter.Gameplay.Combat
             if (!IsAlive)
             {
                 OnDied?.Invoke(gameObject);
+            }
+        }
+
+        // --- 상호작용 및 UI 연출 ---
+
+        public void Interact(GameObject interactor)
+        {
+            Debug.Log($"[MonsterHealth] 플레이어와 상호작용 성공! 전투 팝업 열기 시작!");
+            // TODO: (Sprint 2) CombatManager.Instance.BeginCombat(this);
+        }
+
+        private void OnMouseEnter()
+        {
+            // 마우스 호버링 시 기획에 따라 몬스터 스탯 노출 (능동적 판단 유도)
+            if (TooltipUI.Instance != null && IsAlive)
+            {
+                string stats = $"[미지의 몬스터]\n체력: {_currentHealth} / {_maxHealth}\n클릭하여 전투 진입";
+                TooltipUI.Instance.Show(stats);
+            }
+        }
+
+        private void OnMouseExit()
+        {
+            if (TooltipUI.Instance != null)
+            {
+                TooltipUI.Instance.Hide();
             }
         }
     }
