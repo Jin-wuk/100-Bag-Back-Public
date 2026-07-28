@@ -290,6 +290,25 @@ public class MVPSceneSetup : EditorWindow
         cText.text = "CLOSE";
         cText.alignment = TextAnchor.MiddleCenter;
 
+        // 휴지통(버리기) 영역 UI
+        GameObject trashCanObj = new GameObject("TrashCanUI");
+        trashCanObj.transform.SetParent(dualUIPanelObj.transform, false);
+        Image tBg = trashCanObj.AddComponent<Image>();
+        tBg.color = new Color(0.5f, 0.1f, 0.1f, 0.9f); // 어두운 붉은색
+        RectTransform tRect = trashCanObj.GetComponent<RectTransform>();
+        tRect.anchoredPosition = new Vector2(200, -250); // 우측 하단 (보상 패널 아래)
+        tRect.sizeDelta = new Vector2(100, 100);
+        
+        GameObject tTextObj = new GameObject("Text");
+        tTextObj.transform.SetParent(trashCanObj.transform, false);
+        Text tText = tTextObj.AddComponent<Text>();
+        tText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        tText.color = Color.white;
+        tText.text = "TRASH";
+        tText.alignment = TextAnchor.MiddleCenter;
+        
+        trashCanObj.AddComponent<TrashCanUI>(); // 마커 스크립트 부착
+
         // 아이템 프리팹 (드래그 가능한 빈 객체)
         GameObject itemPrefab = new GameObject("ItemPrefab");
         itemPrefab.AddComponent<RectTransform>();

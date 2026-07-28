@@ -231,10 +231,22 @@ namespace DimensionLooter.UI.Inventory
             EventSystem.current.RaycastAll(eventData, results);
 
             InventoryGridUI targetGridUI = null;
+            TrashCanUI trashCan = null;
+            
             foreach (var res in results)
             {
-                targetGridUI = res.gameObject.GetComponentInParent<InventoryGridUI>();
-                if (targetGridUI != null) break;
+                if (trashCan == null) trashCan = res.gameObject.GetComponentInParent<TrashCanUI>();
+                if (targetGridUI == null) targetGridUI = res.gameObject.GetComponentInParent<InventoryGridUI>();
+            }
+
+            // 휴지통에 드롭된 경우
+            if (trashCan != null)
+            {
+                Debug.Log($"[DraggableItemUI] {Item.Data.Name} 아이템을 휴지통에 버렸습니다.");
+                CurrentGridUI.UnregisterItemUI(Item);
+                // 이미 PickUp()에서 CurrentGridUI.GridLogic.RemoveItem(Item)가 호출되었으므로 데이터 상으로는 제거된 상태
+                Destroy(gameObject);
+                return;
             }
 
             if (targetGridUI != null)
