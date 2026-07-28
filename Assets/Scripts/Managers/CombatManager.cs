@@ -3,6 +3,9 @@ using System.Collections;
 using UnityEngine;
 using DimensionLooter.Gameplay.Combat;
 using DimensionLooter.UI;
+using DimensionLooter.UI.Inventory;
+using DimensionLooter.Data;
+using System.Collections.Generic;
 
 namespace DimensionLooter.Managers
 {
@@ -85,8 +88,25 @@ namespace DimensionLooter.Managers
                 }
             }
 
+            bool isVictory = _currentMonster != null && !_currentMonster.IsAlive;
+            
             // 승리 또는 패배 시 팝업 닫기
             EndCombat();
+
+            if (isVictory)
+            {
+                Debug.Log("[CombatManager] 전투 승리! 듀얼 보상 UI를 엽니다.");
+                List<ItemData> dummyDrops = new List<ItemData>()
+                {
+                    new ItemData { Id = 1, Name = "초보자의 검(1x2)", Width = 1, Height = 2 },
+                    new ItemData { Id = 2, Name = "가죽 투구(2x2)", Width = 2, Height = 2 },
+                    new ItemData { Id = 3, Name = "물약(1x1)", Width = 1, Height = 1 }
+                };
+                if (DualUIPanel.Instance != null)
+                {
+                    DualUIPanel.Instance.Show(dummyDrops);
+                }
+            }
         }
 
         /// <summary>
@@ -114,6 +134,28 @@ namespace DimensionLooter.Managers
 
             _currentMonster = null;
             if (_combatUI != null) _combatUI.HideCombat();
+        }
+
+        public void SpawnPouch(List<ItemData> leftovers)
+        {
+            Debug.Log($"[CombatManager] 남은 전리품 {leftovers.Count}개를 포함한 파우치(Pouch)가 바닥에 떨어졌습니다!");
+            
+            GameObject pouchPrefab = Resources.Load<GameObject>("Prefabs/Pouch");
+            if (pouchPrefab != null)
+            {
+                // 이전 몬스터가 죽은 위치(또는 플레이어 근처)에 스폰
+                Vector3 spawnPos = _currentMonster != null ? _currentMonster.transform.position : new Vector3(3, 3, 0);
+                GameObject pouch = Instantiate(pouchPrefab, spawnPos, Quaternion.identity);
+                var interactable = pouch.GetComponent<DimensionLooter.Gameplay.Inventory.PouchInteractable>();
+                if (interactable != null)
+                {
+                    interactable.Init(leftovers);
+                }
+            }
+            else
+            {
+                Debug.LogError("[CombatManager] Pouch 프리팹을 찾을 수 없습니다. (Resources/Prefabs/Pouch.prefab)");
+            }
         }
     }
 }

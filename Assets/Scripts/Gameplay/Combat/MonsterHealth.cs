@@ -25,6 +25,15 @@ namespace DimensionLooter.Gameplay.Combat
         // 몬스터는 사망 시 자신을 넘겨주어 CombatManager나 PoolManager가 처리하게 돕습니다.
         public event Action<GameObject> OnDied;
 
+        private void Start()
+        {
+            // 에디터에 배치된 더미 몬스터가 Play 모드 진입 시 체력이 0으로 시작하는 것을 방지
+            if (_currentHealth <= 0)
+            {
+                Init(_maxHealth);
+            }
+        }
+
         /// <summary>
         /// 몬스터 스폰 시 스탯 데이터를 기반으로 체력을 초기화합니다.
         /// </summary>
