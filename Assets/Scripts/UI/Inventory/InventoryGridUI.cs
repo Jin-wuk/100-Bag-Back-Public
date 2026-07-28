@@ -74,6 +74,18 @@ namespace DimensionLooter.UI.Inventory
             }
         }
         
+        public void Clear()
+        {
+            _itemUIMap.Clear();
+            if (_itemsContainer != null)
+            {
+                foreach (Transform child in _itemsContainer)
+                {
+                    Destroy(child.gameObject);
+                }
+            }
+        }
+        
         public float CellSize => _cellSize;
     }
 }

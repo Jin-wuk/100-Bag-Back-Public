@@ -119,14 +119,12 @@ namespace DimensionLooter.UI.Inventory
                 }
             }
 
-            // 보상 UI 하위 아이템 모두 삭제
+            // 보상 UI 하위 아이템 및 캐싱된 객체 정리
             if (_rewardInventoryUI != null)
             {
-                foreach(Transform child in _rewardInventoryUI.GetComponent<RectTransform>())
-                {
-                    Destroy(child.gameObject);
-                }
+                _rewardInventoryUI.Clear();
             }
+            _rewardGrid = null;
         }
     }
 }
