@@ -182,6 +182,8 @@ public class MVPSceneSetup : EditorWindow
         combatSo.FindProperty("_monsterHpBar").objectReferenceValue = mSlider;
         combatSo.FindProperty("_monsterNameText").objectReferenceValue = mText;
         combatSo.ApplyModifiedProperties();
+        
+        combatPanel.SetActive(false); // 씬 셋업 직후 에디터 상에서 거슬리지 않도록 비활성화
 
         // 8. 하단 HUD 및 도주 버튼
         GameObject hudObj = new GameObject("BottomHUD");
