@@ -299,13 +299,13 @@ public class MVPSceneSetup : EditorWindow
         tRect.anchoredPosition = new Vector2(200, -250); // 우측 하단 (보상 패널 아래)
         tRect.sizeDelta = new Vector2(100, 100);
         
-        GameObject tTextObj = new GameObject("Text");
-        tTextObj.transform.SetParent(trashCanObj.transform, false);
-        Text tText = tTextObj.AddComponent<Text>();
-        tText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        tText.color = Color.white;
-        tText.text = "TRASH";
-        tText.alignment = TextAnchor.MiddleCenter;
+        GameObject trashTextObj = new GameObject("Text");
+        trashTextObj.transform.SetParent(trashCanObj.transform, false);
+        Text trashText = trashTextObj.AddComponent<Text>();
+        trashText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        trashText.color = Color.white;
+        trashText.text = "TRASH";
+        trashText.alignment = TextAnchor.MiddleCenter;
         
         trashCanObj.AddComponent<TrashCanUI>(); // 마커 스크립트 부착
 
