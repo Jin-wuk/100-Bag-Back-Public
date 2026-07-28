@@ -185,18 +185,12 @@ public class MVPSceneSetup : EditorWindow
         
         combatPanel.SetActive(false); // 씬 셋업 직후 에디터 상에서 거슬리지 않도록 비활성화
 
-        // 8. 하단 HUD 및 도주 버튼
-        GameObject hudObj = new GameObject("BottomHUD");
-        hudObj.transform.SetParent(canvasObj.transform, false);
-        RectTransform hudRect = hudObj.AddComponent<RectTransform>();
-        hudRect.anchorMin = new Vector2(0, 0); hudRect.anchorMax = new Vector2(1, 0.3f);
-        hudRect.offsetMin = hudRect.offsetMax = Vector2.zero;
-
+        // 8. 도주 버튼 (전투 패널 안으로 이동)
         GameObject fleeBtnObj = new GameObject("FleeButton");
-        fleeBtnObj.transform.SetParent(hudObj.transform, false);
+        fleeBtnObj.transform.SetParent(combatPanel.transform, false);
         fleeBtnObj.AddComponent<Image>().color = Color.yellow;
         Button fleeBtn = fleeBtnObj.AddComponent<Button>();
-        fleeBtnObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, 50);
+        fleeBtnObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(0, -100); // 패널 중앙 하단쯤 배치
         fleeBtnObj.GetComponent<RectTransform>().sizeDelta = new Vector2(100, 40);
 
         GameObject fleeText = new GameObject("Text");

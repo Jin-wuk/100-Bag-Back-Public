@@ -94,7 +94,7 @@ namespace DimensionLooter.UI.Inventory
 
             if (targetGridUI != null)
             {
-                RectTransform targetRect = targetGridUI.GetComponent<RectTransform>();
+                RectTransform targetRect = targetGridUI.ContainerRect; // Pivot(0,1)이 보장된 컨테이너 사용
                 if (RectTransformUtility.ScreenPointToLocalPointInRectangle(targetRect, eventData.position, eventData.pressEventCamera, out Vector2 localPoint))
                 {
                     Vector2Int gridPos = targetGridUI.GetGridPosFromLocalPoint(localPoint);

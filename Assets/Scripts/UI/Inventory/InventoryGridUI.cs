@@ -13,6 +13,7 @@ namespace DimensionLooter.UI.Inventory
         [SerializeField] private RectTransform _itemsContainer;
         [SerializeField] private bool _drawGridLines = true;
         
+        public RectTransform ContainerRect => _itemsContainer;
         public InventoryGrid GridLogic { get; private set; }
         private RectTransform _rectTransform;
         
