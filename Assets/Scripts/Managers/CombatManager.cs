@@ -90,8 +90,9 @@ namespace DimensionLooter.Managers
 
             bool isVictory = _currentMonster != null && !_currentMonster.IsAlive;
             
-            // 승리 또는 패배 시 팝업 닫기
-            EndCombat();
+            // 코루틴 내부에서 EndCombat을 부르면 StopCoroutine이 실행되어 이 아래 로직이 무시되는 버그 수정
+            _currentMonster = null;
+            if (_combatUI != null) _combatUI.HideCombat();
 
             if (isVictory)
             {
@@ -107,6 +108,8 @@ namespace DimensionLooter.Managers
                     DualUIPanel.Instance.Show(dummyDrops);
                 }
             }
+            
+            _combatCoroutine = null;
         }
 
         /// <summary>
