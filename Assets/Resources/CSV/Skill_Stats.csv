@@ -1,0 +1,6 @@
+ID,Name,Type,MP_Cost,Cooldown,Effect_Type,Effect_Value,Duration,Description
+SKL_001,기절 타격,CC,20,15,Stun,0,2,보스의 치명적인 강공격 캐스팅을 강제로 끊어냄. (적 2초 기절)
+SKL_002,응급 치료,Survival,25,20,Heal,40,0,체력을 40 회복. 포션이 다 떨어졌을 때 생명 연장의 수단.
+SKL_003,방어 태세,Survival,15,12,Damage_Reduction,80,3,3초간 받는 피해를 80% 감소시킴. 적의 빠른 연타를 막을 때 유용.
+SKL_004,마력 베기,Damage,15,8,True_Damage,30,0,적의 방어력을 무시하고 30의 고정 피해를 입혀 전투 시간을 단축.
+SKL_005,약점 노출,Debuff,20,20,Armor_Break,0,5,5초간 적의 방어력을 0으로 만듦. 무기가 좋지 않을 때 극강의 효율.

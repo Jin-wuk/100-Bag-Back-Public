@@ -1,0 +1,4 @@
+ID,Name,Type,Base_HP,Base_ATK,Base_DEF,Heavy_ATK,Exp_Drop,Gold_Drop,Description
+MOB_001,감염된 쥐,Trash,30,3,0,0,0,1,튜토리얼용 잡몹. 스탯 체크용.
+MOB_002,공허 고블린,Standard,80,8,2,0,0,5,초반 체력과 마나를 갉아먹는 주범.
+MOB_003,뼈대 골렘,Elite,200,12,5,40,0,25,강공격(40)을 시전하는 1층 수문장. 기절 필수.
