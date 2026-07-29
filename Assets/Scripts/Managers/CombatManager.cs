@@ -143,9 +143,11 @@ namespace DimensionLooter.Managers
                     new ItemData { Id = 6, Name = "마법사의 지팡이", Type = DimensionLooter.Core.Define.ItemType.Weapon, AttackPower = 20, Width = 1, Height = 3 },
                     new ItemData { Id = 7, Name = "확장 가방", Type = DimensionLooter.Core.Define.ItemType.Backpack, BagWidth = 4, BagHeight = 2, Width = 2, Height = 2 }
                 };
-                if (DualUIPanel.Instance != null)
+
+                if (DimensionLooter.Managers.LootManager.Instance != null)
                 {
-                    DualUIPanel.Instance.Show(dummyDrops);
+                    Vector3 dropPos = _lastCombatPosition;
+                    DimensionLooter.Managers.LootManager.Instance.SpawnPouch(dummyDrops, dropPos);
                 }
             }
             

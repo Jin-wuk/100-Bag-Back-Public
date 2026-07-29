@@ -50,7 +50,7 @@ namespace DimensionLooter.UI.Inventory
             }
             if (_backgroundImage != null) 
             {
-                _backgroundImage.color = new Color(Random.Range(0.2f, 0.8f), Random.Range(0.2f, 0.8f), Random.Range(0.2f, 0.8f), 0.9f);
+                _backgroundImage.color = GetColorByItemType(item.Data.Type);
             }
 
             if (GetComponent<CanvasGroup>() == null)
@@ -59,6 +59,19 @@ namespace DimensionLooter.UI.Inventory
             }
 
             UpdateSizeAndRotation(initialGridUI.CellSize);
+        }
+
+        private Color GetColorByItemType(DimensionLooter.Core.Define.ItemType type)
+        {
+            switch (type)
+            {
+                case DimensionLooter.Core.Define.ItemType.Weapon: return new Color(1f, 0.4f, 0.4f, 0.9f); // Red
+                case DimensionLooter.Core.Define.ItemType.Armor: return new Color(0.4f, 0.6f, 1f, 0.9f); // Blue
+                case DimensionLooter.Core.Define.ItemType.Consumable: return new Color(0.4f, 1f, 0.4f, 0.9f); // Green
+                case DimensionLooter.Core.Define.ItemType.Backpack: return new Color(0.8f, 0.6f, 0.2f, 0.9f); // Orange/Brown
+                case DimensionLooter.Core.Define.ItemType.Misc: 
+                default: return new Color(0.7f, 0.7f, 0.7f, 0.9f); // Gray
+            }
         }
 
         public void UpdateSizeAndRotation(float cellSize)
@@ -109,6 +122,14 @@ namespace DimensionLooter.UI.Inventory
                     {
                         if (slot.TryEquip(Item, this))
                         {
+                            CurrentGridUI.GridLogic.RemoveItem(Item);
+                            
+                            if (DualUIPanel.Instance != null && CurrentGridUI == DualUIPanel.Instance.RewardInventoryUI)
+                            {
+                                // DualUIPanel에 ActivePouch 접근 가능해야 하므로 잠시 후 DualUIPanel에 public 프로퍼티 추가 필요
+                                DualUIPanel.Instance.ActivePouch?.RemoveItem(Item.Data);
+                            }
+
                             CurrentGridUI.UnregisterItemUI(Item);
                             // TryEquip 내부에서 UI 오브젝트(gameObject)를 Destroy합니다.
                             return;
@@ -283,20 +304,29 @@ namespace DimensionLooter.UI.Inventory
                 if (gearSlot == null) gearSlot = res.gameObject.GetComponentInParent<GearSlotUI>();
             }
 
-            // 휴지통에 드롭된 경우
             if (trashCan != null)
             {
                 Debug.Log($"[DraggableItemUI] {Item.Data.Name} 아이템을 휴지통에 버렸습니다.");
+                
+                if (DualUIPanel.Instance != null && CurrentGridUI == DualUIPanel.Instance.RewardInventoryUI)
+                {
+                    DualUIPanel.Instance.ActivePouch?.RemoveItem(Item.Data);
+                }
+
                 CurrentGridUI.UnregisterItemUI(Item);
                 Destroy(gameObject);
                 return;
             }
 
-            // 장비 슬롯에 드롭된 경우
             if (gearSlot != null)
             {
                 if (gearSlot.TryEquip(Item, this))
                 {
+                    if (DualUIPanel.Instance != null && CurrentGridUI == DualUIPanel.Instance.RewardInventoryUI)
+                    {
+                        DualUIPanel.Instance.ActivePouch?.RemoveItem(Item.Data);
+                    }
+
                     CurrentGridUI.UnregisterItemUI(Item);
                     // TryEquip 내부에서 Destroy(gameObject)를 호출하므로 여기서는 리턴만 함
                     return;
@@ -315,6 +345,19 @@ namespace DimensionLooter.UI.Inventory
 
                     if (targetGridUI.GridLogic.PlaceItem(Item, targetCol, targetRow))
                     {
+                        // 백엔드 파우치 데이터 동기화
+                        if (DualUIPanel.Instance != null)
+                        {
+                            if (CurrentGridUI == DualUIPanel.Instance.RewardInventoryUI && targetGridUI != DualUIPanel.Instance.RewardInventoryUI)
+                            {
+                                DualUIPanel.Instance.ActivePouch?.RemoveItem(Item.Data);
+                            }
+                            else if (CurrentGridUI != DualUIPanel.Instance.RewardInventoryUI && targetGridUI == DualUIPanel.Instance.RewardInventoryUI)
+                            {
+                                DualUIPanel.Instance.ActivePouch?.AppendItems(new System.Collections.Generic.List<DimensionLooter.Data.ItemData> { Item.Data });
+                            }
+                        }
+
                         CurrentGridUI.UnregisterItemUI(Item);
                         CurrentGridUI = targetGridUI;
                         CurrentGridUI.RegisterItemUI(Item, this);

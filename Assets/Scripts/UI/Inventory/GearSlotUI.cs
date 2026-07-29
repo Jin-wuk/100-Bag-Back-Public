@@ -58,14 +58,27 @@ namespace DimensionLooter.UI.Inventory
                 }
                 else
                 {
-                    // 가방이 꽉 찼다면 바닥에 드롭
-                    Vector3 dropPos = Vector3.zero;
-                    GameObject player = GameObject.FindGameObjectWithTag("Player");
-                    if (player != null) dropPos = player.transform.position;
-
-                    if (DimensionLooter.Managers.LootManager.Instance != null)
+                    // 가방이 꽉 찼다면 보상패널에 추가 시도, 보상패널도 닫혀있거나 꽉 찼다면 바닥에 드롭
+                    bool addedToReward = false;
+                    if (DualUIPanel.Instance != null && DualUIPanel.Instance.IsPanelOpen)
                     {
-                        DimensionLooter.Managers.LootManager.Instance.SpawnPouch(new System.Collections.Generic.List<DimensionLooter.Data.ItemData> { oldItem.Data }, dropPos);
+                        var addedRewardItem = DualUIPanel.Instance.TryAddRewardAuto(oldItem.Data);
+                        if (addedRewardItem != null)
+                        {
+                            addedToReward = true;
+                        }
+                    }
+
+                    if (!addedToReward)
+                    {
+                        Vector3 dropPos = Vector3.zero;
+                        var player = FindObjectOfType<DimensionLooter.Gameplay.PlayerController>();
+                        if (player != null) dropPos = player.transform.position;
+
+                        if (DimensionLooter.Managers.LootManager.Instance != null)
+                        {
+                            DimensionLooter.Managers.LootManager.Instance.SpawnPouch(new System.Collections.Generic.List<DimensionLooter.Data.ItemData> { oldItem.Data }, dropPos);
+                        }
                     }
                 }
             }

@@ -33,7 +33,12 @@ namespace DimensionLooter.UI.Inventory
         {
             if (GridLogic != null && _rectTransform != null)
             {
-                _rectTransform.sizeDelta = new Vector2(GridLogic.Width * _cellSize, GridLogic.Height * _cellSize);
+                Vector2 newSize = new Vector2(GridLogic.Width * _cellSize, GridLogic.Height * _cellSize);
+                _rectTransform.sizeDelta = newSize;
+                if (_itemsContainer != null)
+                {
+                    _itemsContainer.sizeDelta = newSize;
+                }
 
                 // 그리드에서 제거된 아이템(오버플로우) UI 정리
                 var allLogicItems = GridLogic.GetAllItems();

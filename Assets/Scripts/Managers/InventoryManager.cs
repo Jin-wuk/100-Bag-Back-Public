@@ -68,7 +68,7 @@ namespace DimensionLooter.Managers
                 }
 
                 Vector3 dropPos = Vector3.zero;
-                GameObject player = GameObject.FindGameObjectWithTag("Player");
+                var player = FindObjectOfType<DimensionLooter.Gameplay.PlayerController>();
                 if (player != null) dropPos = player.transform.position;
 
                 if (DimensionLooter.Managers.LootManager.Instance != null)
@@ -103,6 +103,25 @@ namespace DimensionLooter.Managers
                     }
                 }
             }
+
+            // 1차 시도 실패 시 회전해서 다시 시도
+            if (itemData.Width != itemData.Height)
+            {
+                invItem.IsRotated = !invItem.IsRotated;
+                for (int y = 0; y < MainGrid.Height; y++)
+                {
+                    for (int x = 0; x < MainGrid.Width; x++)
+                    {
+                        if (MainGrid.PlaceItem(invItem, x, y))
+                        {
+                            Debug.Log($"[InventoryManager] {itemData.Name} 아이템을 회전하여 자동 배치했습니다. ({x}, {y})");
+                            return invItem;
+                        }
+                    }
+                }
+                invItem.IsRotated = !invItem.IsRotated; // 실패 시 롤백
+            }
+
             Debug.LogWarning($"[InventoryManager] 가방이 꽉 찼습니다! {itemData.Name} 배치 실패.");
             return null;
         }

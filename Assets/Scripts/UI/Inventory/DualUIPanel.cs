@@ -30,12 +30,20 @@ namespace DimensionLooter.UI.Inventory
         [SerializeField] private GameObject _itemPrefab;
 
         private InventoryGrid _rewardGrid;
+        private PouchInteractable _activePouch;
+        public PouchInteractable ActivePouch => _activePouch;
+        private GameObject _raycastBlocker;
+
+        public bool IsPanelOpen => _panelRoot != null && _panelRoot.activeSelf;
+        public InventoryGridUI RewardInventoryUI => _rewardInventoryUI;
 
         private void Awake()
         {
             if (Instance == null)
             {
                 Instance = this;
+                CreateRaycastBlocker();
+                ArrangeInventoryLayout();
                 Hide();
                 if (InventoryManager.Instance != null)
                 {
@@ -46,6 +54,99 @@ namespace DimensionLooter.UI.Inventory
             {
                 Destroy(gameObject);
             }
+        }
+
+        private void ArrangeInventoryLayout()
+        {
+            if (_gearPanel == null || _bagPanel == null) return;
+            
+            // 두 패널이 이미 동일한 컨테이너에 배치되어 있을 수 있으므로 부모를 찾음
+            Transform parent = _gearPanel.transform.parent;
+            
+            // 컨테이너 동적 생성
+            GameObject container = new GameObject("InventoryVerticalContainer");
+            container.transform.SetParent(parent, false);
+            container.transform.SetSiblingIndex(_gearPanel.transform.GetSiblingIndex());
+
+            var rt = container.AddComponent<RectTransform>();
+            // 부모 앵커 꽉 채우기 (여백 조정 필요 시 offset 수정)
+            rt.anchorMin = new Vector2(0, 0);
+            rt.anchorMax = new Vector2(1, 1);
+            rt.offsetMin = new Vector2(50, 50); // 여백 추가
+            rt.offsetMax = new Vector2(-50, -50);
+
+            var vlg = container.AddComponent<UnityEngine.UI.VerticalLayoutGroup>();
+            vlg.childAlignment = TextAnchor.UpperCenter;
+            vlg.spacing = 30f; // 장비창과 가방 사이 여백
+            vlg.childControlHeight = false;
+            vlg.childControlWidth = false;
+            vlg.childForceExpandHeight = false;
+            vlg.childForceExpandWidth = false;
+
+            // 자식으로 편입
+            _gearPanel.transform.SetParent(container.transform, false);
+            _bagPanel.transform.SetParent(container.transform, false);
+
+            ArrangeGearSlots();
+        }
+
+        private void ArrangeGearSlots()
+        {
+            if (_gearPanel == null) return;
+            
+            RectTransform gearRt = _gearPanel.GetComponent<RectTransform>();
+            if (gearRt != null)
+            {
+                gearRt.sizeDelta = new Vector2(330, 230); // 2줄 레이아웃 높이에 맞춤
+            }
+
+            GearSlotUI[] slots = _gearPanel.GetComponentsInChildren<GearSlotUI>(true);
+            foreach (var slot in slots)
+            {
+                RectTransform rt = slot.GetComponent<RectTransform>();
+                if (rt == null) continue;
+
+                rt.sizeDelta = new Vector2(100, 100);
+                
+                string n = slot.gameObject.name;
+                if (n.Contains("Weapon"))
+                {
+                    rt.anchoredPosition = new Vector2(-110, -10);
+                    rt.sizeDelta = new Vector2(100, 210); // 세로 2줄 크기
+                }
+                else if (n.Contains("Armor"))
+                {
+                    rt.anchoredPosition = new Vector2(0, -10);
+                }
+                else if (n.Contains("Helmet"))
+                {
+                    rt.anchoredPosition = new Vector2(110, -10);
+                }
+                else if (n.Contains("Accessory"))
+                {
+                    rt.anchoredPosition = new Vector2(0, -120);
+                }
+                else if (n.Contains("Bag"))
+                {
+                    rt.anchoredPosition = new Vector2(110, -120);
+                }
+            }
+        }
+
+        private void CreateRaycastBlocker()
+        {
+            _raycastBlocker = new GameObject("RaycastBlocker");
+            _raycastBlocker.transform.SetParent(_panelRoot.transform, false);
+            _raycastBlocker.transform.SetSiblingIndex(0); // 가장 뒤로
+            
+            var rt = _raycastBlocker.AddComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.sizeDelta = Vector2.zero;
+
+            var img = _raycastBlocker.AddComponent<UnityEngine.UI.Image>();
+            img.color = new Color(0, 0, 0, 0.5f); // 어둡게 처리하여 모달 느낌 부여
+            img.raycastTarget = true;
         }
 
         public void Hide()
@@ -67,9 +168,11 @@ namespace DimensionLooter.UI.Inventory
             if (_secureInventoryUI != null) _secureInventoryUI.RefreshSize();
         }
 
-        public void Show(List<ItemData> drops)
+        public void Show(PouchInteractable pouch = null)
         {
             if (_panelRoot != null) _panelRoot.SetActive(true);
+            
+            SwitchToInventory();
 
             // 메인 인벤토리 연동
             if (_mainInventoryUI.GridLogic == null)
@@ -83,7 +186,9 @@ namespace DimensionLooter.UI.Inventory
                 _secureInventoryUI.Init(InventoryManager.Instance.SecureGrid);
             }
 
-            if (drops == null)
+            _activePouch = pouch;
+
+            if (_activePouch == null || _activePouch.StoredItems.Count == 0)
             {
                 // 보상 목록이 없을 경우 (수동으로 가방을 열었을 때) 보상 UI를 숨김
                 if (_rewardInventoryUI != null) _rewardInventoryUI.gameObject.SetActive(false);
@@ -94,12 +199,20 @@ namespace DimensionLooter.UI.Inventory
                 // 파우치나 몬스터 드랍으로 열렸을 때
                 if (_rewardInventoryUI != null) _rewardInventoryUI.gameObject.SetActive(true);
 
-                // 보상 인벤토리(그리드) 생성 (임시 크기: 6x4)
-                _rewardGrid = new InventoryGrid(6, 4);
+                if (_rewardGrid == null)
+                {
+                    // 넉넉한 가로 폭의 그리드 생성 (가로 15, 세로 6)
+                    _rewardGrid = new InventoryGrid(15, 6);
+                    _rewardInventoryUI.Init(_rewardGrid);
+                }
+
+                // 기존 UI 초기화 후 재배치
+                _rewardInventoryUI.Clear();
+                _rewardGrid = new InventoryGrid(15, 6);
                 _rewardInventoryUI.Init(_rewardGrid);
 
                 // 아이템 배치
-                foreach (var itemData in drops)
+                foreach (var itemData in _activePouch.StoredItems)
                 {
                     var invItem = new InventoryItem(itemData);
                     bool placed = false;
@@ -138,26 +251,18 @@ namespace DimensionLooter.UI.Inventory
         {
             if (_panelRoot != null) _panelRoot.SetActive(false);
 
-            if (_rewardGrid != null)
+            if (_activePouch != null)
             {
-                var remainingItems = _rewardGrid.GetAllItems();
-                if (remainingItems.Count > 0)
+                if (_activePouch.StoredItems.Count == 0)
                 {
-                    List<ItemData> leftovers = new List<ItemData>();
-                    foreach(var i in remainingItems) leftovers.Add(i.Data);
-                    
-                    Debug.Log($"[DualUIPanel] 보상 {leftovers.Count}개가 남아 바닥에 Pouch를 생성합니다.");
-                    
-                    // LootManager를 통해 플레이어 발밑에 파우치 스폰
-                    Vector3 dropPos = Vector3.zero;
-                    GameObject player = GameObject.FindGameObjectWithTag("Player");
-                    if (player != null) dropPos = player.transform.position;
-
+                    Debug.Log($"[DualUIPanel] 파우치({_activePouch.Id})가 비어있으므로 파괴합니다.");
                     if (DimensionLooter.Managers.LootManager.Instance != null)
                     {
-                        DimensionLooter.Managers.LootManager.Instance.SpawnPouch(leftovers, dropPos);
+                        DimensionLooter.Managers.LootManager.Instance.DeregisterPouch(_activePouch.Id);
                     }
+                    Destroy(_activePouch.gameObject);
                 }
+                _activePouch = null;
             }
 
             // 보상 UI 하위 아이템 및 캐싱된 객체 정리
@@ -179,24 +284,29 @@ namespace DimensionLooter.UI.Inventory
             else
             {
                 // 근접 루팅 (Proximity Looting)
-                System.Collections.Generic.List<DimensionLooter.Data.ItemData> nearbyDrops = null;
-                GameObject player = GameObject.FindGameObjectWithTag("Player");
+                PouchInteractable targetPouch = null;
+                var player = FindObjectOfType<DimensionLooter.Gameplay.PlayerController>();
                 if (player != null)
                 {
+                    Physics2D.SyncTransforms();
                     Collider2D[] colliders = Physics2D.OverlapCircleAll(player.transform.position, 1.5f);
+                    float minDistance = float.MaxValue;
                     foreach (var col in colliders)
                     {
                         var pouch = col.GetComponent<DimensionLooter.Gameplay.Inventory.PouchInteractable>();
                         if (pouch != null && pouch.StoredItems.Count > 0)
                         {
-                            nearbyDrops = new System.Collections.Generic.List<DimensionLooter.Data.ItemData>(pouch.StoredItems);
-                            Destroy(pouch.gameObject);
-                            break; // 여러 개가 있더라도 Merge 로직에 의해 1개일 확률이 높으므로 첫 번째 것만 루팅
+                            float dist = Vector2.Distance(player.transform.position, pouch.transform.position);
+                            if (dist < minDistance)
+                            {
+                                minDistance = dist;
+                                targetPouch = pouch;
+                            }
                         }
                     }
                 }
                 
-                Show(nearbyDrops);
+                Show(targetPouch);
             }
         }
         public void SwitchTab(TabType tab)
@@ -212,5 +322,58 @@ namespace DimensionLooter.UI.Inventory
 
         public void SwitchToInventory() => SwitchTab(TabType.INVENTORY);
         public void SwitchToSkills() => SwitchTab(TabType.SKILLS);
+
+        public DimensionLooter.Gameplay.Inventory.InventoryItem TryAddRewardAuto(DimensionLooter.Data.ItemData itemData)
+        {
+            if (_rewardGrid == null || !IsPanelOpen || _activePouch == null) return null;
+
+            var invItem = new InventoryItem(itemData);
+            for (int y = 0; y < _rewardGrid.Height; y++)
+            {
+                for (int x = 0; x < _rewardGrid.Width; x++)
+                {
+                    if (_rewardGrid.PlaceItem(invItem, x, y))
+                    {
+                        if (_itemPrefab != null && _rewardInventoryUI != null)
+                        {
+                            GameObject uiObj = Instantiate(_itemPrefab);
+                            DraggableItemUI itemUI = uiObj.GetComponent<DraggableItemUI>();
+                            itemUI.Init(invItem, _rewardInventoryUI);
+                            _rewardInventoryUI.RegisterItemUI(invItem, itemUI);
+                        }
+                        
+                        // 백엔드 파우치 데이터 동기화
+                        _activePouch.AppendItems(new System.Collections.Generic.List<DimensionLooter.Data.ItemData> { itemData });
+                        
+                        return invItem;
+                    }
+                }
+            }
+
+            if (itemData.Width != itemData.Height)
+            {
+                invItem.IsRotated = !invItem.IsRotated;
+                for (int y = 0; y < _rewardGrid.Height; y++)
+                {
+                    for (int x = 0; x < _rewardGrid.Width; x++)
+                    {
+                        if (_rewardGrid.PlaceItem(invItem, x, y))
+                        {
+                            if (_itemPrefab != null && _rewardInventoryUI != null)
+                            {
+                                GameObject uiObj = Instantiate(_itemPrefab);
+                                DraggableItemUI itemUI = uiObj.GetComponent<DraggableItemUI>();
+                                itemUI.Init(invItem, _rewardInventoryUI);
+                                _rewardInventoryUI.RegisterItemUI(invItem, itemUI);
+                            }
+                            return invItem;
+                        }
+                    }
+                }
+                invItem.IsRotated = !invItem.IsRotated;
+            }
+
+            return null;
+        }
     }
 }
