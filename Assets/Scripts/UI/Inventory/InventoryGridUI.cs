@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using DimensionLooter.Gameplay.Inventory;
 using DimensionLooter.Data;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace DimensionLooter.UI.Inventory
 {
@@ -33,6 +34,22 @@ namespace DimensionLooter.UI.Inventory
             if (GridLogic != null && _rectTransform != null)
             {
                 _rectTransform.sizeDelta = new Vector2(GridLogic.Width * _cellSize, GridLogic.Height * _cellSize);
+
+                // 그리드에서 제거된 아이템(오버플로우) UI 정리
+                var allLogicItems = GridLogic.GetAllItems();
+                List<InventoryItem> toRemove = new List<InventoryItem>();
+                foreach (var kvp in _itemUIMap)
+                {
+                    if (!allLogicItems.Contains(kvp.Key))
+                    {
+                        toRemove.Add(kvp.Key);
+                        if (kvp.Value != null) Destroy(kvp.Value.gameObject);
+                    }
+                }
+                foreach (var item in toRemove)
+                {
+                    _itemUIMap.Remove(item);
+                }
             }
 
             if (_drawGridLines)

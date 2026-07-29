@@ -198,8 +198,16 @@ namespace DimensionLooter.UI.Inventory
                 {
                     if (Input.GetMouseButtonDown(0))
                     {
-                        PointerEventData dropEvent = new PointerEventData(EventSystem.current) { position = Input.mousePosition };
-                        Drop(dropEvent);
+                        if (Time.unscaledTime - _carryStartTime < 0.35f)
+                        {
+                            // 더블클릭 (빠른 두번째 클릭) 감지 시 자동 장착 시도
+                            TryEquipByDoubleClick();
+                        }
+                        else
+                        {
+                            PointerEventData dropEvent = new PointerEventData(EventSystem.current) { position = Input.mousePosition };
+                            Drop(dropEvent);
+                        }
                     }
                     else if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.R))
                     {
@@ -368,8 +376,15 @@ namespace DimensionLooter.UI.Inventory
 
         private float Easing(float t)
         {
-            // Out-Quad Easing
-            return t * (2f - t);
+            return t * t * (3f - 2f * t);
+        }
+
+        private void OnDestroy()
+        {
+            if (_ghostObj != null)
+            {
+                Destroy(_ghostObj);
+            }
         }
     }
 }
