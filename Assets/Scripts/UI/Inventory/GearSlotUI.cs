@@ -59,8 +59,14 @@ namespace DimensionLooter.UI.Inventory
                 else
                 {
                     // 가방이 꽉 찼다면 바닥에 드롭
-                    var cm = FindObjectOfType<CombatManager>();
-                    if (cm != null) cm.SpawnPouch(new System.Collections.Generic.List<DimensionLooter.Data.ItemData> { oldItem.Data });
+                    Vector3 dropPos = Vector3.zero;
+                    GameObject player = GameObject.FindGameObjectWithTag("Player");
+                    if (player != null) dropPos = player.transform.position;
+
+                    if (DimensionLooter.Managers.LootManager.Instance != null)
+                    {
+                        DimensionLooter.Managers.LootManager.Instance.SpawnPouch(new System.Collections.Generic.List<DimensionLooter.Data.ItemData> { oldItem.Data }, dropPos);
+                    }
                 }
             }
         }

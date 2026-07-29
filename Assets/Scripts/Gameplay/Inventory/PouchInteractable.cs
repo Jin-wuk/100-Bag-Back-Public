@@ -10,10 +10,19 @@ namespace DimensionLooter.Gameplay.Inventory
     public class PouchInteractable : MonoBehaviour, IInteractable
     {
         private List<ItemData> _storedItems = new List<ItemData>();
+        public IReadOnlyList<ItemData> StoredItems => _storedItems;
 
         public void Init(List<ItemData> items)
         {
             _storedItems = new List<ItemData>(items);
+        }
+
+        public void AppendItems(List<ItemData> items)
+        {
+            if (items != null)
+            {
+                _storedItems.AddRange(items);
+            }
         }
 
         public void Interact(GameObject interactor)

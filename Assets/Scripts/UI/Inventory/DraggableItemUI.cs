@@ -31,6 +31,7 @@ namespace DimensionLooter.UI.Inventory
         private InventoryGridUI _originalGridUI;
         private int _originalGridX;
         private int _originalGridY;
+        private bool _originalIsRotated;
 
         public void Init(InventoryItem item, InventoryGridUI initialGridUI)
         {
@@ -142,6 +143,7 @@ namespace DimensionLooter.UI.Inventory
             _originalGridUI = CurrentGridUI;
             _originalGridX = Item.GridX;
             _originalGridY = Item.GridY;
+            _originalIsRotated = Item.IsRotated;
 
             // 로컬 클릭 위치 계산 (Grab Offset)
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
@@ -338,6 +340,13 @@ namespace DimensionLooter.UI.Inventory
 
         private IEnumerator ReturnToOriginalCoroutine()
         {
+            // 바뀐 회전 상태로 원래 자리에 들어갈 수 없다면 회전 상태 롤백
+            if (!_originalGridUI.GridLogic.CanPlaceItem(Item, _originalGridX, _originalGridY))
+            {
+                Item.IsRotated = _originalIsRotated;
+                UpdateSizeAndRotation(CurrentGridUI.CellSize);
+            }
+
             // 데이터 논리 복구
             _originalGridUI.GridLogic.PlaceItem(Item, _originalGridX, _originalGridY);
             CurrentGridUI = _originalGridUI;

@@ -221,20 +221,5 @@ namespace DimensionLooter.Managers
             _currentMonster = null;
             if (_combatUI != null) _combatUI.HideCombat();
         }
-
-        public void SpawnPouch(List<ItemData> leftovers)
-        {
-            GameObject pouchPrefab = Resources.Load<GameObject>("Prefabs/Pouch");
-            if (pouchPrefab != null)
-            {
-                Vector3 spawnPos = _lastCombatPosition;
-                GameObject pouch = Instantiate(pouchPrefab, spawnPos, Quaternion.identity);
-                var interactable = pouch.GetComponent<DimensionLooter.Gameplay.Inventory.PouchInteractable>();
-                if (interactable != null)
-                {
-                    interactable.Init(leftovers);
-                }
-            }
-        }
     }
 }

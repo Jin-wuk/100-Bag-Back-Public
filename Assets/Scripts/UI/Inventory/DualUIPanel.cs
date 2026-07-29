@@ -148,11 +148,14 @@ namespace DimensionLooter.UI.Inventory
                     
                     Debug.Log($"[DualUIPanel] 보상 {leftovers.Count}개가 남아 바닥에 Pouch를 생성합니다.");
                     
-                    // CombatManager를 통해 현재 몬스터가 죽은 위치에 파우치 스폰
-                    var cm = FindObjectOfType<CombatManager>();
-                    if (cm != null)
+                    // LootManager를 통해 플레이어 발밑에 파우치 스폰
+                    Vector3 dropPos = Vector3.zero;
+                    GameObject player = GameObject.FindGameObjectWithTag("Player");
+                    if (player != null) dropPos = player.transform.position;
+
+                    if (DimensionLooter.Managers.LootManager.Instance != null)
                     {
-                        cm.SpawnPouch(leftovers);
+                        DimensionLooter.Managers.LootManager.Instance.SpawnPouch(leftovers, dropPos);
                     }
                 }
             }
@@ -175,7 +178,25 @@ namespace DimensionLooter.UI.Inventory
             }
             else
             {
-                Show(null);
+                // 근접 루팅 (Proximity Looting)
+                System.Collections.Generic.List<DimensionLooter.Data.ItemData> nearbyDrops = null;
+                GameObject player = GameObject.FindGameObjectWithTag("Player");
+                if (player != null)
+                {
+                    Collider2D[] colliders = Physics2D.OverlapCircleAll(player.transform.position, 1.5f);
+                    foreach (var col in colliders)
+                    {
+                        var pouch = col.GetComponent<DimensionLooter.Gameplay.Inventory.PouchInteractable>();
+                        if (pouch != null && pouch.StoredItems.Count > 0)
+                        {
+                            nearbyDrops = new System.Collections.Generic.List<DimensionLooter.Data.ItemData>(pouch.StoredItems);
+                            Destroy(pouch.gameObject);
+                            break; // 여러 개가 있더라도 Merge 로직에 의해 1개일 확률이 높으므로 첫 번째 것만 루팅
+                        }
+                    }
+                }
+                
+                Show(nearbyDrops);
             }
         }
         public void SwitchTab(TabType tab)

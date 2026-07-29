@@ -67,15 +67,18 @@ namespace DimensionLooter.Managers
                     leftovers.Add(item.Data);
                 }
 
-                CombatManager cm = FindObjectOfType<CombatManager>();
-                if (cm != null)
+                Vector3 dropPos = Vector3.zero;
+                GameObject player = GameObject.FindGameObjectWithTag("Player");
+                if (player != null) dropPos = player.transform.position;
+
+                if (DimensionLooter.Managers.LootManager.Instance != null)
                 {
-                    cm.SpawnPouch(leftovers);
+                    DimensionLooter.Managers.LootManager.Instance.SpawnPouch(leftovers, dropPos);
                     Debug.LogWarning($"[InventoryManager] 가방 크기가 줄어들어 {leftovers.Count}개의 아이템이 바닥에 드랍되었습니다.");
                 }
                 else
                 {
-                    Debug.LogError("[InventoryManager] CombatManager를 찾을 수 없어 오버플로우 아이템이 증발했습니다.");
+                    Debug.LogError("[InventoryManager] LootManager를 찾을 수 없어 오버플로우 아이템이 증발했습니다.");
                 }
             }
 
