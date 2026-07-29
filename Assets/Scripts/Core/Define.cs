@@ -25,7 +25,9 @@ namespace DimensionLooter.Core
         public enum ItemType
         {
             Weapon,
+            Helmet,
             Armor,
+            Accessory,
             Backpack,
             Consumable,
             ReturnStone,    // 귀환석

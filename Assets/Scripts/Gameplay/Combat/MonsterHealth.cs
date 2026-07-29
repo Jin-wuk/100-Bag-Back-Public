@@ -14,17 +14,16 @@ namespace DimensionLooter.Gameplay.Combat
     public class MonsterHealth : MonoBehaviour, IDamageable, IInteractable
     {
         [Header("Stats")]
-        [SerializeField] private int _maxHealth = 20;
-        [SerializeField] private int _attackPower = 5;
-        [SerializeField] private float _speed = 40f;
+        [SerializeField] private DimensionLooter.Data.MonsterData _data;
 
         private int _currentHealth;
 
         public bool IsAlive => _currentHealth > 0;
         public int CurrentHealth => _currentHealth;
-        public int MaxHealth => _maxHealth;
-        public int AttackPower => _attackPower;
-        public float Speed => _speed;
+        public int MaxHealth => _data != null ? _data.MaxHealth : 20;
+        public int AttackPower => _data != null ? _data.AttackPower : 5;
+        public float Speed => _data != null ? _data.AttackSpeed : 40f;
+        public DimensionLooter.Data.MonsterData Data => _data;
 
         public event Action<int, int> OnHealthChanged;
         
@@ -34,29 +33,43 @@ namespace DimensionLooter.Gameplay.Combat
         private void Start()
         {
             // 에디터에 배치된 더미 몬스터가 Play 모드 진입 시 체력이 0으로 시작하는 것을 방지
-            if (_currentHealth <= 0)
+            if (_currentHealth <= 0 && _data != null)
             {
-                Init(_maxHealth);
+                Init(_data);
+            }
+            else if (_currentHealth <= 0)
+            {
+                // 더미 데이터 초기화
+                Init(new DimensionLooter.Data.MonsterData { MaxHealth = 20, AttackPower = 5, AttackSpeed = 40f, Name = "더미 몬스터" });
             }
         }
 
         /// <summary>
         /// 몬스터 스폰 시 스탯 데이터를 기반으로 체력을 초기화합니다.
         /// </summary>
+        public void Init(DimensionLooter.Data.MonsterData data)
+        {
+            _data = data;
+            _currentHealth = MaxHealth;
+            OnHealthChanged?.Invoke(_currentHealth, MaxHealth);
+        }
+
+        // 재시작 용도
         public void Init(int maxHp)
         {
-            _maxHealth = maxHp;
-            _currentHealth = _maxHealth;
-            OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
+            if (_data == null) _data = new DimensionLooter.Data.MonsterData { MaxHealth = maxHp, AttackPower = 5, AttackSpeed = 40f };
+            else _data.MaxHealth = maxHp;
+            _currentHealth = maxHp;
+            OnHealthChanged?.Invoke(_currentHealth, MaxHealth);
         }
 
         public void TakeDamage(int amount)
         {
             if (!IsAlive) return;
 
-            _currentHealth = Mathf.Clamp(_currentHealth - amount, 0, _maxHealth);
+            _currentHealth = Mathf.Clamp(_currentHealth - amount, 0, MaxHealth);
             
-            OnHealthChanged?.Invoke(_currentHealth, _maxHealth);
+            OnHealthChanged?.Invoke(_currentHealth, MaxHealth);
 
             if (!IsAlive)
             {
@@ -77,10 +90,10 @@ namespace DimensionLooter.Gameplay.Combat
 
         private void OnMouseEnter()
         {
-            // 마우스 호버링 시 기획에 따라 몬스터 스탯 노출 (능동적 판단 유도)
             if (TooltipUI.Instance != null && IsAlive)
             {
-                string stats = $"[미지의 몬스터]\n체력: {_currentHealth} / {_maxHealth}\n클릭하여 전투 진입";
+                string monsterName = _data != null && !string.IsNullOrEmpty(_data.Name) ? _data.Name : "미지의 몬스터";
+                string stats = $"[{monsterName}]\n체력: {_currentHealth} / {MaxHealth}\n클릭하여 전투 진입";
                 TooltipUI.Instance.Show(stats);
             }
         }

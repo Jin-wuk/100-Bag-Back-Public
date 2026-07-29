@@ -13,5 +13,8 @@ namespace DimensionLooter.Data
         public float AttackSpeed { get; set; }
         public int DropGold { get; set; }
         public int DropExp { get; set; }
+        public float CastDuration { get; set; } = 3f;
+        public float CastProbability { get; set; } = 0.3f;
+        public int CastDamageMultiplier { get; set; } = 3;
     }
 }

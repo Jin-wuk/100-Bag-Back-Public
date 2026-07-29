@@ -86,7 +86,7 @@ namespace DimensionLooter.Managers
         /// <summary>
         /// 빈 공간을 찾아 자동으로 아이템을 배치합니다. (주로 치트나 퀘스트 보상용)
         /// </summary>
-        public bool TryAddAuto(DimensionLooter.Data.ItemData itemData)
+        public DimensionLooter.Gameplay.Inventory.InventoryItem TryAddAuto(DimensionLooter.Data.ItemData itemData)
         {
             var invItem = new InventoryItem(itemData);
             for (int y = 0; y < MainGrid.Height; y++)
@@ -95,16 +95,13 @@ namespace DimensionLooter.Managers
                 {
                     if (MainGrid.PlaceItem(invItem, x, y))
                     {
-                        // UI 갱신을 위해 DualUIPanel이나 MainInventoryUI 측에 알려야 함
-                        // 임시로 자동 배치 시에는 UI가 열려있다면 갱신하도록 처리 가능
-                        // [Todo] Event 기반 UI 갱신 로직 (현재는 드래그 앤 드롭 전용이므로 생략)
                         Debug.Log($"[InventoryManager] {itemData.Name} 아이템을 자동 배치했습니다. ({x}, {y})");
-                        return true;
+                        return invItem;
                     }
                 }
             }
             Debug.LogWarning($"[InventoryManager] 가방이 꽉 찼습니다! {itemData.Name} 배치 실패.");
-            return false;
+            return null;
         }
     }
 }

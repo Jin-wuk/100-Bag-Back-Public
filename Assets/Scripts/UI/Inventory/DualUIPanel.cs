@@ -11,11 +11,23 @@ namespace DimensionLooter.UI.Inventory
     {
         public static DualUIPanel Instance { get; private set; }
 
+        public enum TabType { INVENTORY, SKILLS }
+
+        [Header("Root")]
         [SerializeField] private GameObject _panelRoot;
+
+        [Header("Tab Contents")]
+        [SerializeField] private GameObject _gearPanel;
+        [SerializeField] private GameObject _bagPanel; // _mainInventoryUI의 부모 또는 오브젝트 자신
+        [SerializeField] private GameObject _skillsPanel;
+
+        [Header("Grids")]
         [SerializeField] private InventoryGridUI _mainInventoryUI;
-        [SerializeField] private InventoryGridUI _secureInventoryUI; // 보안 파우치 추가
+        [SerializeField] private InventoryGridUI _secureInventoryUI;
         [SerializeField] private InventoryGridUI _rewardInventoryUI;
-        [SerializeField] private GameObject _itemPrefab; // DraggableItemUI 프리팹
+        
+        [Header("Prefabs")]
+        [SerializeField] private GameObject _itemPrefab;
 
         private InventoryGrid _rewardGrid;
 
@@ -111,6 +123,17 @@ namespace DimensionLooter.UI.Inventory
             }
         }
 
+        public void SpawnMainInventoryItemUI(InventoryItem invItem)
+        {
+            if (_mainInventoryUI != null && _itemPrefab != null)
+            {
+                GameObject uiObj = Instantiate(_itemPrefab);
+                DraggableItemUI itemUI = uiObj.GetComponent<DraggableItemUI>();
+                itemUI.Init(invItem, _mainInventoryUI);
+                _mainInventoryUI.RegisterItemUI(invItem, itemUI);
+            }
+        }
+
         public void ClosePanel()
         {
             if (_panelRoot != null) _panelRoot.SetActive(false);
@@ -155,5 +178,18 @@ namespace DimensionLooter.UI.Inventory
                 Show(null);
             }
         }
+        public void SwitchTab(TabType tab)
+        {
+            if (_gearPanel != null) _gearPanel.SetActive(tab == TabType.INVENTORY);
+            if (_bagPanel != null) _bagPanel.SetActive(tab == TabType.INVENTORY);
+            if (_skillsPanel != null) _skillsPanel.SetActive(tab == TabType.SKILLS);
+            
+            if (_secureInventoryUI != null) _secureInventoryUI.gameObject.SetActive(tab == TabType.INVENTORY);
+            TrashCanUI trashCan = GetComponentInChildren<TrashCanUI>(true);
+            if (trashCan != null) trashCan.gameObject.SetActive(tab == TabType.INVENTORY);
+        }
+
+        public void SwitchToInventory() => SwitchTab(TabType.INVENTORY);
+        public void SwitchToSkills() => SwitchTab(TabType.SKILLS);
     }
 }

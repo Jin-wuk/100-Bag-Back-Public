@@ -71,6 +71,13 @@ namespace DimensionLooter.UI.Inventory
         {
             if (!IsCarrying)
             {
+                // 왼쪽 더블클릭 시 자동 장착 시도
+                if (eventData.button == PointerEventData.InputButton.Left && eventData.clickCount == 2)
+                {
+                    TryEquipByDoubleClick();
+                    return;
+                }
+
                 // 오른쪽 클릭 시 회전 (들지 않고 제자리 회전 시도)
                 if (eventData.button == PointerEventData.InputButton.Right)
                 {
@@ -83,6 +90,31 @@ namespace DimensionLooter.UI.Inventory
             }
             // IsCarrying == true 일 때의 클릭 처리는 Update()의 전역 Input 감지에서 처리하여
             // 허공, 다른 UI, 빈 그리드 등 어디를 클릭해도 동일하게 작동하도록 보장합니다.
+        }
+
+        private void TryEquipByDoubleClick()
+        {
+            var type = Item.Data.Type;
+            if (type == DimensionLooter.Core.Define.ItemType.Weapon ||
+                type == DimensionLooter.Core.Define.ItemType.Helmet ||
+                type == DimensionLooter.Core.Define.ItemType.Armor ||
+                type == DimensionLooter.Core.Define.ItemType.Accessory ||
+                type == DimensionLooter.Core.Define.ItemType.Backpack)
+            {
+                GearSlotUI[] slots = FindObjectsOfType<GearSlotUI>();
+                foreach (var slot in slots)
+                {
+                    if (slot.slotType == type)
+                    {
+                        if (slot.TryEquip(Item, this))
+                        {
+                            CurrentGridUI.UnregisterItemUI(Item);
+                            // TryEquip 내부에서 UI 오브젝트(gameObject)를 Destroy합니다.
+                            return;
+                        }
+                    }
+                }
+            }
         }
 
         private void TryRotateInPlace()
@@ -232,11 +264,13 @@ namespace DimensionLooter.UI.Inventory
 
             InventoryGridUI targetGridUI = null;
             TrashCanUI trashCan = null;
+            GearSlotUI gearSlot = null;
             
             foreach (var res in results)
             {
                 if (trashCan == null) trashCan = res.gameObject.GetComponentInParent<TrashCanUI>();
                 if (targetGridUI == null) targetGridUI = res.gameObject.GetComponentInParent<InventoryGridUI>();
+                if (gearSlot == null) gearSlot = res.gameObject.GetComponentInParent<GearSlotUI>();
             }
 
             // 휴지통에 드롭된 경우
@@ -244,9 +278,19 @@ namespace DimensionLooter.UI.Inventory
             {
                 Debug.Log($"[DraggableItemUI] {Item.Data.Name} 아이템을 휴지통에 버렸습니다.");
                 CurrentGridUI.UnregisterItemUI(Item);
-                // 이미 PickUp()에서 CurrentGridUI.GridLogic.RemoveItem(Item)가 호출되었으므로 데이터 상으로는 제거된 상태
                 Destroy(gameObject);
                 return;
+            }
+
+            // 장비 슬롯에 드롭된 경우
+            if (gearSlot != null)
+            {
+                if (gearSlot.TryEquip(Item, this))
+                {
+                    CurrentGridUI.UnregisterItemUI(Item);
+                    // TryEquip 내부에서 Destroy(gameObject)를 호출하므로 여기서는 리턴만 함
+                    return;
+                }
             }
 
             if (targetGridUI != null)

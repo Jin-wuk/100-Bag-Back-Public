@@ -1,0 +1,1269 @@
+{
+    "elements": [
+        {
+            "name": "Canvas",
+            "anchoredPosition": {
+                "x": 960.0,
+                "y": 540.0
+            },
+            "sizeDelta": {
+                "x": 1920.0,
+                "y": 1080.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "TooltipPanel",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 250.0,
+                "y": 80.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 100.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "CombatPanel",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "PlayerHpBar",
+            "anchoredPosition": {
+                "x": -400.0,
+                "y": 200.0
+            },
+            "sizeDelta": {
+                "x": 300.0,
+                "y": 30.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Fill Area",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Fill",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "PlayerMpBar",
+            "anchoredPosition": {
+                "x": -400.0,
+                "y": 150.0
+            },
+            "sizeDelta": {
+                "x": 300.0,
+                "y": 30.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Fill Area",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Fill",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "MonsterHpBar",
+            "anchoredPosition": {
+                "x": 400.0,
+                "y": 200.0
+            },
+            "sizeDelta": {
+                "x": 300.0,
+                "y": 30.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Fill Area",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Fill",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "MonsterCastBar",
+            "anchoredPosition": {
+                "x": 400.0,
+                "y": 150.0
+            },
+            "sizeDelta": {
+                "x": 300.0,
+                "y": 30.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Fill Area",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Fill",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "MonsterName",
+            "anchoredPosition": {
+                "x": 400.0,
+                "y": 250.0
+            },
+            "sizeDelta": {
+                "x": 300.0,
+                "y": 50.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "MonsterWarning",
+            "anchoredPosition": {
+                "x": 400.0,
+                "y": 100.0
+            },
+            "sizeDelta": {
+                "x": 300.0,
+                "y": 50.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "StunButton",
+            "anchoredPosition": {
+                "x": -200.0,
+                "y": -300.0
+            },
+            "sizeDelta": {
+                "x": 120.0,
+                "y": 120.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": -30.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 30.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 0.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "HealButton",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": -300.0
+            },
+            "sizeDelta": {
+                "x": 120.0,
+                "y": 120.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": -30.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 30.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 0.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "FleeButton",
+            "anchoredPosition": {
+                "x": 200.0,
+                "y": -300.0
+            },
+            "sizeDelta": {
+                "x": 120.0,
+                "y": 120.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": -30.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 30.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 0.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "DualUIPanel",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "LeftPanel",
+            "anchoredPosition": {
+                "x": 50.0,
+                "y": -40.0
+            },
+            "sizeDelta": {
+                "x": 800.0,
+                "y": 1000.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.0,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "GEARTab",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 150.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.0,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 150.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "BAGTab",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": -120.0
+            },
+            "sizeDelta": {
+                "x": 150.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.0,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 150.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "SKILLSTab",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": -240.0
+            },
+            "sizeDelta": {
+                "x": 150.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.0,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 150.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "GearPanelUI",
+            "anchoredPosition": {
+                "x": 170.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 600.0,
+                "y": 700.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.0,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "PlaceholderText",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "SkillsPanelUI",
+            "anchoredPosition": {
+                "x": 170.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 600.0,
+                "y": 700.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.0,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "PlaceholderText",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "MainInventoryUI",
+            "anchoredPosition": {
+                "x": 170.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 500.0,
+                "y": 700.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.0,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "Items",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 100.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.0,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "SecureInventoryUI",
+            "anchoredPosition": {
+                "x": 170.0,
+                "y": -720.0
+            },
+            "sizeDelta": {
+                "x": 200.0,
+                "y": 200.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.0,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "Items",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 100.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.0,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "TrashCanUI",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": -770.0
+            },
+            "sizeDelta": {
+                "x": 150.0,
+                "y": 150.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.0,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 100.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "RewardInventoryUI",
+            "anchoredPosition": {
+                "x": -50.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 600.0,
+                "y": 800.0
+            },
+            "anchorMin": {
+                "x": 1.0,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 1.0,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Items",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 100.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.0,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "CloseButton",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": -965.0
+            },
+            "sizeDelta": {
+                "x": 200.0,
+                "y": 60.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 100.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "ExplorationUI",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "ExpHpBar",
+            "anchoredPosition": {
+                "x": 90.0,
+                "y": -30.0
+            },
+            "sizeDelta": {
+                "x": 120.0,
+                "y": 15.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Fill Area",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Fill",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "ExpMpBar",
+            "anchoredPosition": {
+                "x": 90.0,
+                "y": -50.0
+            },
+            "sizeDelta": {
+                "x": 120.0,
+                "y": 15.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Fill Area",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Fill",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 0.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "BagButton",
+            "anchoredPosition": {
+                "x": -60.0,
+                "y": -40.0
+            },
+            "sizeDelta": {
+                "x": 60.0,
+                "y": 60.0
+            },
+            "anchorMin": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 100.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        }
+    ]
+}

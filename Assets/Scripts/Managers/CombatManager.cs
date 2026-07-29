@@ -90,7 +90,8 @@ namespace DimensionLooter.Managers
                         // 특수 패턴 발동
                         _isMonsterCasting = false;
                         _combatUI.UpdateMonsterCastBar(0f);
-                        int heavyDamage = _currentMonster.AttackPower * 3;
+                        int multiplier = _currentMonster.Data != null ? _currentMonster.Data.CastDamageMultiplier : 3;
+                        int heavyDamage = _currentMonster.AttackPower * multiplier;
                         _playerStats.TakeDamage(heavyDamage);
                         Debug.Log($"[CombatManager] 몬스터 특수 패턴 작렬! ({heavyDamage} 데미지)");
                         if (!_playerStats.IsAlive) break;
@@ -103,11 +104,12 @@ namespace DimensionLooter.Managers
                     {
                         _monsterGauge -= maxGauge;
                         
-                        // 30% 확률로 특수 패턴 진입
-                        if (Random.value < 0.3f)
+                        float castProb = _currentMonster.Data != null ? _currentMonster.Data.CastProbability : 0.3f;
+                        if (Random.value < castProb)
                         {
                             _isMonsterCasting = true;
                             _monsterCastTimer = 0f;
+                            _monsterCastDuration = _currentMonster.Data != null ? _currentMonster.Data.CastDuration : 3f;
                             Debug.Log($"[CombatManager] 몬스터 강공격 준비 중!");
                         }
                         else
@@ -133,9 +135,13 @@ namespace DimensionLooter.Managers
 
                 List<ItemData> dummyDrops = new List<ItemData>()
                 {
-                    new ItemData { Id = 1, Name = "초보자의 검(1x2)", Width = 1, Height = 2 },
-                    new ItemData { Id = 2, Name = "가죽 투구(2x2)", Width = 2, Height = 2 },
-                    new ItemData { Id = 3, Name = "물약(1x1)", Width = 1, Height = 1 }
+                    new ItemData { Id = 1, Name = "용사의 대검", Type = DimensionLooter.Core.Define.ItemType.Weapon, AttackPower = 25, Width = 2, Height = 3 },
+                    new ItemData { Id = 2, Name = "가죽 갑옷", Type = DimensionLooter.Core.Define.ItemType.Armor, DefensePower = 10, Width = 2, Height = 2 },
+                    new ItemData { Id = 3, Name = "빨간 물약", Type = DimensionLooter.Core.Define.ItemType.Consumable, Width = 1, Height = 1 },
+                    new ItemData { Id = 4, Name = "나무 방패", Type = DimensionLooter.Core.Define.ItemType.Armor, DefensePower = 5, Width = 2, Height = 2 },
+                    new ItemData { Id = 5, Name = "황금 열쇠", Type = DimensionLooter.Core.Define.ItemType.Misc, Width = 1, Height = 1 },
+                    new ItemData { Id = 6, Name = "마법사의 지팡이", Type = DimensionLooter.Core.Define.ItemType.Weapon, AttackPower = 20, Width = 1, Height = 3 },
+                    new ItemData { Id = 7, Name = "확장 가방", Type = DimensionLooter.Core.Define.ItemType.Backpack, BagWidth = 4, BagHeight = 2, Width = 2, Height = 2 }
                 };
                 if (DualUIPanel.Instance != null)
                 {

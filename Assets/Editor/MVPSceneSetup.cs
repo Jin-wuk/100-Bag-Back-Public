@@ -18,6 +18,30 @@ public class MVPSceneSetup : EditorWindow
         // 내장 기본 스프라이트 가져오기 (UISprite)
         Sprite defaultSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
 
+        // 방금 생성한 픽셀 아트 이미지들을 Sprite로 강제 임포트 세팅
+        AssetDatabase.Refresh();
+        string[] spritePaths = {
+            "Assets/Resources/Sprites/UI/fantasy_forest_bg.jpg",
+            "Assets/Resources/Sprites/UI/icon_stun.jpg",
+            "Assets/Resources/Sprites/UI/icon_heal.jpg",
+            "Assets/Resources/Sprites/UI/icon_flee.jpg"
+        };
+        foreach (var path in spritePaths)
+        {
+            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer != null && importer.textureType != TextureImporterType.Sprite)
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.SaveAndReimport();
+            }
+        }
+
+        Sprite bgSprite = Resources.Load<Sprite>("Sprites/UI/fantasy_forest_bg");
+        Sprite stunSprite = Resources.Load<Sprite>("Sprites/UI/icon_stun");
+        Sprite healSprite = Resources.Load<Sprite>("Sprites/UI/icon_heal");
+        Sprite fleeSprite = Resources.Load<Sprite>("Sprites/UI/icon_flee");
+
         // 0. 카메라 2D 직교 모드 설정
         if (Camera.main != null)
         {
@@ -29,6 +53,21 @@ public class MVPSceneSetup : EditorWindow
         // 1. Prefab 폴더 생성
         if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
         if (!AssetDatabase.IsValidFolder("Assets/Resources/Prefabs")) AssetDatabase.CreateFolder("Assets/Resources", "Prefabs");
+
+        // 기존에 셋업된 오브젝트들 정리 (중복 방지)
+        string[] oldObjects = { "Grid", "Player", "Canvas", "EventSystem", "@Managers", "Monster_Dummy", "Pouch", "ExplorationUI" };
+        foreach (string objName in oldObjects)
+        {
+            GameObject obj = GameObject.Find(objName);
+            if (obj != null) DestroyImmediate(obj);
+        }
+        
+        // 추가적으로 씬에 남아있는 Monster_Dummy(Clone) 같은 애들도 정리
+        var allMonsters = Object.FindObjectsOfType<DimensionLooter.Gameplay.Combat.MonsterHealth>();
+        foreach (var m in allMonsters)
+        {
+            DestroyImmediate(m.gameObject);
+        }
 
         // 2. 그리드 및 타일맵 생성 (바닥 시각화용)
         GameObject gridObj = new GameObject("Grid");
@@ -96,7 +135,10 @@ public class MVPSceneSetup : EditorWindow
         GameObject canvasObj = new GameObject("Canvas");
         Canvas canvas = canvasObj.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvasObj.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        CanvasScaler scaler = canvasObj.AddComponent<CanvasScaler>();
+        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.matchWidthOrHeight = 0.5f;
         canvasObj.AddComponent<GraphicRaycaster>();
 
         GameObject eventSystem = new GameObject("EventSystem");
@@ -133,7 +175,8 @@ public class MVPSceneSetup : EditorWindow
         GameObject combatPanel = new GameObject("CombatPanel");
         combatPanel.transform.SetParent(canvasObj.transform, false);
         Image combatBg = combatPanel.AddComponent<Image>();
-        combatBg.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+        combatBg.sprite = bgSprite != null ? bgSprite : defaultSprite;
+        combatBg.color = bgSprite != null ? Color.white : new Color(0.1f, 0.1f, 0.1f, 0.9f);
         RectTransform cpRect = combatPanel.GetComponent<RectTransform>();
         cpRect.anchorMin = Vector2.zero; cpRect.anchorMax = Vector2.one;
         cpRect.offsetMin = cpRect.offsetMax = Vector2.zero;
@@ -148,7 +191,7 @@ public class MVPSceneSetup : EditorWindow
             slider.interactable = false; // 마우스로 조작 불가능하게 설정
             RectTransform rect = sliderObj.GetComponent<RectTransform>();
             rect.anchoredPosition = anchoredPos;
-            rect.sizeDelta = new Vector2(100, 10); // 스탯바 크기 대폭 축소 (100x10)
+            rect.sizeDelta = new Vector2(300, 30); // 1080p 해상도에 맞게 스탯바 크기 확대
 
             GameObject fillArea = new GameObject("Fill Area");
             fillArea.transform.SetParent(sliderObj.transform, false);
@@ -168,27 +211,33 @@ public class MVPSceneSetup : EditorWindow
             return slider;
         }
 
-        Slider pSlider = CreateSlider("PlayerHpBar", combatPanel.transform, Color.green, new Vector2(-150, 20));
-        Slider pMpSlider = CreateSlider("PlayerMpBar", combatPanel.transform, Color.blue, new Vector2(-150, -10));
+        Slider pSlider = CreateSlider("PlayerHpBar", combatPanel.transform, Color.green, new Vector2(-400, 200));
+        Slider pMpSlider = CreateSlider("PlayerMpBar", combatPanel.transform, Color.blue, new Vector2(-400, 150));
 
-        Slider mSlider = CreateSlider("MonsterHpBar", combatPanel.transform, Color.red, new Vector2(150, 20));
-        Slider mCastSlider = CreateSlider("MonsterCastBar", combatPanel.transform, Color.yellow, new Vector2(150, -10));
+        Slider mSlider = CreateSlider("MonsterHpBar", combatPanel.transform, Color.red, new Vector2(400, 200));
+        Slider mCastSlider = CreateSlider("MonsterCastBar", combatPanel.transform, Color.yellow, new Vector2(400, 150));
 
         GameObject mNameObj = new GameObject("MonsterName");
         mNameObj.transform.SetParent(combatPanel.transform, false);
         Text mText = mNameObj.AddComponent<Text>();
         mText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        mText.fontSize = 32;
         mText.color = Color.white;
-        mNameObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(150, 50);
+        mText.alignment = TextAnchor.MiddleCenter;
+        mNameObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(400, 250);
+        mNameObj.GetComponent<RectTransform>().sizeDelta = new Vector2(300, 50);
 
         GameObject mWarnObj = new GameObject("MonsterWarning");
         mWarnObj.transform.SetParent(combatPanel.transform, false);
         Text mWarnText = mWarnObj.AddComponent<Text>();
         mWarnText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        mWarnText.fontSize = 28;
         mWarnText.color = Color.red;
         mWarnText.text = "캐스팅 중!";
         mWarnText.fontStyle = FontStyle.Bold;
-        mWarnObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(150, -40);
+        mWarnText.alignment = TextAnchor.MiddleCenter;
+        mWarnObj.GetComponent<RectTransform>().anchoredPosition = new Vector2(400, 100);
+        mWarnObj.GetComponent<RectTransform>().sizeDelta = new Vector2(300, 50);
 
         SerializedObject combatSo = new SerializedObject(combatUI);
         combatSo.FindProperty("_popupPanel").objectReferenceValue = combatPanel;
@@ -204,28 +253,35 @@ public class MVPSceneSetup : EditorWindow
         combatPanel.SetActive(false); // 씬 셋업 직후 에디터 상에서 거슬리지 않도록 비활성화
 
         // 8. 스킬 버튼 및 도주 버튼 (전투 패널 하단)
-        Button CreateSkillButton(string name, string text, Vector2 pos, Color color)
+        Button CreateSkillButton(string name, string text, Vector2 pos, Sprite sprite, Color fallbackColor)
         {
             GameObject btnObj = new GameObject(name);
             btnObj.transform.SetParent(combatPanel.transform, false);
-            btnObj.AddComponent<Image>().color = color;
+            Image btnImg = btnObj.AddComponent<Image>();
+            btnImg.sprite = sprite != null ? sprite : defaultSprite;
+            btnImg.color = sprite != null ? Color.white : fallbackColor;
             Button btn = btnObj.AddComponent<Button>();
             btnObj.GetComponent<RectTransform>().anchoredPosition = pos; 
-            btnObj.GetComponent<RectTransform>().sizeDelta = new Vector2(80, 40);
+            btnObj.GetComponent<RectTransform>().sizeDelta = new Vector2(120, 120);
 
             GameObject tObj = new GameObject("Text");
             tObj.transform.SetParent(btnObj.transform, false);
             Text t = tObj.AddComponent<Text>();
             t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            t.color = Color.black;
+            t.fontSize = 24;
+            t.color = Color.white;
             t.text = text;
-            t.alignment = TextAnchor.MiddleCenter;
+            t.alignment = TextAnchor.UpperCenter;
+            RectTransform tRect = t.GetComponent<RectTransform>();
+            tRect.anchorMin = new Vector2(0, 0); tRect.anchorMax = new Vector2(1, 0); // 바닥에 고정
+            tRect.anchoredPosition = new Vector2(0, -30); 
+            tRect.sizeDelta = new Vector2(0, 30);
             return btn;
         }
 
-        Button stunBtn = CreateSkillButton("StunButton", "STUN", new Vector2(-90, -100), Color.magenta);
-        Button healBtn = CreateSkillButton("HealButton", "HEAL", new Vector2(0, -100), Color.cyan);
-        Button fleeBtn = CreateSkillButton("FleeButton", "FLEE", new Vector2(90, -100), Color.yellow);
+        Button stunBtn = CreateSkillButton("StunButton", "STUN", new Vector2(-200, -300), stunSprite, Color.magenta);
+        Button healBtn = CreateSkillButton("HealButton", "HEAL", new Vector2(0, -300), healSprite, Color.cyan);
+        Button fleeBtn = CreateSkillButton("FleeButton", "FLEE", new Vector2(200, -300), fleeSprite, Color.yellow);
 
         // 8.5 DualUIPanel 셋업
         GameObject dualUIPanelObj = new GameObject("DualUIPanel");
@@ -236,49 +292,138 @@ public class MVPSceneSetup : EditorWindow
         dualRect.anchorMin = Vector2.zero; dualRect.anchorMax = Vector2.one;
         dualRect.offsetMin = dualRect.offsetMax = Vector2.zero;
 
-        // 좌측 통합 패널 (탭 영역)
+        // 좌측 통합 패널 (좌측 전체 레이아웃 그룹)
         GameObject leftPanelObj = new GameObject("LeftPanel");
         leftPanelObj.transform.SetParent(dualUIPanelObj.transform, false);
         RectTransform lpRect = leftPanelObj.AddComponent<RectTransform>();
         lpRect.anchorMin = new Vector2(0f, 0.5f); lpRect.anchorMax = new Vector2(0f, 0.5f);
         lpRect.pivot = new Vector2(0f, 0.5f);
         lpRect.anchoredPosition = new Vector2(50, 0);
-        lpRect.sizeDelta = new Vector2(300, 400);
+        lpRect.sizeDelta = new Vector2(800, 1000); // 전체 폭 대폭 확대
 
-        // 상단 탭 버튼들
-        string[] tabNames = { "GEAR", "BAG", "SKILLS" };
-        for (int i = 0; i < 3; i++)
+        // 1. 좌측 가장자리 세로 탭 버튼들
+        string[] tabNames = { "INVENTORY", "SKILLS" };
+        Button[] tabButtons = new Button[2];
+        for (int i = 0; i < 2; i++)
         {
             GameObject tabBtnObj = new GameObject(tabNames[i] + "Tab");
             tabBtnObj.transform.SetParent(leftPanelObj.transform, false);
-            tabBtnObj.AddComponent<Image>().color = (i == 1) ? new Color(0.4f, 0.4f, 0.4f) : new Color(0.2f, 0.2f, 0.2f); // BAG 탭 활성화 표시
+            tabBtnObj.AddComponent<Image>().color = (i == 1) ? new Color(0.4f, 0.4f, 0.4f) : new Color(0.2f, 0.2f, 0.2f);
+            Button btn = tabBtnObj.AddComponent<Button>();
+            tabButtons[i] = btn;
             RectTransform tabRect = tabBtnObj.GetComponent<RectTransform>();
             tabRect.anchorMin = new Vector2(0, 1); tabRect.anchorMax = new Vector2(0, 1);
             tabRect.pivot = new Vector2(0, 1);
-            tabRect.anchoredPosition = new Vector2(i * 100, 0);
-            tabRect.sizeDelta = new Vector2(100, 40);
+            tabRect.anchoredPosition = new Vector2(0, -i * 120);
+            tabRect.sizeDelta = new Vector2(150, 100);
 
             GameObject txtObj = new GameObject("Text");
             txtObj.transform.SetParent(tabBtnObj.transform, false);
             Text txt = txtObj.AddComponent<Text>();
             txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            txt.fontSize = 24;
             txt.color = Color.white;
             txt.text = tabNames[i];
             txt.alignment = TextAnchor.MiddleCenter;
             txt.GetComponent<RectTransform>().anchoredPosition = Vector2.zero;
-            txt.GetComponent<RectTransform>().sizeDelta = new Vector2(100, 40);
+            txt.GetComponent<RectTransform>().sizeDelta = new Vector2(150, 100);
         }
 
-        // 메인 인벤토리 UI (가방 탭의 내용물)
+        // 2-1. 장비 UI (초기 비활성화)
+        GameObject gearPanelObj = new GameObject("GearPanelUI");
+        gearPanelObj.transform.SetParent(leftPanelObj.transform, false);
+        Image gBg = gearPanelObj.AddComponent<Image>();
+        gBg.color = new Color(0.15f, 0.2f, 0.25f, 0.9f); // 약간 푸른빛
+        RectTransform gRect = gearPanelObj.GetComponent<RectTransform>();
+        gRect.anchorMin = new Vector2(0, 1); gRect.anchorMax = new Vector2(0, 1);
+        gRect.pivot = new Vector2(0, 1);
+        gRect.anchoredPosition = new Vector2(170, 0); 
+        gRect.sizeDelta = new Vector2(300, 700);
+        gearPanelObj.SetActive(false); // 가방이 기본이므로 끔
+
+        // 슬롯 생성용 로컬 함수
+        GameObject CreateGearSlot(string name, DimensionLooter.Core.Define.ItemType type, Vector2 pos)
+        {
+            GameObject slotObj = new GameObject(name);
+            slotObj.transform.SetParent(gearPanelObj.transform, false);
+            Image slotBg = slotObj.AddComponent<Image>();
+            slotBg.color = new Color(0.2f, 0.2f, 0.2f, 0.8f);
+            RectTransform sRect = slotObj.GetComponent<RectTransform>();
+            sRect.anchorMin = new Vector2(0.5f, 1f); sRect.anchorMax = new Vector2(0.5f, 1f);
+            sRect.pivot = new Vector2(0.5f, 1f);
+            sRect.anchoredPosition = pos;
+            sRect.sizeDelta = new Vector2(100, 100);
+
+            GameObject iconObj = new GameObject("Icon");
+            iconObj.transform.SetParent(slotObj.transform, false);
+            Image iconImg = iconObj.AddComponent<Image>();
+            iconImg.gameObject.SetActive(false);
+            RectTransform iRect = iconObj.GetComponent<RectTransform>();
+            iRect.anchorMin = Vector2.zero; iRect.anchorMax = Vector2.one;
+            iRect.offsetMin = iRect.offsetMax = Vector2.zero;
+
+            GameObject txtObj = new GameObject("Text");
+            txtObj.transform.SetParent(slotObj.transform, false);
+            Text txt = txtObj.AddComponent<Text>();
+            txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            txt.fontSize = 20;
+            txt.color = Color.gray;
+            txt.alignment = TextAnchor.MiddleCenter;
+            txt.GetComponent<RectTransform>().anchorMin = Vector2.zero;
+            txt.GetComponent<RectTransform>().anchorMax = Vector2.one;
+            txt.GetComponent<RectTransform>().offsetMin = txt.GetComponent<RectTransform>().offsetMax = Vector2.zero;
+
+            GearSlotUI slotUI = slotObj.AddComponent<GearSlotUI>();
+            SerializedObject so = new SerializedObject(slotUI);
+            so.FindProperty("slotType").enumValueIndex = (int)type;
+            so.FindProperty("_iconImage").objectReferenceValue = iconImg;
+            so.FindProperty("_placeholderText").objectReferenceValue = txt;
+            so.ApplyModifiedProperties();
+            
+            slotUI.Init(type);
+            return slotObj;
+        }
+
+        CreateGearSlot("HelmetSlot", DimensionLooter.Core.Define.ItemType.Helmet, new Vector2(0, -50));
+        CreateGearSlot("ArmorSlot", DimensionLooter.Core.Define.ItemType.Armor, new Vector2(0, -170));
+        CreateGearSlot("WeaponSlot", DimensionLooter.Core.Define.ItemType.Weapon, new Vector2(-110, -170));
+        CreateGearSlot("AccessorySlot", DimensionLooter.Core.Define.ItemType.Accessory, new Vector2(110, -170));
+        CreateGearSlot("BagSlot", DimensionLooter.Core.Define.ItemType.Backpack, new Vector2(0, -290));
+
+        // 2-2. 스킬 UI (초기 비활성화)
+        GameObject skillsPanelObj = new GameObject("SkillsPanelUI");
+        skillsPanelObj.transform.SetParent(leftPanelObj.transform, false);
+        Image skBg = skillsPanelObj.AddComponent<Image>();
+        skBg.color = new Color(0.25f, 0.15f, 0.2f, 0.9f); // 약간 보라빛
+        RectTransform skRect = skillsPanelObj.GetComponent<RectTransform>();
+        skRect.anchorMin = new Vector2(0, 1); skRect.anchorMax = new Vector2(0, 1);
+        skRect.pivot = new Vector2(0, 1);
+        skRect.anchoredPosition = new Vector2(170, 0); 
+        skRect.sizeDelta = new Vector2(820, 700);
+        skillsPanelObj.SetActive(false);
+
+        GameObject skTxtObj = new GameObject("PlaceholderText");
+        skTxtObj.transform.SetParent(skillsPanelObj.transform, false);
+        Text skTxt = skTxtObj.AddComponent<Text>();
+        skTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        skTxt.fontSize = 32;
+        skTxt.color = Color.white;
+        skTxt.text = "스킬창 준비중 (스킬 트리/정보가 들어갈 예정)";
+        skTxt.alignment = TextAnchor.MiddleCenter;
+        skTxt.GetComponent<RectTransform>().anchorMin = Vector2.zero;
+        skTxt.GetComponent<RectTransform>().anchorMax = Vector2.one;
+        skTxt.GetComponent<RectTransform>().offsetMin = skTxt.GetComponent<RectTransform>().offsetMax = Vector2.zero;
+
+        // 2. 메인 인벤토리 UI (가방 탭의 내용물 - 기본 활성화)
         GameObject mainInvObj = new GameObject("MainInventoryUI");
         mainInvObj.transform.SetParent(leftPanelObj.transform, false);
         Image mBg = mainInvObj.AddComponent<Image>();
         mBg.color = new Color(0.2f, 0.2f, 0.2f, 0.9f);
         RectTransform mRect = mainInvObj.GetComponent<RectTransform>();
-        mRect.anchorMin = new Vector2(0.5f, 1f); mRect.anchorMax = new Vector2(0.5f, 1f);
-        mRect.pivot = new Vector2(0.5f, 1f);
-        mRect.anchoredPosition = new Vector2(0, -40); // 탭 바로 아래
-        mRect.sizeDelta = new Vector2(300, 360); // 6x7 여유 공간
+        mRect.anchorMin = new Vector2(0, 1); mRect.anchorMax = new Vector2(0, 1);
+        mRect.pivot = new Vector2(0, 1);
+        mRect.anchoredPosition = new Vector2(490, 0); // 170(탭) + 300(장비창) + 20(여백)
+        mRect.sizeDelta = new Vector2(500, 700); // 메인 인벤토리 크기
         InventoryGridUI mainGridUI = mainInvObj.AddComponent<InventoryGridUI>();
         
         GameObject mItems = new GameObject("Items");
@@ -292,16 +437,16 @@ public class MVPSceneSetup : EditorWindow
         mainGridSo.FindProperty("_itemsContainer").objectReferenceValue = mItems;
         mainGridSo.ApplyModifiedProperties();
 
-        // 보안 파우치 UI (메인 인벤토리 아래)
+        // 3. 보안 파우치 UI (메인 인벤토리 하단 좌측)
         GameObject secureInvObj = new GameObject("SecureInventoryUI");
-        secureInvObj.transform.SetParent(dualUIPanelObj.transform, false);
+        secureInvObj.transform.SetParent(leftPanelObj.transform, false);
         Image sBg = secureInvObj.AddComponent<Image>();
-        sBg.color = new Color(0.8f, 0.6f, 0.2f, 0.9f); // 구별을 위해 금색 계열
+        sBg.color = new Color(0.8f, 0.6f, 0.2f, 0.9f); 
         RectTransform sRect = secureInvObj.GetComponent<RectTransform>();
-        sRect.anchorMin = new Vector2(0.5f, 0f); sRect.anchorMax = new Vector2(0.5f, 0f); 
-        sRect.pivot = new Vector2(0.5f, 0f);
-        sRect.anchoredPosition = new Vector2(-100, 50); // 하단 중앙 좌측
-        sRect.sizeDelta = new Vector2(100, 100); // 2x2 (50x50 cell)
+        sRect.anchorMin = new Vector2(0, 1); sRect.anchorMax = new Vector2(0, 1); 
+        sRect.pivot = new Vector2(0, 1);
+        sRect.anchoredPosition = new Vector2(170, -720); // 메인인벤(700) 바로 아래 여백(20)
+        sRect.sizeDelta = new Vector2(200, 200); // 200x200
         InventoryGridUI secureGridUI = secureInvObj.AddComponent<InventoryGridUI>();
         
         GameObject sItems = new GameObject("Items");
@@ -315,7 +460,29 @@ public class MVPSceneSetup : EditorWindow
         secureGridSo.FindProperty("_itemsContainer").objectReferenceValue = sItems;
         secureGridSo.ApplyModifiedProperties();
 
-        // 보상 인벤토리 UI
+        // 4. 휴지통(버리기) 영역 UI
+        GameObject trashCanObj = new GameObject("TrashCanUI");
+        trashCanObj.transform.SetParent(leftPanelObj.transform, false);
+        Image tBg = trashCanObj.AddComponent<Image>();
+        tBg.color = new Color(0.5f, 0.1f, 0.1f, 0.9f); // 어두운 붉은색
+        RectTransform tRect = trashCanObj.GetComponent<RectTransform>();
+        tRect.anchorMin = new Vector2(0, 1); tRect.anchorMax = new Vector2(0, 1);
+        tRect.pivot = new Vector2(0, 1);
+        tRect.anchoredPosition = new Vector2(0, -770); // 사용자 설정값 반영
+        tRect.sizeDelta = new Vector2(150, 150); // 사용자 설정값 반영
+        
+        GameObject trashTextObj = new GameObject("Text");
+        trashTextObj.transform.SetParent(trashCanObj.transform, false);
+        Text trashText = trashTextObj.AddComponent<Text>();
+        trashText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        trashText.fontSize = 24;
+        trashText.color = Color.white;
+        trashText.text = "TRASH";
+        trashText.alignment = TextAnchor.MiddleCenter;
+        
+        trashCanObj.AddComponent<TrashCanUI>(); // 마커 스크립트 부착
+
+        // 5. 보상 인벤토리 UI (우측 끝에 고정)
         GameObject rewardInvObj = new GameObject("RewardInventoryUI");
         rewardInvObj.transform.SetParent(dualUIPanelObj.transform, false);
         Image rBg = rewardInvObj.AddComponent<Image>();
@@ -323,8 +490,8 @@ public class MVPSceneSetup : EditorWindow
         RectTransform rRect = rewardInvObj.GetComponent<RectTransform>();
         rRect.anchorMin = new Vector2(1f, 0.5f); rRect.anchorMax = new Vector2(1f, 0.5f); // 우측 고정
         rRect.pivot = new Vector2(1f, 0.5f);
-        rRect.anchoredPosition = new Vector2(-50, 0); // 우측 끝
-        rRect.sizeDelta = new Vector2(300, 400); // 6x8 (50x50 cell) 보상/창고는 길게
+        rRect.anchoredPosition = new Vector2(-50, 0); // 우측 끝 여백
+        rRect.sizeDelta = new Vector2(600, 800); // 보상/창고도 메인과 맞먹게 대형화
         InventoryGridUI rewardGridUI = rewardInvObj.AddComponent<InventoryGridUI>();
 
         GameObject rItems = new GameObject("Items");
@@ -339,43 +506,24 @@ public class MVPSceneSetup : EditorWindow
         rewardGridSo.FindProperty("_drawGridLines").boolValue = false;
         rewardGridSo.ApplyModifiedProperties();
 
-        // 닫기 버튼
+        // 6. 닫기 버튼 (가운데 상단)
         GameObject closeBtnObj = new GameObject("CloseButton");
         closeBtnObj.transform.SetParent(dualUIPanelObj.transform, false);
         closeBtnObj.AddComponent<Image>().color = Color.gray;
         Button closeBtn = closeBtnObj.AddComponent<Button>();
         RectTransform cRect = closeBtnObj.GetComponent<RectTransform>();
-        cRect.anchorMin = new Vector2(0.5f, 0f); cRect.anchorMax = new Vector2(0.5f, 0f); // 하단 중앙
-        cRect.anchoredPosition = new Vector2(0, 40);
-        cRect.sizeDelta = new Vector2(100, 40);
+        cRect.anchorMin = new Vector2(0.5f, 1f); cRect.anchorMax = new Vector2(0.5f, 1f); 
+        cRect.pivot = new Vector2(0.5f, 1f);
+        cRect.anchoredPosition = new Vector2(0, -40);
+        cRect.sizeDelta = new Vector2(200, 60);
         GameObject cTextObj = new GameObject("Text");
         cTextObj.transform.SetParent(closeBtnObj.transform, false);
         Text cText = cTextObj.AddComponent<Text>();
         cText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        cText.fontSize = 24;
         cText.color = Color.white;
         cText.text = "CLOSE";
         cText.alignment = TextAnchor.MiddleCenter;
-
-        // 휴지통(버리기) 영역 UI
-        GameObject trashCanObj = new GameObject("TrashCanUI");
-        trashCanObj.transform.SetParent(dualUIPanelObj.transform, false);
-        Image tBg = trashCanObj.AddComponent<Image>();
-        tBg.color = new Color(0.5f, 0.1f, 0.1f, 0.9f); // 어두운 붉은색
-        RectTransform tRect = trashCanObj.GetComponent<RectTransform>();
-        tRect.anchorMin = new Vector2(0.5f, 0f); tRect.anchorMax = new Vector2(0.5f, 0f);
-        tRect.pivot = new Vector2(0.5f, 0f);
-        tRect.anchoredPosition = new Vector2(100, 50); // 하단 중앙 우측
-        tRect.sizeDelta = new Vector2(100, 100);
-        
-        GameObject trashTextObj = new GameObject("Text");
-        trashTextObj.transform.SetParent(trashCanObj.transform, false);
-        Text trashText = trashTextObj.AddComponent<Text>();
-        trashText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        trashText.color = Color.white;
-        trashText.text = "TRASH";
-        trashText.alignment = TextAnchor.MiddleCenter;
-        
-        trashCanObj.AddComponent<TrashCanUI>(); // 마커 스크립트 부착
 
         // 아이템 프리팹 (드래그 가능한 빈 객체)
         GameObject itemPrefab = new GameObject("ItemPrefab");
@@ -405,12 +553,17 @@ public class MVPSceneSetup : EditorWindow
         DualUIPanel dualUI = canvasObj.AddComponent<DualUIPanel>(); // Rule 12: 항상 활성화된 Canvas에 붙여서 Awake가 보장되도록 함
         SerializedObject dualSo = new SerializedObject(dualUI);
         dualSo.FindProperty("_panelRoot").objectReferenceValue = dualUIPanelObj;
+        dualSo.FindProperty("_gearPanel").objectReferenceValue = gearPanelObj;
+        dualSo.FindProperty("_bagPanel").objectReferenceValue = mainInvObj;
+        dualSo.FindProperty("_skillsPanel").objectReferenceValue = skillsPanelObj;
         dualSo.FindProperty("_mainInventoryUI").objectReferenceValue = mainGridUI;
         dualSo.FindProperty("_secureInventoryUI").objectReferenceValue = secureGridUI;
         dualSo.FindProperty("_rewardInventoryUI").objectReferenceValue = rewardGridUI;
         dualSo.FindProperty("_itemPrefab").objectReferenceValue = savedItemPrefab;
         dualSo.ApplyModifiedProperties();
 
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(tabButtons[0].onClick, dualUI.SwitchToInventory);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(tabButtons[1].onClick, dualUI.SwitchToSkills);
         UnityEditor.Events.UnityEventTools.AddPersistentListener(closeBtn.onClick, dualUI.ClosePanel);
         
         dualUIPanelObj.SetActive(false);
@@ -461,6 +614,7 @@ public class MVPSceneSetup : EditorWindow
         GameObject managersObj = GameObject.Find("@Managers") ?? new GameObject("@Managers");
         CombatManager combatMgr = managersObj.GetComponent<CombatManager>() ?? managersObj.AddComponent<CombatManager>();
         InventoryManager invMgr = managersObj.GetComponent<InventoryManager>() ?? managersObj.AddComponent<InventoryManager>();
+        GearManager gearMgr = managersObj.GetComponent<GearManager>() ?? managersObj.AddComponent<GearManager>();
         
         UnityEditor.Events.UnityEventTools.AddPersistentListener(fleeBtn.onClick, combatMgr.Flee);
         UnityEditor.Events.UnityEventTools.AddPersistentListener(stunBtn.onClick, combatMgr.UseSkillStun);
