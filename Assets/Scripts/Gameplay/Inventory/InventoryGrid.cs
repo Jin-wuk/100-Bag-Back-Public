@@ -123,5 +123,11 @@ namespace DimensionLooter.Gameplay.Inventory
             
             return overflows;
         }
+
+        public void Clear()
+        {
+            _items.Clear();
+            _grid = new InventoryItem[Width, Height];
+        }
     }
 }

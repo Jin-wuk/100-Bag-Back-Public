@@ -18,6 +18,8 @@ namespace DimensionLooter.Managers
 
         public Define.GameState CurrentState => _currentState;
 
+        public event System.Action<Define.GameState> OnStateChanged;
+
         private void Awake()
         {
             if (Instance == null)
@@ -36,15 +38,51 @@ namespace DimensionLooter.Managers
             ChangeState(Define.GameState.Lobby);
         }
 
-        /// <summary>
-        /// 게임의 전반적인 상태를 변경합니다.
-        /// </summary>
         public void ChangeState(Define.GameState newState)
         {
             _currentState = newState;
             Debug.Log($"[GameManager] 게임 상태 변경: {_currentState}", this);
-            
-            // TODO: 추후 옵저버 패턴(Action)을 통해 상태 변경 이벤트를 뿌리고 UI들이 반응하도록 구현
+            OnStateChanged?.Invoke(_currentState);
+        }
+
+        public void OnPlayerDeath()
+        {
+            Debug.Log("[GameManager] 플레이어 사망! 페널티 적용 및 로비 귀환.");
+
+            // 1. 가방 및 장비 증발 페널티
+            if (InventoryManager.Instance != null)
+            {
+                InventoryManager.Instance.ClearMainInventory();
+            }
+
+            if (GearManager.Instance != null)
+            {
+                GearManager.Instance.DestroyAllGears();
+            }
+
+            // 2. UI 갱신 (만약 열려 있다면 닫거나 갱신)
+            if (UI.Inventory.DualUIPanel.Instance != null)
+            {
+                UI.Inventory.DualUIPanel.Instance.RefreshGearSlots();
+                UI.Inventory.DualUIPanel.Instance.Hide();
+            }
+
+            // 3. 로비 상태로 전환 및 텔레포트
+            ChangeState(Define.GameState.Lobby);
+
+            var player = FindObjectOfType<Gameplay.PlayerController>();
+            if (player != null)
+            {
+                // 로비 구역 좌표 (MVP 기준 임시 좌표)
+                player.transform.position = new Vector3(0, 0, 0);
+                
+                // 체력 회복
+                var stats = player.GetComponent<Gameplay.Combat.PlayerStats>();
+                if (stats != null)
+                {
+                    stats.Heal(9999); // 풀피 회복
+                }
+            }
         }
     }
 }

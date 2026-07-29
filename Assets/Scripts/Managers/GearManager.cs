@@ -99,5 +99,16 @@ namespace DimensionLooter.Managers
 
             OnGearStatsChanged?.Invoke(totalAtk, totalDef);
         }
+
+        public void DestroyAllGears()
+        {
+            _equippedGears.Clear();
+            if (InventoryManager.Instance != null)
+            {
+                InventoryManager.Instance.EquipBackpack(null);
+            }
+            CalculateTotalStats();
+            Debug.Log("[GearManager] 사망 페널티: 모든 장비가 증발했습니다.");
+        }
     }
 }

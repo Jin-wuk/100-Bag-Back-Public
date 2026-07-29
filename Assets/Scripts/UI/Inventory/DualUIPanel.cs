@@ -133,6 +133,20 @@ namespace DimensionLooter.UI.Inventory
             }
         }
 
+        public void RefreshGearSlots()
+        {
+            if (_gearPanel == null) return;
+            GearSlotUI[] slots = _gearPanel.GetComponentsInChildren<GearSlotUI>(true);
+            foreach (var slot in slots)
+            {
+                // 강제로 null 세팅 후 시각 갱신
+                if (GearManager.Instance != null && GearManager.Instance.GetEquippedItem(slot.slotType) == null)
+                {
+                    slot.ForceClear();
+                }
+            }
+        }
+
         private void CreateRaycastBlocker()
         {
             _raycastBlocker = new GameObject("RaycastBlocker");

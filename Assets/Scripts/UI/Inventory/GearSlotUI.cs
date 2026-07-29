@@ -115,6 +115,12 @@ namespace DimensionLooter.UI.Inventory
             UpdateVisual();
         }
 
+        public void ForceClear()
+        {
+            _equippedItem = null;
+            UpdateVisual();
+        }
+
         private void UpdateVisual()
         {
             if (_equippedItem != null)

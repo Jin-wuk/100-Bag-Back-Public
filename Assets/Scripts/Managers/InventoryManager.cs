@@ -125,5 +125,16 @@ namespace DimensionLooter.Managers
             Debug.LogWarning($"[InventoryManager] 가방이 꽉 찼습니다! {itemData.Name} 배치 실패.");
             return null;
         }
+
+        /// <summary>
+        /// 사망 시 메인 인벤토리의 모든 아이템을 완전히 삭제(증발)시킵니다.
+        /// (보안 파우치의 내용은 건드리지 않습니다.)
+        /// </summary>
+        public void ClearMainInventory()
+        {
+            MainGrid.Clear();
+            OnGridResized?.Invoke();
+            Debug.Log("[InventoryManager] 사망 페널티: 메인 인벤토리의 아이템이 모두 증발했습니다.");
+        }
     }
 }

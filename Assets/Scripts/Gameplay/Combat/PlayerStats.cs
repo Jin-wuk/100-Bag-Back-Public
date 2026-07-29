@@ -89,6 +89,11 @@ namespace DimensionLooter.Gameplay.Combat
             {
                 Debug.Log("[PlayerStats] 플레이어 사망!", this);
                 OnDied?.Invoke();
+                
+                if (DimensionLooter.Managers.GameManager.Instance != null)
+                {
+                    DimensionLooter.Managers.GameManager.Instance.OnPlayerDeath();
+                }
             }
         }
 
