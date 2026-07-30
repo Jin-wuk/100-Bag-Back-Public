@@ -183,6 +183,13 @@ namespace DimensionLooter.Managers
                 }
             }
 
+            // 4. 플레이어를 타일맵 중앙(0, 0, 0)으로 이동
+            var player = FindObjectOfType<Gameplay.PlayerController>();
+            if (player != null)
+            {
+                player.transform.position = Vector3.zero;
+            }
+
             Debug.Log($"[DungeonManager] 던전 생성 완료! (포탈 1개, 몬스터 {_monsterCount}마리 스폰)");
         }
 
