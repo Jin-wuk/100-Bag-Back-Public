@@ -26,6 +26,7 @@ namespace DimensionLooter.Managers
         private MonsterHealth _currentMonster;
         private Coroutine _combatCoroutine;
         private Vector3 _lastCombatPosition = new Vector3(3, 3, 0);
+        private Vector3 _lastMonsterPosition = Vector3.zero;
         
         // 전투 내부 상태
         private float _playerGauge = 0f;
@@ -47,8 +48,18 @@ namespace DimensionLooter.Managers
             if (IsInCombat || !_playerStats.IsAlive) return;
 
             _currentMonster = monster;
-            _lastCombatPosition = monster.transform.position;
+            _lastCombatPosition = _playerStats.transform.position; // 플레이어의 원래 위치 저장
+            _lastMonsterPosition = monster.transform.position; // 몬스터의 원래 위치 저장
             
+            // 전투 필드(0,0,0)로 이동
+            _playerStats.transform.position = new Vector3(-2, 0, 0);
+            monster.transform.position = new Vector3(2, 0, 0);
+            
+            // 카메라 강제 이동 및 추적 중지
+            var camFollow = Camera.main.GetComponent<Gameplay.CameraFollow>();
+            if (camFollow != null) camFollow.enabled = false;
+            Camera.main.transform.position = new Vector3(0, 0, -10);
+
             // 게이지 초기화
             _playerGauge = 0f;
             _monsterGauge = 0f;
@@ -146,11 +157,21 @@ namespace DimensionLooter.Managers
 
                 if (DimensionLooter.Managers.LootManager.Instance != null)
                 {
-                    Vector3 dropPos = _lastCombatPosition;
+                    Vector3 dropPos = _lastMonsterPosition; // 파우치 생성 위치를 몬스터가 있던 곳으로 변경
                     DimensionLooter.Managers.LootManager.Instance.SpawnPouch(dummyDrops, dropPos);
                 }
             }
             
+            // 전투 종료 후 원래 던전 좌표로 플레이어 복귀
+            if (_playerStats != null)
+            {
+                _playerStats.transform.position = _lastCombatPosition;
+            }
+
+            // 카메라 추적 복구
+            var camFollow = Camera.main.GetComponent<Gameplay.CameraFollow>();
+            if (camFollow != null) camFollow.enabled = true;
+
             _combatCoroutine = null;
         }
 
@@ -219,6 +240,16 @@ namespace DimensionLooter.Managers
                 StopCoroutine(_combatCoroutine);
                 _combatCoroutine = null;
             }
+
+            // 전투 종료 후 원래 던전 좌표로 플레이어 복귀
+            if (_playerStats != null)
+            {
+                _playerStats.transform.position = _lastCombatPosition;
+            }
+
+            // 카메라 추적 복구
+            var camFollow = Camera.main.GetComponent<Gameplay.CameraFollow>();
+            if (camFollow != null) camFollow.enabled = true;
 
             _currentMonster = null;
             if (_combatUI != null) _combatUI.HideCombat();
