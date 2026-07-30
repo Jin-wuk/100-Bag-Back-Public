@@ -4,16 +4,16 @@ using DimensionLooter.Managers;
 
 namespace DimensionLooter.Gameplay
 {
-    public class ReturnPortal : MonoBehaviour
+    public class ReturnPortal : MonoBehaviour, Core.IInteractable
     {
         [Tooltip("로비 귀환 시 이동할 스폰 좌표")]
         [SerializeField] private Vector3 _lobbySpawnPosition = new Vector3(0, 0, 0);
 
-        private void OnTriggerEnter2D(Collider2D collision)
+        public void Interact(GameObject interactor)
         {
-            if (collision.CompareTag("Player"))
+            if (interactor.CompareTag("Player"))
             {
-                ReturnToLobby(collision.gameObject);
+                ReturnToLobby(interactor);
             }
         }
 

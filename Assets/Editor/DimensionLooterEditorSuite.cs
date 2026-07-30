@@ -1,20 +1,80 @@
-// File: Assets/Editor/MVPSceneSetup.cs
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEngine.Tilemaps;
+using System.IO;
+using System.Collections.Generic;
 using DimensionLooter.Managers;
 using DimensionLooter.Gameplay.Combat;
 using DimensionLooter.Gameplay;
 using DimensionLooter.UI;
 using DimensionLooter.UI.Inventory;
+using DimensionLooter.UI.Lobby;
 
-public class MVPSceneSetup : EditorWindow
+public class DimensionLooterEditorSuite : EditorWindow
 {
-    [MenuItem("Tools/Setup MVP Scene 2.5")]
+    // =========================================================================
+    // UILayoutExporter
+    // =========================================================================
+    [System.Serializable]
+    public class RectData
+    {
+        public string name;
+        public Vector2 anchoredPosition;
+        public Vector2 sizeDelta;
+        public Vector2 anchorMin;
+        public Vector2 anchorMax;
+        public Vector2 pivot;
+    }
+
+    [System.Serializable]
+    public class LayoutDump
+    {
+        public List<RectData> elements = new List<RectData>();
+    }
+
+    [MenuItem("Tools/DimensionLooter/1. 현재 UI 레이아웃 추출하기 (Export Layout)")]
+    public static void ExportLayout()
+    {
+        GameObject canvas = GameObject.Find("Canvas");
+        if (canvas == null)
+        {
+            Debug.LogError("Canvas를 찾을 수 없습니다!");
+            return;
+        }
+
+        LayoutDump dump = new LayoutDump();
+
+        // 모든 자식 RectTransform 탐색
+        RectTransform[] allRects = canvas.GetComponentsInChildren<RectTransform>(true);
+        foreach (RectTransform rt in allRects)
+        {
+            RectData data = new RectData();
+            data.name = rt.name;
+            data.anchoredPosition = rt.anchoredPosition;
+            data.sizeDelta = rt.sizeDelta;
+            data.anchorMin = rt.anchorMin;
+            data.anchorMax = rt.anchorMax;
+            data.pivot = rt.pivot;
+            dump.elements.Add(data);
+        }
+
+        string json = JsonUtility.ToJson(dump, true);
+        string path = Path.Combine(Application.dataPath, "Editor", "LayoutDump.json");
+        File.WriteAllText(path, json);
+        
+        AssetDatabase.Refresh();
+        Debug.Log($"[UI 레이아웃 추출 성공] {path} 에 저장되었습니다! 이제 AI에게 알려주세요.");
+    }
+
+    // =========================================================================
+    // MVPSceneSetup (Unified)
+    // =========================================================================
+    [MenuItem("Tools/DimensionLooter/2. Setup Full Scene (MVP 2.5)")]
     public static void SetupScene()
     {
+        Debug.Log("[Setup] 씬 초기화 및 통합 셋업을 시작합니다...");
         // 내장 기본 스프라이트 가져오기 (UISprite)
         Sprite defaultSprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
 
@@ -42,12 +102,16 @@ public class MVPSceneSetup : EditorWindow
         Sprite healSprite = Resources.Load<Sprite>("Sprites/UI/icon_heal");
         Sprite fleeSprite = Resources.Load<Sprite>("Sprites/UI/icon_flee");
 
-        // 0. 카메라 2D 직교 모드 설정
+        // 0. 카메라 2D 직교 모드 설정 및 추적 스크립트 부착
         if (Camera.main != null)
         {
             Camera.main.orthographic = true;
             Camera.main.orthographicSize = 5f;
             Camera.main.transform.position = new Vector3(0, 0, -10);
+            if (Camera.main.gameObject.GetComponent<DimensionLooter.Gameplay.CameraFollow>() == null)
+            {
+                Camera.main.gameObject.AddComponent<DimensionLooter.Gameplay.CameraFollow>();
+            }
         }
 
         // 1. Prefab 폴더 생성
@@ -119,6 +183,7 @@ public class MVPSceneSetup : EditorWindow
 
         // 4. 플레이어 오브젝트
         GameObject playerObj = new GameObject("Player");
+        playerObj.tag = "Player"; // 플레이어 태그 할당
         SpriteRenderer pSr = playerObj.AddComponent<SpriteRenderer>();
         pSr.sprite = defaultSprite;
         pSr.color = Color.blue; 
@@ -175,8 +240,7 @@ public class MVPSceneSetup : EditorWindow
         GameObject combatPanel = new GameObject("CombatPanel");
         combatPanel.transform.SetParent(canvasObj.transform, false);
         Image combatBg = combatPanel.AddComponent<Image>();
-        combatBg.sprite = bgSprite != null ? bgSprite : defaultSprite;
-        combatBg.color = bgSprite != null ? Color.white : new Color(0.1f, 0.1f, 0.1f, 0.9f);
+        combatBg.color = new Color(0, 0, 0, 0.4f); // 배경을 반투명하게 하여 0,0,0 필드가 보이도록 함
         RectTransform cpRect = combatPanel.GetComponent<RectTransform>();
         cpRect.anchorMin = Vector2.zero; cpRect.anchorMax = Vector2.one;
         cpRect.offsetMin = cpRect.offsetMax = Vector2.zero;
@@ -548,8 +612,6 @@ public class MVPSceneSetup : EditorWindow
         GameObject savedItemPrefab = PrefabUtility.SaveAsPrefabAsset(itemPrefab, "Assets/Resources/Prefabs/DraggableItem_Dummy.prefab");
         DestroyImmediate(itemPrefab);
 
-        // 장비창 더미 UI 부분 삭제 (탭 시스템으로 대체됨)
-
         DualUIPanel dualUI = canvasObj.AddComponent<DualUIPanel>(); // Rule 12: 항상 활성화된 Canvas에 붙여서 Awake가 보장되도록 함
         SerializedObject dualSo = new SerializedObject(dualUI);
         dualSo.FindProperty("_panelRoot").objectReferenceValue = dualUIPanelObj;
@@ -612,6 +674,7 @@ public class MVPSceneSetup : EditorWindow
 
         // 9. Managers 셋업
         GameObject managersObj = GameObject.Find("@Managers") ?? new GameObject("@Managers");
+        GameManager gameMgr = managersObj.GetComponent<GameManager>() ?? managersObj.AddComponent<GameManager>();
         CombatManager combatMgr = managersObj.GetComponent<CombatManager>() ?? managersObj.AddComponent<CombatManager>();
         InventoryManager invMgr = managersObj.GetComponent<InventoryManager>() ?? managersObj.AddComponent<InventoryManager>();
         GearManager gearMgr = managersObj.GetComponent<GearManager>() ?? managersObj.AddComponent<GearManager>();
@@ -625,10 +688,73 @@ public class MVPSceneSetup : EditorWindow
         mgrSo.FindProperty("_combatUI").objectReferenceValue = combatUI;
         mgrSo.ApplyModifiedProperties();
 
-        // 10. 몬스터 배치 (x=3, y=3 정수 좌표에 배치)
-        GameObject testMonster = (GameObject)PrefabUtility.InstantiatePrefab(monsterPrefab);
-        testMonster.transform.position = new Vector3(3, 3, 0);
-        testMonster.GetComponent<MonsterHealth>().Init(80);
+        // 10. 레거시(더미 몬스터 단일 배치) 삭제됨
+
+        // 11. Lobby UI 셋업
+        GameObject lobbyGO = new GameObject("LobbyUI", typeof(RectTransform));
+        lobbyGO.transform.SetParent(canvasObj.transform, false);
+        LobbyUI lobbyUI = lobbyGO.AddComponent<LobbyUI>();
+        RectTransform lobbyRT = lobbyGO.GetComponent<RectTransform>();
+        lobbyRT.anchorMin = Vector2.zero; lobbyRT.anchorMax = Vector2.one;
+        lobbyRT.offsetMin = lobbyRT.offsetMax = Vector2.zero;
+        
+        // 11-1. 내가방 보기 버튼
+        GameObject invBtnGO = new GameObject("Btn_Inventory", typeof(RectTransform));
+        invBtnGO.transform.SetParent(lobbyGO.transform, false);
+        Image invImg = invBtnGO.AddComponent<Image>();
+        invImg.color = new Color(0.2f, 0.4f, 0.8f);
+        Button invBtn = invBtnGO.AddComponent<Button>();
+        RectTransform invRT = invBtnGO.GetComponent<RectTransform>();
+        invRT.anchorMin = new Vector2(0.5f, 0.5f); invRT.anchorMax = new Vector2(0.5f, 0.5f);
+        invRT.anchoredPosition = new Vector2(-150, 0);
+        invRT.sizeDelta = new Vector2(200, 80);
+        
+        GameObject invTxtGO = new GameObject("Text");
+        invTxtGO.transform.SetParent(invBtnGO.transform, false);
+        Text invTxt = invTxtGO.AddComponent<Text>();
+        invTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        invTxt.fontSize = 24;
+        invTxt.color = Color.white;
+        invTxt.text = "내가방 보기";
+        invTxt.alignment = TextAnchor.MiddleCenter;
+        RectTransform invTxtRT = invTxt.GetComponent<RectTransform>();
+        invTxtRT.anchorMin = Vector2.zero; invTxtRT.anchorMax = Vector2.one;
+        invTxtRT.offsetMin = invTxtRT.offsetMax = Vector2.zero;
+        
+        // 11-2. 던전 입장 버튼
+        GameObject dunBtnGO = new GameObject("Btn_EnterDungeon", typeof(RectTransform));
+        dunBtnGO.transform.SetParent(lobbyGO.transform, false);
+        Image dunImg = dunBtnGO.AddComponent<Image>();
+        dunImg.color = new Color(0.8f, 0.2f, 0.2f);
+        Button dunBtn = dunBtnGO.AddComponent<Button>();
+        RectTransform dunRT = dunBtnGO.GetComponent<RectTransform>();
+        dunRT.anchorMin = new Vector2(0.5f, 0.5f); dunRT.anchorMax = new Vector2(0.5f, 0.5f);
+        dunRT.anchoredPosition = new Vector2(150, 0);
+        dunRT.sizeDelta = new Vector2(200, 80);
+        
+        GameObject dunTxtGO = new GameObject("Text");
+        dunTxtGO.transform.SetParent(dunBtnGO.transform, false);
+        Text dunTxt = dunTxtGO.AddComponent<Text>();
+        dunTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        dunTxt.fontSize = 24;
+        dunTxt.color = Color.white;
+        dunTxt.text = "던전 입장";
+        dunTxt.alignment = TextAnchor.MiddleCenter;
+        RectTransform dunTxtRT = dunTxt.GetComponent<RectTransform>();
+        dunTxtRT.anchorMin = Vector2.zero; dunTxtRT.anchorMax = Vector2.one;
+        dunTxtRT.offsetMin = dunTxtRT.offsetMax = Vector2.zero;
+
+        SerializedObject lobbySO = new SerializedObject(lobbyUI);
+        lobbySO.FindProperty("_btnInventory").objectReferenceValue = invBtn;
+        lobbySO.FindProperty("_btnEnterDungeon").objectReferenceValue = dunBtn;
+        lobbySO.ApplyModifiedProperties();
+        
+        // LobbyManager 바인딩
+        DungeonManager dunMgr = managersObj.GetComponent<DungeonManager>() ?? managersObj.AddComponent<DungeonManager>();
+        LobbyManager lobMgr = managersObj.GetComponent<LobbyManager>() ?? managersObj.AddComponent<LobbyManager>();
+        SerializedObject lmSO = new SerializedObject(lobMgr);
+        lmSO.FindProperty("_lobbyUI").objectReferenceValue = lobbyUI;
+        lmSO.ApplyModifiedProperties();
 
         // 변경사항이 Play 모드 진입 시 날아가지 않도록 씬 더티 마킹
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());

@@ -579,7 +579,7 @@
             "name": "LeftPanel",
             "anchoredPosition": {
                 "x": 50.0,
-                "y": -40.0
+                "y": 0.0
             },
             "sizeDelta": {
                 "x": 800.0,
@@ -599,56 +599,10 @@
             }
         },
         {
-            "name": "GEARTab",
+            "name": "INVENTORYTab",
             "anchoredPosition": {
                 "x": 0.0,
                 "y": 0.0
-            },
-            "sizeDelta": {
-                "x": 150.0,
-                "y": 100.0
-            },
-            "anchorMin": {
-                "x": 0.0,
-                "y": 1.0
-            },
-            "anchorMax": {
-                "x": 0.0,
-                "y": 1.0
-            },
-            "pivot": {
-                "x": 0.0,
-                "y": 1.0
-            }
-        },
-        {
-            "name": "Text",
-            "anchoredPosition": {
-                "x": 0.0,
-                "y": 0.0
-            },
-            "sizeDelta": {
-                "x": 150.0,
-                "y": 100.0
-            },
-            "anchorMin": {
-                "x": 0.5,
-                "y": 0.5
-            },
-            "anchorMax": {
-                "x": 0.5,
-                "y": 0.5
-            },
-            "pivot": {
-                "x": 0.5,
-                "y": 0.5
-            }
-        },
-        {
-            "name": "BAGTab",
-            "anchoredPosition": {
-                "x": 0.0,
-                "y": -120.0
             },
             "sizeDelta": {
                 "x": 150.0,
@@ -694,7 +648,7 @@
             "name": "SKILLSTab",
             "anchoredPosition": {
                 "x": 0.0,
-                "y": -240.0
+                "y": -120.0
             },
             "sizeDelta": {
                 "x": 150.0,
@@ -743,7 +697,7 @@
                 "y": 0.0
             },
             "sizeDelta": {
-                "x": 600.0,
+                "x": 300.0,
                 "y": 700.0
             },
             "anchorMin": {
@@ -760,7 +714,329 @@
             }
         },
         {
-            "name": "PlaceholderText",
+            "name": "HelmetSlot",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": -50.0
+            },
+            "sizeDelta": {
+                "x": 100.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "Icon",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "ArmorSlot",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": -170.0
+            },
+            "sizeDelta": {
+                "x": 100.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "Icon",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "WeaponSlot",
+            "anchoredPosition": {
+                "x": -110.0,
+                "y": -170.0
+            },
+            "sizeDelta": {
+                "x": 100.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "Icon",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "AccessorySlot",
+            "anchoredPosition": {
+                "x": 110.0,
+                "y": -170.0
+            },
+            "sizeDelta": {
+                "x": 100.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "Icon",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "BagSlot",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": -290.0
+            },
+            "sizeDelta": {
+                "x": 100.0,
+                "y": 100.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 1.0
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 1.0
+            }
+        },
+        {
+            "name": "Icon",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Text",
             "anchoredPosition": {
                 "x": 0.0,
                 "y": 0.0
@@ -789,7 +1065,7 @@
                 "y": 0.0
             },
             "sizeDelta": {
-                "x": 600.0,
+                "x": 820.0,
                 "y": 700.0
             },
             "anchorMin": {
@@ -831,7 +1107,7 @@
         {
             "name": "MainInventoryUI",
             "anchoredPosition": {
-                "x": 170.0,
+                "x": 490.0,
                 "y": 0.0
             },
             "sizeDelta": {
@@ -1016,7 +1292,7 @@
             "name": "CloseButton",
             "anchoredPosition": {
                 "x": 0.0,
-                "y": -965.0
+                "y": -40.0
             },
             "sizeDelta": {
                 "x": 200.0,
@@ -1259,6 +1535,121 @@
             "anchorMax": {
                 "x": 0.5,
                 "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "LobbyUI",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Btn_Inventory",
+            "anchoredPosition": {
+                "x": -150.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 200.0,
+                "y": 80.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Btn_EnterDungeon",
+            "anchoredPosition": {
+                "x": 150.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 200.0,
+                "y": 80.0
+            },
+            "anchorMin": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "anchorMax": {
+                "x": 0.5,
+                "y": 0.5
+            },
+            "pivot": {
+                "x": 0.5,
+                "y": 0.5
+            }
+        },
+        {
+            "name": "Text",
+            "anchoredPosition": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "sizeDelta": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMin": {
+                "x": 0.0,
+                "y": 0.0
+            },
+            "anchorMax": {
+                "x": 1.0,
+                "y": 1.0
             },
             "pivot": {
                 "x": 0.5,

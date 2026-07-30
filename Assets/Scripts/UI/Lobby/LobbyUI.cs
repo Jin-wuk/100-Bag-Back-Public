@@ -63,6 +63,10 @@ namespace DimensionLooter.UI.Lobby
             {
                 GameManager.Instance.ChangeState(Core.Define.GameState.Exploration);
             }
+            else
+            {
+                Debug.LogError("[LobbyUI] 치명적 에러: GameManager.Instance가 NULL이라서 상태 변경을 스킵합니다!");
+            }
             
             // 던전 입장 시 인벤토리 닫기
             if (DimensionLooter.UI.Inventory.DualUIPanel.Instance != null)

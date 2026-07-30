@@ -3,7 +3,7 @@ using UnityEditor;
 using System.IO;
 using System.Collections.Generic;
 
-public class UILayoutExporter : EditorWindow
+public class UILayoutExporter
 {
     [System.Serializable]
     public class RectData

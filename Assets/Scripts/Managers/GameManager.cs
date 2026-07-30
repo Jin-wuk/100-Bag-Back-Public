@@ -22,14 +22,17 @@ namespace DimensionLooter.Managers
 
         private void Awake()
         {
+            Debug.Log("[GameManager] Awake 실행됨!");
             if (Instance == null)
             {
                 Instance = this;
                 DontDestroyOnLoad(gameObject);
+                Debug.Log("[GameManager] Instance 할당 완료!");
             }
             else
             {
                 Destroy(gameObject);
+                Debug.Log("[GameManager] 중복 Instance 감지되어 파괴됨!");
             }
         }
 

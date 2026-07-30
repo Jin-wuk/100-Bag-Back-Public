@@ -58,6 +58,19 @@ namespace DimensionLooter.Managers
             }
         }
 
+        public void ClearAllPouches()
+        {
+            foreach (var kvp in _activePouches)
+            {
+                if (kvp.Value != null)
+                {
+                    Destroy(kvp.Value.gameObject);
+                }
+            }
+            _activePouches.Clear();
+            Debug.Log("[LootManager] 던전 내 모든 파우치(드랍템)가 초기화되었습니다.");
+        }
+
         public void SpawnPouch(List<ItemData> items, Vector3 position)
         {
             if (items == null || items.Count == 0) return;
