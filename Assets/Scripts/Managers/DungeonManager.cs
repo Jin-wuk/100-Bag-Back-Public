@@ -89,10 +89,55 @@ namespace DimensionLooter.Managers
             Debug.Log("[DungeonManager] 던전 생성 시작...");
             ClearDungeon(); // 안전을 위해 기존 던전 정리
 
-            if (_floorTilemap == null || _wallTilemap == null || _floorTile == null || _wallTile == null)
+            if (_floorTilemap == null || _wallTilemap == null)
             {
-                Debug.LogError("[DungeonManager] 타일맵 또는 타일 에셋이 할당되지 않았습니다! (유니티 에디터 인스펙터를 확인하세요)");
-                return;
+                Debug.LogWarning("[DungeonManager] 타일맵이 할당되지 않아 런타임에 동적으로 생성합니다.");
+                GameObject gridObj = GameObject.Find("Grid");
+                if (gridObj == null)
+                {
+                    gridObj = new GameObject("Grid");
+                    gridObj.AddComponent<Grid>();
+                }
+                
+                if (_floorTilemap == null)
+                {
+                    GameObject tmObj = new GameObject("FloorTilemap");
+                    tmObj.transform.SetParent(gridObj.transform);
+                    _floorTilemap = tmObj.AddComponent<UnityEngine.Tilemaps.Tilemap>();
+                    tmObj.AddComponent<UnityEngine.Tilemaps.TilemapRenderer>();
+                }
+                
+                if (_wallTilemap == null)
+                {
+                    GameObject tmObj = new GameObject("WallTilemap");
+                    tmObj.transform.SetParent(gridObj.transform);
+                    _wallTilemap = tmObj.AddComponent<UnityEngine.Tilemaps.Tilemap>();
+                    tmObj.AddComponent<UnityEngine.Tilemaps.TilemapRenderer>();
+                }
+            }
+
+            if (_floorTile == null)
+            {
+                var tile = ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>();
+                Texture2D tex = new Texture2D(32, 32);
+                Color[] colors = new Color[32 * 32];
+                for(int i = 0; i < colors.Length; i++) colors[i] = Color.gray; // 바닥은 회색
+                tex.SetPixels(colors);
+                tex.Apply();
+                tile.sprite = Sprite.Create(tex, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32);
+                _floorTile = tile;
+            }
+
+            if (_wallTile == null)
+            {
+                var tile = ScriptableObject.CreateInstance<UnityEngine.Tilemaps.Tile>();
+                Texture2D tex = new Texture2D(32, 32);
+                Color[] colors = new Color[32 * 32];
+                for(int i = 0; i < colors.Length; i++) colors[i] = Color.black; // 벽은 검은색
+                tex.SetPixels(colors);
+                tex.Apply();
+                tile.sprite = Sprite.Create(tex, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f), 32);
+                _wallTile = tile;
             }
 
             // 1. 타일맵 기반 던전 생성 (방 크기에 맞춰 바닥과 벽 배치)
