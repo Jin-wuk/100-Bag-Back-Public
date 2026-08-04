@@ -6,13 +6,19 @@ namespace DimensionLooter.Data
     /// </summary>
     public class MonsterData
     {
-        public int Id { get; set; }
+        public string Id { get; set; }
         public string Name { get; set; }
+        public string Type { get; set; }
         public int MaxHealth { get; set; }
         public int AttackPower { get; set; }
-        public float AttackSpeed { get; set; }
-        public int DropGold { get; set; }
+        public int DefensePower { get; set; }
+        public int HeavyAttackPower { get; set; }
         public int DropExp { get; set; }
+        public int DropGold { get; set; }
+        public string Description { get; set; }
+
+        public float AttackSpeed { get; set; } = 40f;
+        public int Range { get; set; } = 1;
         public float CastDuration { get; set; } = 3f;
         public float CastProbability { get; set; } = 0.3f;
         public int CastDamageMultiplier { get; set; } = 3;

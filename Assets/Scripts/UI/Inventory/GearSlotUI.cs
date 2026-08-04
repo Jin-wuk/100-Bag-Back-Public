@@ -47,7 +47,7 @@ namespace DimensionLooter.UI.Inventory
             // 가방에 자동 추가 시도
             if (InventoryManager.Instance != null)
             {
-                var addedItem = InventoryManager.Instance.TryAddAuto(oldItem.Data);
+                var addedItem = InventoryManager.Instance.TryAddAuto(oldItem.Instance);
                 if (addedItem != null)
                 {
                     // UI에 생성
@@ -62,7 +62,7 @@ namespace DimensionLooter.UI.Inventory
                     bool addedToReward = false;
                     if (DualUIPanel.Instance != null && DualUIPanel.Instance.IsPanelOpen)
                     {
-                        var addedRewardItem = DualUIPanel.Instance.TryAddRewardAuto(oldItem.Data);
+                        var addedRewardItem = DualUIPanel.Instance.TryAddRewardAuto(oldItem.Instance);
                         if (addedRewardItem != null)
                         {
                             addedToReward = true;
@@ -77,7 +77,7 @@ namespace DimensionLooter.UI.Inventory
 
                         if (DimensionLooter.Managers.LootManager.Instance != null)
                         {
-                            DimensionLooter.Managers.LootManager.Instance.SpawnPouch(new System.Collections.Generic.List<DimensionLooter.Data.ItemData> { oldItem.Data }, dropPos);
+                            DimensionLooter.Managers.LootManager.Instance.SpawnPouch(new System.Collections.Generic.List<DimensionLooter.Data.ItemInstance> { oldItem.Instance }, dropPos);
                         }
                     }
                 }
@@ -87,6 +87,11 @@ namespace DimensionLooter.UI.Inventory
         public bool TryEquip(InventoryItem item, DraggableItemUI draggedUI)
         {
             if (item.Data.Type != slotType) return false;
+            if (item.Instance.IsUnidentified)
+            {
+                Debug.LogWarning("[GearSlotUI] 미확인 장비는 장착할 수 없습니다. 감정이 필요합니다.");
+                return false;
+            }
 
             if (_equippedItem != null)
             {
@@ -130,7 +135,14 @@ namespace DimensionLooter.UI.Inventory
                     _iconImage.gameObject.SetActive(true);
                     _iconImage.color = new Color(Random.Range(0.3f, 0.9f), Random.Range(0.3f, 0.9f), Random.Range(0.3f, 0.9f));
                 }
-                if (_placeholderText != null) _placeholderText.text = _equippedItem.Data.Name;
+                
+                string skillText = "";
+                if (!string.IsNullOrEmpty(_equippedItem.Instance.AssignedSkillId) && DimensionLooter.Managers.DataManager.Instance.SkillDict.TryGetValue(_equippedItem.Instance.AssignedSkillId, out var skill))
+                {
+                    skillText = $"\n<size=12><color=#FFD700>[{skill.Name}]</color></size>";
+                }
+                
+                if (_placeholderText != null) _placeholderText.text = _equippedItem.Data.Name + skillText;
             }
             else
             {

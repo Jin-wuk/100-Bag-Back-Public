@@ -22,7 +22,9 @@ namespace DimensionLooter.Gameplay.Combat
         [Tooltip("기본 방어력")]
         [SerializeField] private int _baseDefensePower = 0;
         [Tooltip("행동 게이지 차오르는 속도")]
-        [SerializeField] private float _speed = 50f; 
+        [SerializeField] private float _speed = 50f;
+        [Tooltip("기본 공격 사거리")]
+        [SerializeField] private int _baseRange = 1;
 
         private int _currentHealth;
         private int _currentMana;
@@ -31,14 +33,22 @@ namespace DimensionLooter.Gameplay.Combat
         private int _gearAttackPower = 0;
         private int _gearDefensePower = 0;
 
+        // 제단(Shrine) 버프 관련
+        private int _shrineBuffAttack = 0;
+        private int _shrineBuffDefense = 0;
+        private int _buffEncountersRemaining = 0;
+        
+        private Coroutine _poisonCoroutine;
+
         public bool IsAlive => _currentHealth > 0;
         public int CurrentHealth => _currentHealth;
         public int MaxHealth => _maxHealth;
         public int CurrentMana => _currentMana;
         public int MaxMana => _maxMana;
-        public int AttackPower => _baseAttackPower + _gearAttackPower;
-        public int DefensePower => _baseDefensePower + _gearDefensePower;
+        public int AttackPower => _baseAttackPower + _gearAttackPower + _shrineBuffAttack;
+        public int DefensePower => _baseDefensePower + _gearDefensePower + _shrineBuffDefense;
         public float Speed => _speed;
+        public int Range => _baseRange;
 
         // [Observer] 스탯 변경 시 UI 등에서 갱신하도록 이벤트 발송
         public event Action<int, int> OnHealthChanged;
@@ -121,6 +131,51 @@ namespace DimensionLooter.Gameplay.Combat
         {
             _currentMana = Mathf.Clamp(_currentMana + amount, 0, _maxMana);
             OnManaChanged?.Invoke(_currentMana, _maxMana);
+        }
+
+        public void ApplyShrineBuff(int atkBonus, int defBonus, int encounters)
+        {
+            _shrineBuffAttack = atkBonus;
+            _shrineBuffDefense = defBonus;
+            _buffEncountersRemaining = encounters;
+            OnCombatStatsChanged?.Invoke(AttackPower, DefensePower);
+            Debug.Log($"[PlayerStats] 제단 버프 적용: ATK+{atkBonus}, DEF+{defBonus}, 지속 횟수:{encounters}");
+        }
+
+        public void DecreaseBuffEncounter()
+        {
+            if (_buffEncountersRemaining > 0)
+            {
+                _buffEncountersRemaining--;
+                Debug.Log($"[PlayerStats] 전투 종료. 남은 제단 버프 횟수: {_buffEncountersRemaining}");
+                if (_buffEncountersRemaining <= 0)
+                {
+                    _shrineBuffAttack = 0;
+                    _shrineBuffDefense = 0;
+                    Debug.Log("[PlayerStats] 제단 버프가 만료되었습니다.");
+                    OnCombatStatsChanged?.Invoke(AttackPower, DefensePower);
+                }
+            }
+        }
+
+        public void ApplyPoison(int damagePerTick, int durationSeconds)
+        {
+            if (_poisonCoroutine != null) StopCoroutine(_poisonCoroutine);
+            _poisonCoroutine = StartCoroutine(PoisonRoutine(damagePerTick, durationSeconds));
+        }
+
+        private System.Collections.IEnumerator PoisonRoutine(int damage, int duration)
+        {
+            Debug.Log($"[PlayerStats] 독에 중독되었습니다! (초당 {damage} 데미지, {duration}초 지속)");
+            for (int i = 0; i < duration; i++)
+            {
+                if (!IsAlive) break;
+                yield return new WaitForSeconds(1f);
+                TakeDamage(damage);
+                Debug.Log($"[PlayerStats] 독 데미지 {damage} 피해. 현재 체력: {CurrentHealth}");
+            }
+            Debug.Log("[PlayerStats] 독 효과가 끝났습니다.");
+            _poisonCoroutine = null;
         }
     }
 }

@@ -28,10 +28,11 @@ namespace DimensionLooter.UI.Inventory
         
         [Header("Prefabs")]
         [SerializeField] private GameObject _itemPrefab;
+        public GameObject ItemPrefab => _itemPrefab;
 
         private InventoryGrid _rewardGrid;
-        private PouchInteractable _activePouch;
-        public PouchInteractable ActivePouch => _activePouch;
+        private ILootSource _activeLootSource;
+        public ILootSource ActiveLootSource => _activeLootSource;
         private GameObject _raycastBlocker;
 
         public bool IsPanelOpen => _panelRoot != null && _panelRoot.activeSelf;
@@ -182,7 +183,7 @@ namespace DimensionLooter.UI.Inventory
             if (_secureInventoryUI != null) _secureInventoryUI.RefreshSize();
         }
 
-        public void Show(PouchInteractable pouch = null)
+        public void Show(ILootSource lootSource = null)
         {
             if (_panelRoot != null) _panelRoot.SetActive(true);
             
@@ -200,9 +201,9 @@ namespace DimensionLooter.UI.Inventory
                 _secureInventoryUI.Init(InventoryManager.Instance.SecureGrid);
             }
 
-            _activePouch = pouch;
+            _activeLootSource = lootSource;
 
-            if (_activePouch == null || _activePouch.StoredItems.Count == 0)
+            if (_activeLootSource == null)
             {
                 // 보상 목록이 없을 경우 (수동으로 가방을 열었을 때) 보상 UI를 숨김
                 if (_rewardInventoryUI != null) _rewardInventoryUI.gameObject.SetActive(false);
@@ -210,7 +211,7 @@ namespace DimensionLooter.UI.Inventory
             }
             else
             {
-                // 파우치나 몬스터 드랍으로 열렸을 때
+                // 파우치나 몬스터 드랍으로 열렸을 때 (빈 상자라도 패널 유지)
                 if (_rewardInventoryUI != null) _rewardInventoryUI.gameObject.SetActive(true);
 
                 if (_rewardGrid == null)
@@ -226,9 +227,9 @@ namespace DimensionLooter.UI.Inventory
                 _rewardInventoryUI.Init(_rewardGrid);
 
                 // 아이템 배치
-                foreach (var itemData in _activePouch.StoredItems)
+                foreach (var itemInst in _activeLootSource.StoredItems)
                 {
-                    var invItem = new InventoryItem(itemData);
+                    var invItem = new InventoryItem(itemInst);
                     bool placed = false;
                     for (int y = 0; y < _rewardGrid.Height; y++)
                     {
@@ -250,6 +251,26 @@ namespace DimensionLooter.UI.Inventory
             }
         }
 
+        public void ShowOnlyMainBag()
+        {
+            if (_panelRoot != null) _panelRoot.SetActive(true);
+            SwitchToInventory();
+
+            if (_mainInventoryUI.GridLogic == null)
+            {
+                _mainInventoryUI.Init(InventoryManager.Instance.MainGrid);
+            }
+
+            if (_secureInventoryUI != null && _secureInventoryUI.GridLogic == null)
+            {
+                _secureInventoryUI.Init(InventoryManager.Instance.SecureGrid);
+            }
+
+            if (_rewardInventoryUI != null) _rewardInventoryUI.gameObject.SetActive(false);
+            _rewardGrid = null;
+            _activeLootSource = null;
+        }
+
         public void SpawnMainInventoryItemUI(InventoryItem invItem)
         {
             if (_mainInventoryUI != null && _itemPrefab != null)
@@ -265,18 +286,18 @@ namespace DimensionLooter.UI.Inventory
         {
             if (_panelRoot != null) _panelRoot.SetActive(false);
 
-            if (_activePouch != null)
+            if (_activeLootSource != null)
             {
-                if (_activePouch.StoredItems.Count == 0)
+                if (_activeLootSource.StoredItems.Count == 0 && _activeLootSource.DestroyWhenEmpty)
                 {
-                    Debug.Log($"[DualUIPanel] 파우치({_activePouch.Id})가 비어있으므로 파괴합니다.");
-                    if (DimensionLooter.Managers.LootManager.Instance != null)
+                    Debug.Log($"[DualUIPanel] 보관함({_activeLootSource.Id})가 비어있으므로 파괴합니다.");
+                    if (DimensionLooter.Managers.LootManager.Instance != null && _activeLootSource is PouchInteractable)
                     {
-                        DimensionLooter.Managers.LootManager.Instance.DeregisterPouch(_activePouch.Id);
+                        DimensionLooter.Managers.LootManager.Instance.DeregisterPouch(_activeLootSource.Id);
                     }
-                    Destroy(_activePouch.gameObject);
+                    Destroy(_activeLootSource.gameObject);
                 }
-                _activePouch = null;
+                _activeLootSource = null;
             }
 
             // 보상 UI 하위 아이템 및 캐싱된 객체 정리
@@ -297,8 +318,14 @@ namespace DimensionLooter.UI.Inventory
             }
             else
             {
+                if (DimensionLooter.Managers.CombatManager.Instance != null && DimensionLooter.Managers.CombatManager.Instance.IsInCombat)
+                {
+                    Debug.Log("[DualUIPanel] 전투 중에는 가방을 열 수 없습니다.");
+                    return;
+                }
+
                 // 근접 루팅 (Proximity Looting)
-                PouchInteractable targetPouch = null;
+                ILootSource targetLoot = null;
                 var player = FindObjectOfType<DimensionLooter.Gameplay.PlayerController>();
                 if (player != null)
                 {
@@ -307,20 +334,20 @@ namespace DimensionLooter.UI.Inventory
                     float minDistance = float.MaxValue;
                     foreach (var col in colliders)
                     {
-                        var pouch = col.GetComponent<DimensionLooter.Gameplay.Inventory.PouchInteractable>();
-                        if (pouch != null && pouch.StoredItems.Count > 0)
+                        var loot = col.GetComponent<ILootSource>();
+                        if (loot != null && loot.StoredItems.Count > 0)
                         {
-                            float dist = Vector2.Distance(player.transform.position, pouch.transform.position);
+                            float dist = Vector2.Distance(player.transform.position, loot.gameObject.transform.position);
                             if (dist < minDistance)
                             {
                                 minDistance = dist;
-                                targetPouch = pouch;
+                                targetLoot = loot;
                             }
                         }
                     }
                 }
                 
-                Show(targetPouch);
+                Show(targetLoot);
             }
         }
         public void SwitchTab(TabType tab)
@@ -337,11 +364,11 @@ namespace DimensionLooter.UI.Inventory
         public void SwitchToInventory() => SwitchTab(TabType.INVENTORY);
         public void SwitchToSkills() => SwitchTab(TabType.SKILLS);
 
-        public DimensionLooter.Gameplay.Inventory.InventoryItem TryAddRewardAuto(DimensionLooter.Data.ItemData itemData)
+        public DimensionLooter.Gameplay.Inventory.InventoryItem TryAddRewardAuto(DimensionLooter.Data.ItemInstance itemInst)
         {
-            if (_rewardGrid == null || !IsPanelOpen || _activePouch == null) return null;
+            if (_rewardGrid == null || !IsPanelOpen || _activeLootSource == null) return null;
 
-            var invItem = new InventoryItem(itemData);
+            var invItem = new InventoryItem(itemInst);
             for (int y = 0; y < _rewardGrid.Height; y++)
             {
                 for (int x = 0; x < _rewardGrid.Width; x++)
@@ -357,14 +384,14 @@ namespace DimensionLooter.UI.Inventory
                         }
                         
                         // 백엔드 파우치 데이터 동기화
-                        _activePouch.AppendItems(new System.Collections.Generic.List<DimensionLooter.Data.ItemData> { itemData });
+                        _activeLootSource.AppendItems(new System.Collections.Generic.List<DimensionLooter.Data.ItemInstance> { itemInst });
                         
                         return invItem;
                     }
                 }
             }
 
-            if (itemData.Width != itemData.Height)
+            if (itemInst.Data.Width != itemInst.Data.Height)
             {
                 invItem.IsRotated = !invItem.IsRotated;
                 for (int y = 0; y < _rewardGrid.Height; y++)

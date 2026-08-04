@@ -35,6 +35,12 @@ namespace DimensionLooter.Managers
         {
             if (item == null || item.Data.Type != slotType) return false;
 
+            if (CombatManager.Instance != null && CombatManager.Instance.IsInCombat)
+            {
+                Debug.LogWarning("[GearManager] 전투 중에는 장비를 장착할 수 없습니다.");
+                return false;
+            }
+
             _equippedGears[slotType] = item;
 
             if (slotType == Define.ItemType.Backpack)
@@ -55,6 +61,12 @@ namespace DimensionLooter.Managers
 
         public InventoryItem Unequip(Define.ItemType slotType)
         {
+            if (CombatManager.Instance != null && CombatManager.Instance.IsInCombat)
+            {
+                Debug.LogWarning("[GearManager] 전투 중에는 장비를 해제할 수 없습니다.");
+                return null;
+            }
+
             if (_equippedGears.TryGetValue(slotType, out InventoryItem item))
             {
                 _equippedGears.Remove(slotType);

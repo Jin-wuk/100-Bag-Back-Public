@@ -31,7 +31,27 @@ namespace DimensionLooter.Core
             Backpack,
             Consumable,
             ReturnStone,    // 귀환석
+            Key,            // 열쇠
             Misc            // 재화/잡템
+        }
+
+        public enum SkillType
+        {
+            Attack,
+            CC,
+            Survival,
+            Damage,
+            Debuff
+        }
+
+        public enum SkillEffectType
+        {
+            None,
+            Stun,
+            Heal,
+            Damage_Reduction,
+            True_Damage,
+            Armor_Break
         }
 
         // [Why] CSV 리소스 경로를 상수로 관리하여, 추후 경로가 변경되어도 여기서만 수정하면 되도록 합니다.

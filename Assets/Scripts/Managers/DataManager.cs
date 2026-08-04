@@ -16,8 +16,9 @@ namespace DimensionLooter.Managers
         // MVP 단계용 싱글톤
         public static DataManager Instance { get; private set; }
 
-        public Dictionary<int, ItemData> ItemDict { get; private set; } = new Dictionary<int, ItemData>();
-        public Dictionary<int, MonsterData> MonsterDict { get; private set; } = new Dictionary<int, MonsterData>();
+        public Dictionary<string, ItemData> ItemDict { get; private set; } = new Dictionary<string, ItemData>();
+        public Dictionary<string, MonsterData> MonsterDict { get; private set; } = new Dictionary<string, MonsterData>();
+        public Dictionary<string, SkillData> SkillDict { get; private set; } = new Dictionary<string, SkillData>();
 
         private void Awake()
         {
@@ -37,12 +38,11 @@ namespace DimensionLooter.Managers
         {
             LoadItemData();
             LoadMonsterData();
+            LoadSkillData();
         }
 
         private void LoadItemData()
         {
-            // [Todo] 실제 CSV 파싱 로직 구현 (String.Split 기반 자체 파서)
-            // 현재는 뼈대만 작성하며, CSV 파일 양식 확정 후 구체적인 파싱 로직을 채워넣습니다.
             TextAsset csvFile = Resources.Load<TextAsset>(Define.CSV_PATH_ITEM_STATS);
             if (csvFile == null)
             {
@@ -50,9 +50,51 @@ namespace DimensionLooter.Managers
                 return;
             }
 
-            // 임시 더미 데이터 삽입 (파서 완성 전까지의 테스트용)
-            ItemDict.Add(1, new ItemData { Id = 1, Name = "초보자의 검", Type = Define.ItemType.Weapon, AttackPower = 5 });
-            Debug.Log($"[DataManager] 아이템 데이터 로드 완료! (더미 로직 포함)");
+            string[] lines = csvFile.text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 1; i < lines.Length; i++)
+            {
+                string[] cols = lines[i].Split(',');
+                if (cols.Length < 9) continue;
+
+                ItemData item = new ItemData();
+                item.Id = cols[0];
+                item.Name = cols[1];
+                
+                if (Enum.TryParse(cols[2], out Define.ItemType itemType))
+                    item.Type = itemType;
+                else
+                    item.Type = Define.ItemType.Misc;
+
+                int.TryParse(cols[3], out int width);
+                item.Width = width;
+                
+                int.TryParse(cols[4], out int height);
+                item.Height = height;
+
+                string statType = cols[5];
+                int.TryParse(cols[6], out int statValue);
+                if (statType == "ATK") item.AttackPower = statValue;
+                else if (statType == "DEF") item.DefensePower = statValue;
+                else if (statType == "Heal_HP") item.HealHpAmount = statValue;
+                else if (statType == "Heal_MP") item.HealMpAmount = statValue;
+
+                int.TryParse(cols[7], out int price);
+                item.Price = price;
+                
+                if (cols.Length > 8)
+                {
+                    item.PossibleSkills = cols[8];
+                }
+                
+                if (cols.Length > 9)
+                {
+                    item.Description = cols[9];
+                }
+
+                ItemDict[item.Id] = item;
+            }
+
+            Debug.Log($"[DataManager] 아이템 데이터 로드 완료! (총 {ItemDict.Count}개)");
         }
 
         private void LoadMonsterData()
@@ -64,8 +106,88 @@ namespace DimensionLooter.Managers
                 return;
             }
 
-            MonsterDict.Add(1, new MonsterData { Id = 1, Name = "슬라임", MaxHealth = 20, AttackPower = 2 });
-            Debug.Log($"[DataManager] 몬스터 데이터 로드 완료! (더미 로직 포함)");
+            string[] lines = csvFile.text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 1; i < lines.Length; i++)
+            {
+                string[] cols = lines[i].Split(',');
+                if (cols.Length < 10) continue;
+
+                MonsterData mob = new MonsterData();
+                mob.Id = cols[0];
+                mob.Name = cols[1];
+                mob.Type = cols[2];
+                
+                int.TryParse(cols[3], out int hp);
+                mob.MaxHealth = hp;
+                
+                int.TryParse(cols[4], out int atk);
+                mob.AttackPower = atk;
+                
+                int.TryParse(cols[5], out int def);
+                mob.DefensePower = def;
+                
+                int.TryParse(cols[6], out int heavyAtk);
+                mob.HeavyAttackPower = heavyAtk;
+                
+                int.TryParse(cols[7], out int exp);
+                mob.DropExp = exp;
+                
+                int.TryParse(cols[8], out int gold);
+                mob.DropGold = gold;
+                
+                mob.Description = cols[9];
+
+                MonsterDict[mob.Id] = mob;
+            }
+
+            Debug.Log($"[DataManager] 몬스터 데이터 로드 완료! (총 {MonsterDict.Count}개)");
+        }
+
+        private void LoadSkillData()
+        {
+            TextAsset csvFile = Resources.Load<TextAsset>(Define.CSV_PATH_SKILL_STATS);
+            if (csvFile == null)
+            {
+                Debug.LogError($"[DataManager] 스킬 CSV 파일을 찾을 수 없습니다: {Define.CSV_PATH_SKILL_STATS}", this);
+                return;
+            }
+
+            string[] lines = csvFile.text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 1; i < lines.Length; i++)
+            {
+                string[] cols = lines[i].Split(',');
+                if (cols.Length < 9) continue;
+
+                SkillData skill = new SkillData();
+                skill.Id = cols[0];
+                skill.Name = cols[1];
+                
+                if (Enum.TryParse(cols[2], out Define.SkillType skillType))
+                    skill.Type = skillType;
+                
+                int.TryParse(cols[3], out int mpCost);
+                skill.MpCost = mpCost;
+                
+                float.TryParse(cols[4], out float cooldown);
+                skill.Cooldown = cooldown;
+                
+                if (Enum.TryParse(cols[5], out Define.SkillEffectType effectType))
+                    skill.EffectType = effectType;
+                else
+                    skill.EffectType = Define.SkillEffectType.None;
+                
+                int.TryParse(cols[6], out int effectValue);
+                skill.EffectValue = effectValue;
+                
+                float.TryParse(cols[7], out float duration);
+                skill.Duration = duration;
+                
+                skill.Description = cols[8];
+
+                SkillDict[skill.Id] = skill;
+            }
+
+            Debug.Log($"[DataManager] 스킬 데이터 로드 완료! (총 {SkillDict.Count}개)");
         }
     }
 }

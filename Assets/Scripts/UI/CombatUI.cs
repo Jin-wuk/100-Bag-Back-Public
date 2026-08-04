@@ -25,11 +25,34 @@ namespace DimensionLooter.UI
         [SerializeField] private Text _monsterNameText;
         [SerializeField] private Text _monsterCastWarningText;
 
+        [Header("ATB & Distance (MVP UI)")]
+        [SerializeField] private Text _distanceText;
+        [SerializeField] private Slider _playerAtbBar;
+        [SerializeField] private Slider _monsterAtbBar;
+
+        [Header("Skill UI Sync")]
+        [SerializeField] private Button _weaponSkillBtn;
+        [SerializeField] private Text _weaponSkillText;
+        [SerializeField] private Button _armorSkillBtn;
+        [SerializeField] private Text _armorSkillText;
+
         private MonsterHealth _currentMonster;
 
         private void Awake()
         {
             HideCombat(); // 시작 시 숨김
+
+            // 인스펙터 onClick 연결 누락 방지용 강제 할당
+            if (_weaponSkillBtn != null)
+            {
+                _weaponSkillBtn.onClick.RemoveAllListeners();
+                _weaponSkillBtn.onClick.AddListener(OnWeaponSkillClicked);
+            }
+            if (_armorSkillBtn != null)
+            {
+                _armorSkillBtn.onClick.RemoveAllListeners();
+                _armorSkillBtn.onClick.AddListener(OnArmorSkillClicked);
+            }
         }
 
         private void OnEnable()
@@ -41,7 +64,19 @@ namespace DimensionLooter.UI
             }
         }
 
-        private void OnDisable()
+        private void Start()
+        {
+            if (DimensionLooter.Managers.CombatManager.Instance != null)
+            {
+                var cm = DimensionLooter.Managers.CombatManager.Instance;
+                cm.OnCombatBegun += ShowCombat;
+                cm.OnCombatEnded += HideCombat;
+                cm.OnCombatStateUpdated += UpdateCombatState;
+                cm.OnMonsterCastUpdated += UpdateMonsterCastBar;
+            }
+        }
+
+        private void OnDestroy()
         {
             if (_playerStats != null)
             {
@@ -49,6 +84,15 @@ namespace DimensionLooter.UI
                 _playerStats.OnManaChanged -= UpdatePlayerManaBar;
             }
             if (_currentMonster != null) _currentMonster.OnHealthChanged -= UpdateMonsterHealthBar;
+
+            if (DimensionLooter.Managers.CombatManager.Instance != null)
+            {
+                var cm = DimensionLooter.Managers.CombatManager.Instance;
+                cm.OnCombatBegun -= ShowCombat;
+                cm.OnCombatEnded -= HideCombat;
+                cm.OnCombatStateUpdated -= UpdateCombatState;
+                cm.OnMonsterCastUpdated -= UpdateMonsterCastBar;
+            }
         }
 
         public void ShowCombat(MonsterHealth monster)
@@ -69,6 +113,8 @@ namespace DimensionLooter.UI
 
             // 팝업 열기 (Raycast Target이 켜져있어야 뒷면의 맵 클릭 이동이 차단됨)
             if (_popupPanel != null) _popupPanel.SetActive(true);
+
+            RefreshSkillUI();
         }
 
         public void HideCombat()
@@ -110,6 +156,63 @@ namespace DimensionLooter.UI
             {
                 _monsterCastWarningText.gameObject.SetActive(fillAmount > 0f);
             }
+        }
+
+        public void UpdateCombatState(int distance, float playerGaugePercent, float monsterGaugePercent)
+        {
+            if (_distanceText != null)
+            {
+                _distanceText.text = $"Distance: {distance}";
+            }
+
+            if (_playerAtbBar != null)
+            {
+                _playerAtbBar.value = playerGaugePercent;
+            }
+
+            if (_monsterAtbBar != null)
+            {
+                _monsterAtbBar.value = monsterGaugePercent;
+            }
+        }
+
+        public void RefreshSkillUI()
+        {
+            UpdateSkillButton(DimensionLooter.Core.Define.ItemType.Weapon, _weaponSkillBtn, _weaponSkillText);
+            UpdateSkillButton(DimensionLooter.Core.Define.ItemType.Armor, _armorSkillBtn, _armorSkillText);
+        }
+
+        private void UpdateSkillButton(DimensionLooter.Core.Define.ItemType type, Button btn, Text txt)
+        {
+            if (btn == null || txt == null) return;
+            
+            var item = DimensionLooter.Managers.GearManager.Instance.GetEquippedItem(type);
+            if (item != null && !string.IsNullOrEmpty(item.Instance.AssignedSkillId) && DimensionLooter.Managers.DataManager.Instance.SkillDict.TryGetValue(item.Instance.AssignedSkillId, out DimensionLooter.Data.SkillData skill))
+            {
+                btn.interactable = true;
+                txt.text = $"{skill.Name}\n(MP {skill.MpCost})";
+            }
+            else
+            {
+                btn.interactable = false;
+                txt.text = "No Skill";
+            }
+        }
+
+        // 유니티 에디터 버튼 이벤트 할당용 헬퍼 메서드
+        public void OnWeaponSkillClicked()
+        {
+            DimensionLooter.Managers.CombatManager.Instance.UseEquippedSkill(DimensionLooter.Core.Define.ItemType.Weapon);
+        }
+
+        public void OnArmorSkillClicked()
+        {
+            DimensionLooter.Managers.CombatManager.Instance.UseEquippedSkill(DimensionLooter.Core.Define.ItemType.Armor);
+        }
+
+        public void OnHelmetSkillClicked()
+        {
+            DimensionLooter.Managers.CombatManager.Instance.UseEquippedSkill(DimensionLooter.Core.Define.ItemType.Helmet);
         }
     }
 }

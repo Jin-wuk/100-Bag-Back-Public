@@ -21,6 +21,13 @@ namespace DimensionLooter.Managers
         public InventoryGrid MainGrid { get; private set; }
         public InventoryGrid SecureGrid { get; private set; }
         
+        [Header("Stash Settings")]
+        [SerializeField] private int _defaultStashTabs = 3;
+        [SerializeField] private int _stashWidth = 10;
+        [SerializeField] private int _stashHeight = 10;
+        
+        public System.Collections.Generic.List<InventoryGrid> StashGrids { get; private set; } = new System.Collections.Generic.List<InventoryGrid>();
+
         // 현재 장착중인 가방 아이템 데이터
         public DimensionLooter.Data.ItemData EquippedBackpack { get; private set; }
 
@@ -32,6 +39,12 @@ namespace DimensionLooter.Managers
                 // 맨몸 상태(주머니)로 초기화
                 MainGrid = new InventoryGrid(_defaultPocketWidth, _defaultPocketHeight);
                 SecureGrid = new InventoryGrid(_securePouchWidth, _securePouchHeight);
+                
+                // 창고(Stash) 초기화
+                for (int i = 0; i < _defaultStashTabs; i++)
+                {
+                    StashGrids.Add(new InventoryGrid(_stashWidth, _stashHeight));
+                }
             }
             else
             {
@@ -61,10 +74,10 @@ namespace DimensionLooter.Managers
             if (overflows.Count > 0)
             {
                 // 오버플로우된 아이템들을 ItemData 리스트로 변환하여 바닥에 Pouch 형태로 드랍
-                System.Collections.Generic.List<DimensionLooter.Data.ItemData> leftovers = new System.Collections.Generic.List<DimensionLooter.Data.ItemData>();
+                System.Collections.Generic.List<DimensionLooter.Data.ItemInstance> leftovers = new System.Collections.Generic.List<DimensionLooter.Data.ItemInstance>();
                 foreach (var item in overflows)
                 {
-                    leftovers.Add(item.Data);
+                    leftovers.Add(item.Instance);
                 }
 
                 Vector3 dropPos = Vector3.zero;
@@ -87,25 +100,43 @@ namespace DimensionLooter.Managers
         }
 
         /// <summary>
+        /// 보안 파우치의 크기를 영구적으로 확장합니다. MVP 기준 최대 2x3 (6칸)으로 하드 캡 제한이 적용됩니다.
+        /// </summary>
+        public bool UpgradeSecurePouch()
+        {
+            if (_securePouchWidth == 2 && _securePouchHeight == 2)
+            {
+                _securePouchHeight = 3; // 2x3으로 확장
+                SecureGrid.Resize(_securePouchWidth, _securePouchHeight);
+                OnGridResized?.Invoke();
+                Debug.Log("[InventoryManager] 보안 파우치가 2x3 사이즈로 확장되었습니다.");
+                return true;
+            }
+            
+            Debug.Log("[InventoryManager] 보안 파우치가 이미 최대 크기(2x3)입니다.");
+            return false;
+        }
+
+        /// <summary>
         /// 빈 공간을 찾아 자동으로 아이템을 배치합니다. (주로 치트나 퀘스트 보상용)
         /// </summary>
-        public DimensionLooter.Gameplay.Inventory.InventoryItem TryAddAuto(DimensionLooter.Data.ItemData itemData)
+        public DimensionLooter.Gameplay.Inventory.InventoryItem TryAddAuto(DimensionLooter.Data.ItemInstance itemInst)
         {
-            var invItem = new InventoryItem(itemData);
+            var invItem = new InventoryItem(itemInst);
             for (int y = 0; y < MainGrid.Height; y++)
             {
                 for (int x = 0; x < MainGrid.Width; x++)
                 {
                     if (MainGrid.PlaceItem(invItem, x, y))
                     {
-                        Debug.Log($"[InventoryManager] {itemData.Name} 아이템을 자동 배치했습니다. ({x}, {y})");
+                        Debug.Log($"[InventoryManager] {itemInst.Data.Name} 아이템을 자동 배치했습니다. ({x}, {y})");
                         return invItem;
                     }
                 }
             }
 
             // 1차 시도 실패 시 회전해서 다시 시도
-            if (itemData.Width != itemData.Height)
+            if (itemInst.Data.Width != itemInst.Data.Height)
             {
                 invItem.IsRotated = !invItem.IsRotated;
                 for (int y = 0; y < MainGrid.Height; y++)
@@ -114,7 +145,7 @@ namespace DimensionLooter.Managers
                     {
                         if (MainGrid.PlaceItem(invItem, x, y))
                         {
-                            Debug.Log($"[InventoryManager] {itemData.Name} 아이템을 회전하여 자동 배치했습니다. ({x}, {y})");
+                            Debug.Log($"[InventoryManager] {itemInst.Data.Name} 아이템을 회전하여 자동 배치했습니다. ({x}, {y})");
                             return invItem;
                         }
                     }
@@ -122,7 +153,7 @@ namespace DimensionLooter.Managers
                 invItem.IsRotated = !invItem.IsRotated; // 실패 시 롤백
             }
 
-            Debug.LogWarning($"[InventoryManager] 가방이 꽉 찼습니다! {itemData.Name} 배치 실패.");
+            Debug.LogWarning($"[InventoryManager] 가방이 꽉 찼습니다! {itemInst.Data.Name} 배치 실패.");
             return null;
         }
 

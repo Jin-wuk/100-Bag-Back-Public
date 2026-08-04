@@ -71,9 +71,10 @@ namespace DimensionLooter.Managers
             Debug.Log("[LootManager] 던전 내 모든 파우치(드랍템)가 초기화되었습니다.");
         }
 
-        public void SpawnPouch(List<ItemData> items, Vector3 position)
+        public void SpawnPouch(List<ItemInstance> items, Vector3 position)
         {
             if (items == null || items.Count == 0) return;
+
             // 물리 갱신을 강제하여 같은 프레임에 스폰된 콜라이더도 감지할 수 있도록 함
             Physics2D.SyncTransforms();
             // 1. 반경 1.0f 내에 이미 PouchInteractable이 있는지 탐색
@@ -104,7 +105,7 @@ namespace DimensionLooter.Managers
                 // UI 연동: 보상 패널이 열려 있고, 현재 파우치를 보고 있거나 비어 있다면 갱신
                 if (DualUIPanel.Instance != null && DualUIPanel.Instance.IsPanelOpen)
                 {
-                    if (DualUIPanel.Instance.ActivePouch == targetPouch || DualUIPanel.Instance.ActivePouch == null)
+                    if (DualUIPanel.Instance.ActiveLootSource == targetPouch || DualUIPanel.Instance.ActiveLootSource == null)
                     {
                         DualUIPanel.Instance.Show(targetPouch);
                     }
@@ -125,7 +126,7 @@ namespace DimensionLooter.Managers
                         RegisterPouch(interactable);
                         
                         // UI 연동: 보상 패널이 열려 있고 보고 있는 파우치가 없다면 새 파우치를 바로 보여줌
-                        if (DualUIPanel.Instance != null && DualUIPanel.Instance.IsPanelOpen && DualUIPanel.Instance.ActivePouch == null)
+                        if (DualUIPanel.Instance != null && DualUIPanel.Instance.IsPanelOpen && DualUIPanel.Instance.ActiveLootSource == null)
                         {
                             DualUIPanel.Instance.Show(interactable);
                         }

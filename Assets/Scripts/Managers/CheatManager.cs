@@ -12,13 +12,14 @@ namespace DimensionLooter.Managers
     {
         private void Update()
         {
-            // [치트 1] F1 키: 더미 아이템 1번(초보자의 검) 가방에 획득
+            /*
+            // [치트 1] F1 키: 더미 아이템(녹슨 단검) 가방에 획득
             if (Input.GetKeyDown(KeyCode.F1))
             {
-                if (DataManager.Instance.ItemDict.TryGetValue(1, out ItemData itemData))
+                if (DataManager.Instance.ItemDict.TryGetValue("ITM_005", out ItemData itemData))
                 {
-                    Debug.Log("[CheatManager] F1 누름: 초보자의 검 강제 획득 시도", this);
-                    InventoryManager.Instance.TryAddAuto(itemData);
+                    Debug.Log("[CheatManager] F1 누름: 녹슨 단검 강제 획득 시도", this);
+                    InventoryManager.Instance.TryAddAuto(new ItemInstance(itemData));
                 }
             }
 
@@ -35,6 +36,7 @@ namespace DimensionLooter.Managers
                 Debug.Log("[CheatManager] F3 누름: 게임 상태 전환 -> Combat", this);
                 GameManager.Instance.ChangeState(Core.Define.GameState.Combat);
             }
+            */
         }
     }
 }

@@ -4,10 +4,20 @@ using DimensionLooter.Managers;
 
 namespace DimensionLooter.Gameplay
 {
+    [RequireComponent(typeof(BoxCollider2D))]
     public class ReturnPortal : MonoBehaviour, Core.IInteractable
     {
         [Tooltip("로비 귀환 시 이동할 스폰 좌표")]
         [SerializeField] private Vector3 _lobbySpawnPosition = new Vector3(0, 0, 0);
+
+        private void Awake()
+        {
+            var col = GetComponent<Collider2D>();
+            if (col != null)
+            {
+                col.isTrigger = true;
+            }
+        }
 
         public void Interact(GameObject interactor)
         {
@@ -35,6 +45,11 @@ namespace DimensionLooter.Gameplay
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.ChangeState(Core.Define.GameState.Lobby);
+            }
+
+            if (DimensionLooter.UI.Inventory.DualUIPanel.Instance != null)
+            {
+                DimensionLooter.UI.Inventory.DualUIPanel.Instance.ClosePanel();
             }
         }
     }

@@ -7,19 +7,20 @@ using System.Collections.Generic;
 
 namespace DimensionLooter.Gameplay.Inventory
 {
-    public class PouchInteractable : MonoBehaviour, IInteractable
+    public class PouchInteractable : MonoBehaviour, IInteractable, ILootSource
     {
         public string Id { get; private set; }
-        private List<ItemData> _storedItems = new List<ItemData>();
-        public IReadOnlyList<ItemData> StoredItems => _storedItems;
+        private List<ItemInstance> _storedItems = new List<ItemInstance>();
+        public IReadOnlyList<ItemInstance> StoredItems => _storedItems;
+        public bool DestroyWhenEmpty => true;
 
-        public void Init(string id, List<ItemData> items)
+        public void Init(string id, List<ItemInstance> items)
         {
             Id = id;
-            _storedItems = new List<ItemData>(items);
+            _storedItems = new List<ItemInstance>(items);
         }
 
-        public void AppendItems(List<ItemData> items)
+        public void AppendItems(List<ItemInstance> items)
         {
             if (items != null)
             {
@@ -27,7 +28,7 @@ namespace DimensionLooter.Gameplay.Inventory
             }
         }
 
-        public bool RemoveItem(ItemData item)
+        public bool RemoveItem(ItemInstance item)
         {
             return _storedItems.Remove(item);
         }

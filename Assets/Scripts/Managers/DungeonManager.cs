@@ -10,10 +10,7 @@ namespace DimensionLooter.Managers
         public static DungeonManager Instance { get; private set; }
 
         [Header("Dungeon Settings")]
-        [Tooltip("던전 크기 (타일 단위)")]
-        [SerializeField] private int _dungeonWidth = 20;
-        [SerializeField] private int _dungeonHeight = 20;
-        [SerializeField] private int _monsterCount = 5;
+        // 사용되지 않는 구버전 스폰 카운트 변수 등 제거됨
 
         [Header("Tilemap Settings")]
         [SerializeField] private UnityEngine.Tilemaps.Tilemap _floorTilemap;
@@ -141,10 +138,7 @@ namespace DimensionLooter.Managers
             }
 
             // 1. 타일맵 기반 던전 생성 (방 크기에 맞춰 바닥과 벽 배치)
-            int minX = -_dungeonWidth / 2;
-            int maxX = _dungeonWidth / 2;
-            int minY = -_dungeonHeight / 2;
-            int maxY = _dungeonHeight / 2;
+            int minX = -15, maxX = 15, minY = -15, maxY = 15;
 
             for (int x = minX - 1; x <= maxX + 1; x++)
             {
@@ -164,33 +158,142 @@ namespace DimensionLooter.Managers
                 }
             }
 
-            // 2. 귀환 포탈 스폰 (1개)
-            if (_returnPortalPrefab != null)
+            // 2. 3x3 청크(Chunk) 조립 및 스폰 포인트 처리
+            int chunkSize = 10;
+            for (int cx = -1; cx <= 1; cx++)
             {
-                Vector3 portalPos = GetRandomValidPosition(minX, maxX, minY, maxY);
-                GameObject portal = Instantiate(_returnPortalPrefab, portalPos, Quaternion.identity);
-                _spawnedObjects.Add(portal);
-            }
-
-            // 3. 몬스터 스폰 (N마리)
-            if (_monsterPrefab != null)
-            {
-                for (int i = 0; i < _monsterCount; i++)
+                for (int cy = -1; cy <= 1; cy++)
                 {
-                    Vector3 monsterPos = GetRandomValidPosition(minX, maxX, minY, maxY);
-                    GameObject monster = Instantiate(_monsterPrefab, monsterPos, Quaternion.identity);
-                    _spawnedObjects.Add(monster);
+                    Vector3 chunkPos = new Vector3(cx * chunkSize, cy * chunkSize, 0);
+                    GameObject chunk = new GameObject($"MapChunk_{cx}_{cy}");
+                    chunk.transform.position = chunkPos;
+                    _spawnedObjects.Add(chunk);
+
+                    HashSet<Vector3> usedPositions = new HashSet<Vector3>();
+
+                    // 임시 Spawner 부착 (기획자가 프리팹에 미리 세팅할 구조 시뮬레이션)
+                    for (int i = 0; i < 3; i++)
+                    {
+                        var spawnerObj = new GameObject("Spawner");
+                        spawnerObj.transform.SetParent(chunk.transform);
+                        
+                        Vector3 randomPos;
+                        int attempts = 0;
+                        do
+                        {
+                            randomPos = new Vector3(Random.Range(-4, 5), Random.Range(-4, 5), 0f);
+                            attempts++;
+                        } while (usedPositions.Contains(randomPos) && attempts < 100);
+                        usedPositions.Add(randomPos);
+
+                        spawnerObj.transform.localPosition = randomPos;
+                        
+                        var spawner = spawnerObj.AddComponent<DimensionLooter.Gameplay.Spawner>();
+                        
+                        // 중앙 청크는 플레이어 시작 지점
+                        if (cx == 0 && cy == 0 && i == 0)
+                        {
+                            spawner.type = DimensionLooter.Gameplay.SpawnerType.PlayerSpawn;
+                        }
+                        // 외곽 청크 모서리들은 포탈 스폰 지점
+                        else if (Mathf.Abs(cx) == 1 && Mathf.Abs(cy) == 1 && i == 0)
+                        {
+                            spawner.type = DimensionLooter.Gameplay.SpawnerType.PortalSpawn;
+                        }
+                        else
+                        {
+                            // 30% 확률로 기믹(상자, 함정, 제단), 70% 확률로 몬스터 스폰
+                            if (Random.value < 0.3f)
+                            {
+                                spawner.type = DimensionLooter.Gameplay.SpawnerType.Gimmick;
+                                spawner.spawnProbability = 0.6f;
+                                spawner.spawnPool = new List<DimensionLooter.Gameplay.SpawnWeight>()
+                                {
+                                    new DimensionLooter.Gameplay.SpawnWeight { entityId = "Chest_Normal", weight = 40 },
+                                    new DimensionLooter.Gameplay.SpawnWeight { entityId = "Hazard_Spike", weight = 30 },
+                                    new DimensionLooter.Gameplay.SpawnWeight { entityId = "Hazard_Poison", weight = 15 },
+                                    new DimensionLooter.Gameplay.SpawnWeight { entityId = "Shrine_Heal", weight = 15 }
+                                };
+                            }
+                            else
+                            {
+                                spawner.type = DimensionLooter.Gameplay.SpawnerType.Monster;
+                                spawner.spawnProbability = 0.5f;
+                                spawner.spawnPool = new List<DimensionLooter.Gameplay.SpawnWeight>()
+                                {
+                                    new DimensionLooter.Gameplay.SpawnWeight { entityId = "MOB_001", weight = 60 },
+                                    new DimensionLooter.Gameplay.SpawnWeight { entityId = "MOB_002", weight = 30 },
+                                    new DimensionLooter.Gameplay.SpawnWeight { entityId = "MOB_003", weight = 10 }
+                                };
+                            }
+                            
+                            // 히트(하드모드) 팩터 적용: 몹과 기믹의 생성 확률을 히트 배율만큼 증가
+                            if (HeatManager.Instance != null && spawner.type != DimensionLooter.Gameplay.SpawnerType.PlayerSpawn && spawner.type != DimensionLooter.Gameplay.SpawnerType.PortalSpawn)
+                            {
+                                spawner.spawnProbability = Mathf.Clamp01(spawner.spawnProbability * (1f + HeatManager.Instance.RewardMultiplier));
+                            }
+                        }
+                    }
                 }
             }
 
-            // 4. 플레이어를 타일맵 중앙(0, 0, 0)으로 이동
+            // 3. 맵 내의 모든 Spawner 수집 및 처리
+            var allSpawners = FindObjectsOfType<DimensionLooter.Gameplay.Spawner>();
+            List<DimensionLooter.Gameplay.Spawner> playerSpawns = new List<DimensionLooter.Gameplay.Spawner>();
+            List<DimensionLooter.Gameplay.Spawner> portalSpawns = new List<DimensionLooter.Gameplay.Spawner>();
+            List<DimensionLooter.Gameplay.Spawner> entitySpawns = new List<DimensionLooter.Gameplay.Spawner>();
+
+            foreach(var s in allSpawners)
+            {
+                if (s.type == DimensionLooter.Gameplay.SpawnerType.PlayerSpawn) playerSpawns.Add(s);
+                else if (s.type == DimensionLooter.Gameplay.SpawnerType.PortalSpawn) portalSpawns.Add(s);
+                else entitySpawns.Add(s);
+            }
+
+            // 3-1. 플레이어 스폰 위치 결정 (지정된 스폰 위치 중 랜덤 1개)
+            Vector3 playerStartPos = Vector3.zero;
+            if (playerSpawns.Count > 0)
+            {
+                var chosenPlayerSpawn = playerSpawns[Random.Range(0, playerSpawns.Count)];
+                playerStartPos = chosenPlayerSpawn.transform.position;
+            }
+
+            // 3-2. 포탈 스폰 (플레이어와 가장 먼 스폰 위치들 중 랜덤 선택)
+            if (portalSpawns.Count > 0)
+            {
+                portalSpawns.Sort((a, b) => {
+                    float distA = Vector3.Distance(a.transform.position, playerStartPos);
+                    float distB = Vector3.Distance(b.transform.position, playerStartPos);
+                    return distB.CompareTo(distA); // 내림차순 (먼 순서)
+                });
+                
+                // 상위 3개 중 하나 랜덤
+                int maxCandidate = Mathf.Min(3, portalSpawns.Count);
+                var chosenPortal = portalSpawns[Random.Range(0, maxCandidate)];
+                
+                GameObject portalPrefab = Resources.Load<GameObject>("Prefabs/ReturnPortal");
+                if (portalPrefab != null)
+                {
+                    GameObject portal = Instantiate(portalPrefab, chosenPortal.transform.position, Quaternion.identity);
+                    _spawnedObjects.Add(portal);
+                }
+            }
+
+            // 3-3. 일반 몬스터 및 기믹 스폰 실행
+            foreach(var s in entitySpawns)
+            {
+                GameObject spawned = s.ExecuteSpawn();
+                if (spawned != null) _spawnedObjects.Add(spawned);
+            }
+
+            // 4. 플레이어를 최종 스폰 위치로 이동
             var player = FindObjectOfType<Gameplay.PlayerController>();
             if (player != null)
             {
-                player.transform.position = Vector3.zero;
+                player.transform.position = playerStartPos;
             }
 
-            Debug.Log($"[DungeonManager] 던전 생성 완료! (포탈 1개, 몬스터 {_monsterCount}마리 스폰)");
+            Debug.Log($"[DungeonManager] 던전 생성 완료! (청크 조립 기반)");
         }
 
         private void ClearDungeon()
@@ -218,20 +321,5 @@ namespace DimensionLooter.Managers
             }
         }
 
-        private Vector3 GetRandomValidPosition(int minX, int maxX, int minY, int maxY)
-        {
-            // 타일맵 상의 유효한 그리드 좌표를 랜덤으로 선택
-            int randX = Random.Range(minX, maxX + 1);
-            int randY = Random.Range(minY, maxY + 1);
-            Vector3Int gridPos = new Vector3Int(randX, randY, 0);
-            
-            // Floor Tilemap의 해당 그리드 좌표 중심(World Position)을 반환
-            if (_floorTilemap != null)
-            {
-                return _floorTilemap.GetCellCenterWorld(gridPos);
-            }
-            
-            return new Vector3(randX, randY, 0f);
-        }
     }
 }

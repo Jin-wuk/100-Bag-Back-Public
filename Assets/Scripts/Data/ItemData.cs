@@ -7,11 +7,13 @@ namespace DimensionLooter.Data
     /// </summary>
     public class ItemData
     {
-        public int Id { get; set; }
+        public string Id { get; set; }
         public string Name { get; set; }
         public DimensionLooter.Core.Define.ItemType Type { get; set; }
         public int AttackPower { get; set; }
         public int DefensePower { get; set; }
+        public int HealHpAmount { get; set; }
+        public int HealMpAmount { get; set; }
         public int Price { get; set; }
         
         // 인벤토리(테트리스)에서 차지하는 타일 크기
@@ -22,6 +24,8 @@ namespace DimensionLooter.Data
         public int BagWidth { get; set; } = 0;
         public int BagHeight { get; set; } = 0;
         
-        // 추가 기획 속성들은 CSV 컬럼명에 맞춰 나중에 확장 가능합니다.
+        public string PossibleSkills { get; set; }
+        
+        public string Description { get; set; }
     }
 }

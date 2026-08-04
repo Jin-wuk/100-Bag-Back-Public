@@ -46,7 +46,7 @@ namespace DimensionLooter.UI.Inventory
 
             if (_nameText != null) 
             {
-                _nameText.text = item.Data.Name;
+                _nameText.text = item.Instance.IsUnidentified ? "? 미확인 장비 ?" : item.Data.Name;
             }
             if (_backgroundImage != null) 
             {
@@ -92,11 +92,42 @@ namespace DimensionLooter.UI.Inventory
                     return;
                 }
 
-                // 오른쪽 클릭 시 회전 (들지 않고 제자리 회전 시도)
+                // 오른쪽 클릭 시 감정, 회전 또는 매각 시도
                 if (eventData.button == PointerEventData.InputButton.Right)
                 {
-                    TryRotateInPlace();
-                    return;
+                    if (Item.Instance.IsUnidentified)
+                    {
+                        if (DimensionLooter.Managers.GameManager.Instance != null && DimensionLooter.Managers.GameManager.Instance.CurrentState == DimensionLooter.Core.Define.GameState.Lobby)
+                        {
+                            int cost = 50;
+                            if (DimensionLooter.Managers.EconomyManager.Instance != null && DimensionLooter.Managers.EconomyManager.Instance.SpendGold(cost))
+                            {
+                                Item.Instance.IsUnidentified = false;
+                                if (_nameText != null) _nameText.text = Item.Data.Name;
+                                Debug.Log($"[Appraisal] {cost} 골드를 소모하여 {Item.Data.Name} 아이템을 감정했습니다.");
+                            }
+                            else
+                            {
+                                Debug.LogWarning("[Appraisal] 감정에 필요한 골드(50)가 부족합니다.");
+                            }
+                        }
+                        else
+                        {
+                            Debug.LogWarning("[Appraisal] 미확인 장비 감정은 로비에서만 가능합니다.");
+                        }
+                        return;
+                    }
+
+                    if (DimensionLooter.UI.Lobby.SellZoneUI.IsSellModeActive)
+                    {
+                        DimensionLooter.UI.Lobby.SellZoneUI.Instance.SellItem(Item, this);
+                        return;
+                    }
+                    else
+                    {
+                        TryRotateInPlace();
+                        return;
+                    }
                 }
                 
                 // 들기 (Pick Up)
@@ -126,8 +157,8 @@ namespace DimensionLooter.UI.Inventory
                             
                             if (DualUIPanel.Instance != null && CurrentGridUI == DualUIPanel.Instance.RewardInventoryUI)
                             {
-                                // DualUIPanel에 ActivePouch 접근 가능해야 하므로 잠시 후 DualUIPanel에 public 프로퍼티 추가 필요
-                                DualUIPanel.Instance.ActivePouch?.RemoveItem(Item.Data);
+                                // DualUIPanel에 ActiveLootSource 접근 가능해야 하므로 잠시 후 DualUIPanel에 public 프로퍼티 추가 필요
+                                DualUIPanel.Instance.ActiveLootSource?.RemoveItem(Item.Instance);
                             }
 
                             CurrentGridUI.UnregisterItemUI(Item);
@@ -310,7 +341,7 @@ namespace DimensionLooter.UI.Inventory
                 
                 if (DualUIPanel.Instance != null && CurrentGridUI == DualUIPanel.Instance.RewardInventoryUI)
                 {
-                    DualUIPanel.Instance.ActivePouch?.RemoveItem(Item.Data);
+                    DualUIPanel.Instance.ActiveLootSource?.RemoveItem(Item.Instance);
                 }
 
                 CurrentGridUI.UnregisterItemUI(Item);
@@ -324,7 +355,7 @@ namespace DimensionLooter.UI.Inventory
                 {
                     if (DualUIPanel.Instance != null && CurrentGridUI == DualUIPanel.Instance.RewardInventoryUI)
                     {
-                        DualUIPanel.Instance.ActivePouch?.RemoveItem(Item.Data);
+                        DualUIPanel.Instance.ActiveLootSource?.RemoveItem(Item.Instance);
                     }
 
                     CurrentGridUI.UnregisterItemUI(Item);
@@ -350,11 +381,11 @@ namespace DimensionLooter.UI.Inventory
                         {
                             if (CurrentGridUI == DualUIPanel.Instance.RewardInventoryUI && targetGridUI != DualUIPanel.Instance.RewardInventoryUI)
                             {
-                                DualUIPanel.Instance.ActivePouch?.RemoveItem(Item.Data);
+                                DualUIPanel.Instance.ActiveLootSource?.RemoveItem(Item.Instance);
                             }
                             else if (CurrentGridUI != DualUIPanel.Instance.RewardInventoryUI && targetGridUI == DualUIPanel.Instance.RewardInventoryUI)
                             {
-                                DualUIPanel.Instance.ActivePouch?.AppendItems(new System.Collections.Generic.List<DimensionLooter.Data.ItemData> { Item.Data });
+                                DualUIPanel.Instance.ActiveLootSource?.AppendItems(new System.Collections.Generic.List<DimensionLooter.Data.ItemInstance> { Item.Instance });
                             }
                         }
 

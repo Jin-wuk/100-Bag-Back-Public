@@ -1,9 +1,9 @@
-ID,Name,Category,Grid_W,Grid_H,Stat_Type,Stat_Value,Gold_Value,Description
-ITM_001,탈출 귀환석,Consumable,2,2,None,0,100,사용 즉시 공간 틔움. N초의 카운트다운(마지막 템 정리) 후 귀환 (스킵 가능)
-ITM_002,소형 체력 포션,Consumable,1,1,Heal_HP,50,15,체력 50 회복
-ITM_003,소형 마나 포션,Consumable,1,1,Heal_MP,30,20,마나 30 회복. 스킬 사용의 원천.
-ITM_004,구리 열쇠,Key,1,1,None,0,10,잠긴 일반 상자(구리) 개방
-ITM_005,녹슨 단검,Weapon,1,1,ATK,5,25,가장 기본이 되는 1x1 소형 무기
-ITM_006,철제 한손검,Weapon,1,2,ATK,12,60,테트리스의 주축이 되는 1x2 중형 무기
-ITM_007,낡은 나무 방패,Armor,2,2,DEF,8,80,초반 생존력을 크게 올려주는 2x2 방어구
-ITM_008,공허의 장검,Weapon,2,3,ATK,35,300,가방을 반갈죽 내는 거대한 2x3 무기
+ID,Name,Category,Grid_W,Grid_H,Stat_Type,Stat_Value,Gold_Value,Possible_Skills,Description
+ITM_001,탈출 귀환석,Consumable,2,2,None,0,100,,사용 즉시 공간 틔움. N초의 카운트다운(마지막 템 정리) 후 귀환 (스킵 가능)
+ITM_002,소형 체력 포션,Consumable,1,1,Heal_HP,50,15,,체력 50 회복
+ITM_003,소형 마나 포션,Consumable,1,1,Heal_MP,30,20,,마나 30 회복. 스킬 사용의 원천.
+ITM_004,구리 열쇠,Key,1,1,None,0,10,,잠긴 일반 상자(구리) 개방
+ITM_005,녹슨 단검,Weapon,1,1,ATK,5,25,SKL_001:50|SKL_004:50,가장 기본이 되는 1x1 소형 무기
+ITM_006,철제 한손검,Weapon,1,2,ATK,12,60,SKL_001:30|SKL_004:70,테트리스의 주축이 되는 1x2 중형 무기
+ITM_007,낡은 나무 방패,Armor,2,2,DEF,8,80,SKL_002:50|SKL_003:50,초반 생존력을 크게 올려주는 2x2 방어구
+ITM_008,공허의 장검,Weapon,2,3,ATK,35,300,SKL_004:40|SKL_005:60,가방을 반갈죽 내는 거대한 2x3 무기

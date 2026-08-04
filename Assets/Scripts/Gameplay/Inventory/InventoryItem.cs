@@ -5,14 +5,20 @@ namespace DimensionLooter.Gameplay.Inventory
 {
     public class InventoryItem
     {
-        public ItemData Data { get; private set; }
+        public ItemInstance Instance { get; private set; }
+        public ItemData Data => Instance?.Data;
         public int GridX { get; set; }
         public int GridY { get; set; }
         public bool IsRotated { get; set; }
 
+        public InventoryItem(ItemInstance instance)
+        {
+            Instance = instance;
+        }
+
         public InventoryItem(ItemData data)
         {
-            Data = data;
+            Instance = new ItemInstance(data);
         }
 
         public int GetWidth() => IsRotated ? Data.Height : Data.Width;
