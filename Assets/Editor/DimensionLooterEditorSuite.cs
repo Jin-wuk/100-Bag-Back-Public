@@ -680,13 +680,20 @@ public class DimensionLooterEditorSuite : EditorWindow
         GearManager gearMgr = managersObj.GetComponent<GearManager>() ?? managersObj.AddComponent<GearManager>();
         
         UnityEditor.Events.UnityEventTools.AddPersistentListener(fleeBtn.onClick, combatMgr.Flee);
-        UnityEditor.Events.UnityEventTools.AddPersistentListener(stunBtn.onClick, combatMgr.UseSkillStun);
-        UnityEditor.Events.UnityEventTools.AddPersistentListener(healBtn.onClick, combatMgr.UseSkillHeal);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(stunBtn.onClick, combatUI.OnWeaponSkillClicked);
+        UnityEditor.Events.UnityEventTools.AddPersistentListener(healBtn.onClick, combatUI.OnArmorSkillClicked);
 
         SerializedObject mgrSo = new SerializedObject(combatMgr);
         mgrSo.FindProperty("_playerStats").objectReferenceValue = playerObj.GetComponent<PlayerStats>();
         mgrSo.FindProperty("_combatUI").objectReferenceValue = combatUI;
         mgrSo.ApplyModifiedProperties();
+
+        SerializedObject uiSo = new SerializedObject(combatUI);
+        uiSo.FindProperty("_weaponSkillBtn").objectReferenceValue = stunBtn;
+        uiSo.FindProperty("_weaponSkillText").objectReferenceValue = stunBtn.GetComponentInChildren<Text>();
+        uiSo.FindProperty("_armorSkillBtn").objectReferenceValue = healBtn;
+        uiSo.FindProperty("_armorSkillText").objectReferenceValue = healBtn.GetComponentInChildren<Text>();
+        uiSo.ApplyModifiedProperties();
 
         // 10. 레거시(더미 몬스터 단일 배치) 삭제됨
 
