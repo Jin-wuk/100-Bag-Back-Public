@@ -30,16 +30,19 @@ namespace DimensionLooter.Core
         /// <summary>
         /// A* 알고리즘을 이용해 경로를 찾습니다.
         /// </summary>
+        /// <param name="grid">씬 내의 Grid 컴포넌트</param>
         /// <param name="startWorldPos">시작 월드 좌표</param>
         /// <param name="targetWorldPos">목표 월드 좌표</param>
         /// <param name="obstacleLayerMask">장애물로 인식할 레이어 마스크 (Wall 등)</param>
         /// <returns>월드 좌표 기준 경로 리스트 (도달 불가능 시 빈 리스트 반환)</returns>
-        public static List<Vector3> FindPath(Vector3 startWorldPos, Vector3 targetWorldPos, LayerMask obstacleLayerMask)
+        public static List<Vector3> FindPath(Grid grid, Vector3 startWorldPos, Vector3 targetWorldPos, LayerMask obstacleLayerMask)
         {
-            Vector2Int startPos = new Vector2Int(Mathf.FloorToInt(startWorldPos.x), Mathf.FloorToInt(startWorldPos.y));
-            Vector2Int targetPos = new Vector2Int(Mathf.FloorToInt(targetWorldPos.x), Mathf.FloorToInt(targetWorldPos.y));
+            Vector3Int startCell = grid.WorldToCell(startWorldPos);
+            Vector3Int targetCell = grid.WorldToCell(targetWorldPos);
+            Vector2Int startPos = new Vector2Int(startCell.x, startCell.y);
+            Vector2Int targetPos = new Vector2Int(targetCell.x, targetCell.y);
 
-            if (startPos == targetPos || IsObstacle(targetPos, obstacleLayerMask))
+            if (startPos == targetPos || IsObstacle(grid, targetPos, obstacleLayerMask))
             {
                 return new List<Vector3>();
             }
@@ -65,14 +68,14 @@ namespace DimensionLooter.Core
 
                 if (currentNode.Position == targetPos)
                 {
-                    return RetracePath(currentNode);
+                    return RetracePath(grid, currentNode);
                 }
 
                 foreach (Vector2Int dir in Directions)
                 {
                     Vector2Int neighborPos = currentNode.Position + dir;
 
-                    if (closedSet.Contains(neighborPos) || IsObstacle(neighborPos, obstacleLayerMask))
+                    if (closedSet.Contains(neighborPos) || IsObstacle(grid, neighborPos, obstacleLayerMask))
                         continue;
 
                     float newCostToNeighbor = currentNode.GCost + GetDistance(currentNode.Position, neighborPos);
@@ -97,9 +100,9 @@ namespace DimensionLooter.Core
             return new List<Vector3>();
         }
 
-        public static bool IsObstacle(Vector2Int position, LayerMask layerMask)
+        public static bool IsObstacle(Grid grid, Vector2Int position, LayerMask layerMask)
         {
-            Vector2 worldPos = new Vector2(position.x + 0.5f, position.y + 0.5f);
+            Vector3 worldPos = grid.GetCellCenterWorld(new Vector3Int(position.x, position.y, 0));
             return Physics2D.OverlapPoint(worldPos, layerMask) != null;
         }
 
@@ -110,14 +113,14 @@ namespace DimensionLooter.Core
             return dstX + dstY;
         }
 
-        private static List<Vector3> RetracePath(Node endNode)
+        private static List<Vector3> RetracePath(Grid grid, Node endNode)
         {
             List<Vector3> path = new List<Vector3>();
             Node currentNode = endNode;
 
             while (currentNode.Parent != null)
             {
-                path.Add(new Vector3(currentNode.Position.x + 0.5f, currentNode.Position.y + 0.5f, 0f));
+                path.Add(grid.GetCellCenterWorld(new Vector3Int(currentNode.Position.x, currentNode.Position.y, 0)));
                 currentNode = currentNode.Parent;
             }
             

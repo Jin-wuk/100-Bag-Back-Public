@@ -16,10 +16,13 @@ namespace DimensionLooter.Player
 
         private Camera _mainCamera;
         private MovementPreview _movementPreview;
+        private Grid _grid;
 
         private void Start()
         {
             _mainCamera = Camera.main;
+            _grid = FindObjectOfType<Grid>();
+
             // Awake에서 비활성화(Hide)될 수 있으므로, 비활성화된 객체도 찾도록 true 파라미터 추가
             _movementPreview = FindObjectOfType<MovementPreview>(true);
             
@@ -40,18 +43,21 @@ namespace DimensionLooter.Player
             }
 
             Vector3 mouseWorldPos = GetMouseWorldPosition();
-            Vector2Int tilePos = new Vector2Int(Mathf.FloorToInt(mouseWorldPos.x), Mathf.FloorToInt(mouseWorldPos.y));
+            if (_grid == null) return;
+            
+            Vector3Int cellPos = _grid.WorldToCell(mouseWorldPos);
+            Vector2Int tilePos = new Vector2Int(cellPos.x, cellPos.y);
 
             // 프리뷰 업데이트
-            UpdatePreview(tilePos);
+            UpdatePreview(tilePos, cellPos);
 
             // 마우스 좌클릭 시 이동 명령
             if (Input.GetMouseButtonDown(0))
             {
-                bool isObstacle = Pathfinder.IsObstacle(tilePos, _obstacleLayerMask);
+                bool isObstacle = Pathfinder.IsObstacle(_grid, tilePos, _obstacleLayerMask);
                 if (!isObstacle)
                 {
-                    Vector3 targetPos = new Vector3(tilePos.x + 0.5f, tilePos.y + 0.5f, 0f);
+                    Vector3 targetPos = _grid.GetCellCenterWorld(cellPos);
                     OnTileClicked?.Invoke(targetPos);
                 }
             }
@@ -73,12 +79,12 @@ namespace DimensionLooter.Player
             return _mainCamera.ScreenToWorldPoint(mouseScreenPos);
         }
 
-        private void UpdatePreview(Vector2Int tilePos)
+        private void UpdatePreview(Vector2Int tilePos, Vector3Int cellPos)
         {
-            if (_movementPreview == null) return;
+            if (_movementPreview == null || _grid == null) return;
 
-            bool isObstacle = Pathfinder.IsObstacle(tilePos, _obstacleLayerMask);
-            _movementPreview.ShowPreview(new Vector3(tilePos.x + 0.5f, tilePos.y + 0.5f, 0f), !isObstacle);
+            bool isObstacle = Pathfinder.IsObstacle(_grid, tilePos, _obstacleLayerMask);
+            _movementPreview.ShowPreview(_grid.GetCellCenterWorld(cellPos), !isObstacle);
         }
     }
 }

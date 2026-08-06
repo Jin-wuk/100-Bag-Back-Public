@@ -23,6 +23,12 @@ namespace DimensionLooter.Player
         private bool _isMoving = false;
         private Vector3 _pendingTarget;
         private bool _hasPendingTarget = false;
+        private Grid _grid;
+
+        private void Start()
+        {
+            _grid = FindObjectOfType<Grid>();
+        }
 
         public void MoveTo(Vector3 targetPos)
         {
@@ -39,10 +45,12 @@ namespace DimensionLooter.Player
 
         private void StartPath(Vector3 targetPos)
         {
-            // 스냅된 현재 타일 위치 계산 (타일 중앙 0.5f 보정)
-            Vector3 startPos = new Vector3(Mathf.FloorToInt(transform.position.x) + 0.5f, Mathf.FloorToInt(transform.position.y) + 0.5f, 0f);
+            if (_grid == null) return;
             
-            _currentPath = Pathfinder.FindPath(startPos, targetPos, _obstacleLayerMask);
+            // Grid API를 통해 완벽한 타일 중앙값 획득
+            Vector3 startPos = _grid.GetCellCenterWorld(_grid.WorldToCell(transform.position));
+            
+            _currentPath = Pathfinder.FindPath(_grid, startPos, targetPos, _obstacleLayerMask);
             if (_currentPath.Count > 0)
             {
                 if (_moveCoroutine != null)
@@ -88,7 +96,7 @@ namespace DimensionLooter.Player
                 if (_hasPendingTarget)
                 {
                     _hasPendingTarget = false;
-                    _currentPath = Pathfinder.FindPath(endPos, _pendingTarget, _obstacleLayerMask);
+                    _currentPath = Pathfinder.FindPath(_grid, endPos, _pendingTarget, _obstacleLayerMask);
                 }
             }
 
