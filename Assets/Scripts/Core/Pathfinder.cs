@@ -36,8 +36,8 @@ namespace DimensionLooter.Core
         /// <returns>월드 좌표 기준 경로 리스트 (도달 불가능 시 빈 리스트 반환)</returns>
         public static List<Vector3> FindPath(Vector3 startWorldPos, Vector3 targetWorldPos, LayerMask obstacleLayerMask)
         {
-            Vector2Int startPos = new Vector2Int(Mathf.RoundToInt(startWorldPos.x), Mathf.RoundToInt(startWorldPos.y));
-            Vector2Int targetPos = new Vector2Int(Mathf.RoundToInt(targetWorldPos.x), Mathf.RoundToInt(targetWorldPos.y));
+            Vector2Int startPos = new Vector2Int(Mathf.FloorToInt(startWorldPos.x), Mathf.FloorToInt(startWorldPos.y));
+            Vector2Int targetPos = new Vector2Int(Mathf.FloorToInt(targetWorldPos.x), Mathf.FloorToInt(targetWorldPos.y));
 
             if (startPos == targetPos || IsObstacle(targetPos, obstacleLayerMask))
             {
@@ -99,7 +99,7 @@ namespace DimensionLooter.Core
 
         public static bool IsObstacle(Vector2Int position, LayerMask layerMask)
         {
-            Vector2 worldPos = new Vector2(position.x, position.y);
+            Vector2 worldPos = new Vector2(position.x + 0.5f, position.y + 0.5f);
             return Physics2D.OverlapPoint(worldPos, layerMask) != null;
         }
 
@@ -117,7 +117,7 @@ namespace DimensionLooter.Core
 
             while (currentNode.Parent != null)
             {
-                path.Add(new Vector3(currentNode.Position.x, currentNode.Position.y, 0));
+                path.Add(new Vector3(currentNode.Position.x + 0.5f, currentNode.Position.y + 0.5f, 0f));
                 currentNode = currentNode.Parent;
             }
             

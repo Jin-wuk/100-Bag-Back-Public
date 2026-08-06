@@ -40,7 +40,7 @@ namespace DimensionLooter.Player
             }
 
             Vector3 mouseWorldPos = GetMouseWorldPosition();
-            Vector2Int tilePos = new Vector2Int(Mathf.RoundToInt(mouseWorldPos.x), Mathf.RoundToInt(mouseWorldPos.y));
+            Vector2Int tilePos = new Vector2Int(Mathf.FloorToInt(mouseWorldPos.x), Mathf.FloorToInt(mouseWorldPos.y));
 
             // 프리뷰 업데이트
             UpdatePreview(tilePos);
@@ -51,7 +51,7 @@ namespace DimensionLooter.Player
                 bool isObstacle = Pathfinder.IsObstacle(tilePos, _obstacleLayerMask);
                 if (!isObstacle)
                 {
-                    Vector3 targetPos = new Vector3(tilePos.x, tilePos.y, 0f);
+                    Vector3 targetPos = new Vector3(tilePos.x + 0.5f, tilePos.y + 0.5f, 0f);
                     OnTileClicked?.Invoke(targetPos);
                 }
             }
@@ -78,7 +78,7 @@ namespace DimensionLooter.Player
             if (_movementPreview == null) return;
 
             bool isObstacle = Pathfinder.IsObstacle(tilePos, _obstacleLayerMask);
-            _movementPreview.ShowPreview(new Vector3(tilePos.x, tilePos.y, 0f), !isObstacle);
+            _movementPreview.ShowPreview(new Vector3(tilePos.x + 0.5f, tilePos.y + 0.5f, 0f), !isObstacle);
         }
     }
 }

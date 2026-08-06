@@ -39,8 +39,8 @@ namespace DimensionLooter.Player
 
         private void StartPath(Vector3 targetPos)
         {
-            // 스냅된 현재 타일 위치 계산
-            Vector3 startPos = new Vector3(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.y), 0f);
+            // 스냅된 현재 타일 위치 계산 (타일 중앙 0.5f 보정)
+            Vector3 startPos = new Vector3(Mathf.FloorToInt(transform.position.x) + 0.5f, Mathf.FloorToInt(transform.position.y) + 0.5f, 0f);
             
             _currentPath = Pathfinder.FindPath(startPos, targetPos, _obstacleLayerMask);
             if (_currentPath.Count > 0)
