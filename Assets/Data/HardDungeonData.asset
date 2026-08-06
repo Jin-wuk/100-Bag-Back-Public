@@ -12,19 +12,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e4aee141b478414e9f5569a7665126a, type: 3}
   m_Name: HardDungeonData
   m_EditorClassIdentifier: 
-  chunkOffset: {x: 20, y: 20}
+  chunkOffset: {x: 29, y: 29}
   chunkSlots:
   - possibleChunkPrefabs:
     - {fileID: 1465753149088533172, guid: e8745576e619b7c408548be0b26a9fe0, type: 3}
   - possibleChunkPrefabs:
     - {fileID: 1465753149088533172, guid: e8745576e619b7c408548be0b26a9fe0, type: 3}
-  - possibleChunkPrefabs: []
-  - possibleChunkPrefabs: []
-  - possibleChunkPrefabs: []
-  - possibleChunkPrefabs: []
-  - possibleChunkPrefabs: []
-  - possibleChunkPrefabs: []
-  - possibleChunkPrefabs: []
+  - possibleChunkPrefabs:
+    - {fileID: 1465753149088533172, guid: e8745576e619b7c408548be0b26a9fe0, type: 3}
+  - possibleChunkPrefabs:
+    - {fileID: 1465753149088533172, guid: e8745576e619b7c408548be0b26a9fe0, type: 3}
+  - possibleChunkPrefabs:
+    - {fileID: 1465753149088533172, guid: e8745576e619b7c408548be0b26a9fe0, type: 3}
+  - possibleChunkPrefabs:
+    - {fileID: 1465753149088533172, guid: e8745576e619b7c408548be0b26a9fe0, type: 3}
+  - possibleChunkPrefabs:
+    - {fileID: 1465753149088533172, guid: e8745576e619b7c408548be0b26a9fe0, type: 3}
+  - possibleChunkPrefabs:
+    - {fileID: 1465753149088533172, guid: e8745576e619b7c408548be0b26a9fe0, type: 3}
+  - possibleChunkPrefabs:
+    - {fileID: 1465753149088533172, guid: e8745576e619b7c408548be0b26a9fe0, type: 3}
   monsterCountPerChunk: 2
   trapCountPerChunk: 1
   monsterPrefab: {fileID: 4769375905301041180, guid: 8df9a16836a132d4796e502b6c008942, type: 3}

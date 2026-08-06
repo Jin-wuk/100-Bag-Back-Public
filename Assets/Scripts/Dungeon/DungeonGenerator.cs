@@ -11,6 +11,10 @@ namespace DimensionLooter.Dungeon
         [Tooltip("던전 생성 규칙을 담고 있는 ScriptableObject 할당")]
         [SerializeField] private DungeonData _dungeonData;
         
+        [Header("Player Settings")]
+        [Tooltip("던전 진입 시 스폰할 플레이어 프리팹")]
+        [SerializeField] private GameObject _playerPrefab;
+
         private List<DungeonChunk> _spawnedChunks = new List<DungeonChunk>();
 
         private void Start()
@@ -79,6 +83,12 @@ namespace DimensionLooter.Dungeon
 
             Vector2 spawnPos = spawnChunk.PlayerSpawnPoint.position;
             
+            // 플레이어 프리팹 인스턴스화
+            if (_playerPrefab != null)
+            {
+                Instantiate(_playerPrefab, spawnPos, Quaternion.identity);
+            }
+
             // 2. 본인을 제외한 나머지 청크 중, 탈출구가 할당되어 있는 청크들을 스폰 지점과의 거리를 기준으로 내림차순(먼 순서) 정렬
             var distanceList = _spawnedChunks
                 .Where(c => c != spawnChunk && c.ExitPoint != null)
