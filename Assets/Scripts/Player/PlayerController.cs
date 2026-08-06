@@ -27,6 +27,15 @@ namespace DimensionLooter.Player
             _movement.OnMovementFinished += HandleMovementFinished;
         }
 
+        private void Start()
+        {
+            // 스폰 시 메인 카메라에 추적 대상 등록 (DI/참조 캐싱)
+            if (Camera.main != null && Camera.main.TryGetComponent<DimensionLooter.Core.CameraFollow>(out var cameraFollow))
+            {
+                cameraFollow.SetTarget(this.transform);
+            }
+        }
+
         private void OnDestroy()
         {
             if (_input != null)

@@ -20,8 +20,13 @@ namespace DimensionLooter.Player
         private void Start()
         {
             _mainCamera = Camera.main;
-            // 런타임에 프리뷰 UI를 캐싱 (매니저나 DI가 없으므로 임시로 Find 사용, Update 내 호출 아님)
-            _movementPreview = FindObjectOfType<MovementPreview>();
+            // Awake에서 비활성화(Hide)될 수 있으므로, 비활성화된 객체도 찾도록 true 파라미터 추가
+            _movementPreview = FindObjectOfType<MovementPreview>(true);
+            
+            if (_movementPreview == null)
+            {
+                Debug.LogWarning("씬에 MovementPreview 오브젝트가 없습니다. 미리보기가 동작하지 않습니다.");
+            }
         }
 
         private void Update()
@@ -55,7 +60,15 @@ namespace DimensionLooter.Player
         private Vector3 GetMouseWorldPosition()
         {
             if (_mainCamera == null) return Vector3.zero;
+            
             Vector3 mouseScreenPos = Input.mousePosition;
+            
+            // Unity 에디터 밖으로 마우스가 나갔을 때 무한대 값이 들어오는 예외 방지 (Guard Clause)
+            if (float.IsInfinity(mouseScreenPos.x) || float.IsInfinity(mouseScreenPos.y))
+            {
+                return transform.position; // 안전한 기본값 반환
+            }
+
             mouseScreenPos.z = -_mainCamera.transform.position.z;
             return _mainCamera.ScreenToWorldPoint(mouseScreenPos);
         }
