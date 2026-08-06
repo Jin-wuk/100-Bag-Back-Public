@@ -33,10 +33,10 @@ namespace DimensionLooter.Dungeon
             _spawnedChunks.Clear();
             int slotIndex = 0;
 
-            // 3x3 그리드 생성 루프
-            for (int y = 0; y < 3; y++)
+            // DungeonData에 설정된 가로/세로 사이즈 기반 그리드 생성 루프
+            for (int y = 0; y < _dungeonData.gridHeight; y++)
             {
-                for (int x = 0; x < 3; x++)
+                for (int x = 0; x < _dungeonData.gridWidth; x++)
                 {
                     if (slotIndex >= _dungeonData.chunkSlots.Length) break;
 

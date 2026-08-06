@@ -15,6 +15,12 @@ namespace DimensionLooter.Dungeon.Data
     public class DungeonData : ScriptableObject
     {
         [Header("Chunk Layout Settings")]
+        [Tooltip("던전의 가로 청크 개수 (예: 노말 2, 하드 3)")]
+        public int gridWidth = 3;
+        
+        [Tooltip("던전의 세로 청크 개수 (예: 노말 2, 하드 3)")]
+        public int gridHeight = 3;
+
         [Tooltip("청크가 배치될 x, y 간격 (청크의 가로세로 길이)")]
         public Vector2 chunkOffset = new Vector2(20f, 20f);
 

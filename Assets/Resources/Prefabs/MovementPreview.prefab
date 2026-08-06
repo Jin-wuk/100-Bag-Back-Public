@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5116266833857802035}
   - component: {fileID: 5949406577458236170}
+  - component: {fileID: 6136081516191501324}
   m_Layer: 0
   m_Name: MovementPreview
   m_TagString: Untagged
@@ -84,3 +85,17 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &6136081516191501324
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8481942133169383068}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7818f6dbdfc89d47a378e1dd18620e5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _movableColor: {r: 1, g: 1, b: 1, a: 0.5}
+  _unmovableColor: {r: 1, g: 0, b: 0, a: 0.5}
