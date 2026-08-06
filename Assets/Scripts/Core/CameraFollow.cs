@@ -19,6 +19,11 @@ namespace DimensionLooter.Core
         public void SetTarget(Transform target)
         {
             _target = target;
+            if (_target != null)
+            {
+                // 타겟 등록 즉시 해당 위치로 스냅 (최초 진입 시 화면 이동 딜레이 방지)
+                transform.position = _target.position + _offset;
+            }
         }
 
         private void LateUpdate()
