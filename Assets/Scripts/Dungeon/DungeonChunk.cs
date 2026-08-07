@@ -62,11 +62,19 @@ namespace DimensionLooter.Dungeon
             }
         }
 
-        public void ActivateExitPoint()
+        public void ActivateExitPoint(GameObject exitPrefab = null)
         {
             if (_exitPoint != null)
             {
-                _exitPoint.gameObject.SetActive(true);
+                if (exitPrefab != null)
+                {
+                    Instantiate(exitPrefab, _exitPoint.position, _exitPoint.rotation, this.transform);
+                }
+                else
+                {
+                    // 프리팹이 명시되지 않았다면 기존 방식대로 트랜스폼 자체를 활성화 (Fallback)
+                    _exitPoint.gameObject.SetActive(true);
+                }
             }
         }
     }

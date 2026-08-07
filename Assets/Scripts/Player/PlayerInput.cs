@@ -9,6 +9,9 @@ namespace DimensionLooter.Player
     public class PlayerInput : MonoBehaviour
     {
         public event Action<Vector3> OnTileClicked;
+        public event Action OnInventoryToggle;
+        
+        public bool IsMovementBlocked { get; set; } = false;
         
         [Header("Settings")]
         [Tooltip("경로 탐색 시 장애물로 인식할 레이어")]
@@ -34,8 +37,14 @@ namespace DimensionLooter.Player
 
         private void Update()
         {
-            // UI 위를 클릭하거나 호버링 중일 때는 무시
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            // 인벤토리 토글 키
+            if (Input.GetKeyDown(KeyCode.I))
+            {
+                OnInventoryToggle?.Invoke();
+            }
+
+            // 이동 차단 상태이거나 UI 위를 클릭하거나 호버링 중일 때는 무시
+            if (IsMovementBlocked || (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
             {
                 if (_movementPreview != null)
                     _movementPreview.Hide();

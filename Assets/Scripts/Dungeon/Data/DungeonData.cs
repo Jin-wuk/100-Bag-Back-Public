@@ -40,5 +40,8 @@ namespace DimensionLooter.Dungeon.Data
         
         [Tooltip("스폰 시킬 함정 프리팹 (임시 1종)")]
         public GameObject trapPrefab;
+
+        [Tooltip("생성될 탈출구 프리팹")]
+        public GameObject exitPrefab;
     }
 }

@@ -9,18 +9,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0d0d86b18684e3841ba46b0404489e53, type: 3}
-  m_Name: NewMonsterData
+  m_Script: {fileID: 11500000, guid: b3772e08d02708747a24934bf7c169b9, type: 3}
+  m_Name: NewItemData 1
   m_EditorClassIdentifier: 
-  monsterID: 0
-  monsterName: 
-  type: 0
-  hp: 0
-  atk: 0
-  def: 0
-  speed: 0
-  range: 0
-  zocRadius: 0
-  traits: []
-  dropPoolID: 0
-  goldDropBase: 0
+  itemID: 0
+  itemName: 
+  category: 0
+  equipType: 0
+  gridWidth: 2
+  gridHeight: 1
+  bagHeight: 0
+  baseValue: 0
+  rarity: 0

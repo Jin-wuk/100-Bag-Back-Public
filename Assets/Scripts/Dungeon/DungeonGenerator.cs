@@ -102,7 +102,7 @@ namespace DimensionLooter.Dungeon
                 int randomExitIndex = Random.Range(0, candidateCount);
                 
                 DungeonChunk exitChunk = distanceList[randomExitIndex];
-                exitChunk.ActivateExitPoint();
+                exitChunk.ActivateExitPoint(_dungeonData.exitPrefab);
             }
         }
     }
