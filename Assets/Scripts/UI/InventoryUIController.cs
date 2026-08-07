@@ -11,7 +11,6 @@ namespace DimensionLooter.UI
     {
         [Header("References")]
         [SerializeField] private InventoryManager _inventoryManager;
-        [SerializeField] private PlayerInput _playerInput;
         
         [Header("UI Elements")]
         [SerializeField] private GameObject _panelRoot;
@@ -27,36 +26,26 @@ namespace DimensionLooter.UI
 
         private void Awake()
         {
-            InventoryManager.OnManagerCreated += OnManagerCreated;
-            PlayerInput.OnInputCreated += OnInputCreated;
+            if (_gridContainer != null) _gridLayout = _gridContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
 
+            InventoryManager.OnManagerCreated += OnManagerCreated;
             // 이미 존재하는 인스턴스가 있다면 가져오기 (지연 스폰과 초기 스폰 모두 완벽 대응)
             if (_inventoryManager == null) 
             {
                 var existing = FindObjectOfType<InventoryManager>();
                 if (existing != null) OnManagerCreated(existing);
             }
-            if (_playerInput == null)
-            {
-                var existing = FindObjectOfType<PlayerInput>();
-                if (existing != null) OnInputCreated(existing);
-            }
-
-            if (_panelRoot != null) _panelRoot.SetActive(false);
-            if (_gridContainer != null) _gridLayout = _gridContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         }
 
         private void OnManagerCreated(InventoryManager manager)
         {
             _inventoryManager = manager;
             _inventoryManager.OnInventoryChanged += RefreshUI;
+            
+            // UI가 늦게 활성화되었을 경우를 대비해 구독 즉시 1회 갱신
+            RefreshUI();
         }
 
-        private void OnInputCreated(PlayerInput input)
-        {
-            _playerInput = input;
-            _playerInput.OnInventoryToggle += TogglePanel;
-        }
 
         private void Start()
         {
@@ -66,46 +55,22 @@ namespace DimensionLooter.UI
         private void OnDestroy()
         {
             InventoryManager.OnManagerCreated -= OnManagerCreated;
-            PlayerInput.OnInputCreated -= OnInputCreated;
 
             if (_inventoryManager != null)
             {
                 _inventoryManager.OnInventoryChanged -= RefreshUI;
             }
-            if (_playerInput != null)
-            {
-                _playerInput.OnInventoryToggle -= TogglePanel;
-            }
         }
 
-        public void Bind(InventoryManager invManager, PlayerInput input)
+        public void Bind(InventoryManager invManager)
         {
             // 기존 이벤트 해제
             if (_inventoryManager != null) _inventoryManager.OnInventoryChanged -= RefreshUI;
-            if (_playerInput != null) _playerInput.OnInventoryToggle -= TogglePanel;
 
             _inventoryManager = invManager;
-            _playerInput = input;
 
             // 새 이벤트 구독
             if (_inventoryManager != null) _inventoryManager.OnInventoryChanged += RefreshUI;
-            if (_playerInput != null) _playerInput.OnInventoryToggle += TogglePanel;
-        }
-
-        public void TogglePanel()
-        {
-            bool isActive = !_panelRoot.activeSelf;
-            _panelRoot.SetActive(isActive);
-
-            if (_playerInput != null)
-            {
-                _playerInput.IsMovementBlocked = isActive;
-            }
-
-            if (isActive)
-            {
-                RefreshUI();
-            }
         }
 
         private int _lastGridWidth = -1;
@@ -113,7 +78,9 @@ namespace DimensionLooter.UI
 
         private void RefreshUI()
         {
-            if (!_panelRoot.activeSelf) return;
+            // Removed panel active check since DungeonUIManager handles it and we are always refreshing when told so.
+            // If we only want to refresh when active, we can add a property or check canvas group.
+            // But since this is a pure view, it should just refresh when requested.
 
             // 가방 사이즈가 실제로 변했을 때만 격자를 새로 그림 (최적화)
             if (_lastGridWidth != _inventoryManager.GridWidth || _lastGridHeight != _inventoryManager.GridHeight)
@@ -310,6 +277,18 @@ namespace DimensionLooter.UI
                 Vector2 localMouse;
                 RectTransformUtility.ScreenPointToLocalPointInRectangle(_itemsContainer, UnityEngine.Input.mousePosition, null, out localMouse);
                 _dragOffset = localMouse - (Vector2)_heldItemUI.rectTransform.localPosition;
+            }
+        }
+
+        public void OnItemDoubleClicked(DraggableItemUI clickedItem)
+        {
+            if (_heldItemUI != null) return; // Cannot equip while holding an item
+
+            // Try to equip the item
+            var equipmentManager = FindObjectOfType<EquipmentManager>();
+            if (equipmentManager != null)
+            {
+                equipmentManager.TryEquip(clickedItem.Item);
             }
         }
 

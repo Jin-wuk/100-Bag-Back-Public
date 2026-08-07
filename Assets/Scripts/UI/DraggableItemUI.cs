@@ -48,6 +48,15 @@ namespace DimensionLooter.UI
             _spacing = spacing;
             _uiController = uiController;
             
+            if (_iconTransform != null && _item?.ItemData != null)
+            {
+                var iconImage = _iconTransform.GetComponent<UnityEngine.UI.Image>();
+                if (iconImage != null)
+                {
+                    iconImage.sprite = _item.ItemData.itemIcon;
+                }
+            }
+
             UpdateSizeAndRotation();
         }
 
@@ -131,12 +140,21 @@ namespace DimensionLooter.UI
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            // 클릭-투-픽업
             if (eventData.button == PointerEventData.InputButton.Left)
             {
-                if (_uiController != null)
+                if (eventData.clickCount == 2)
                 {
-                    _uiController.OnItemClicked(this);
+                    if (_uiController != null)
+                    {
+                        _uiController.OnItemDoubleClicked(this);
+                    }
+                }
+                else if (eventData.clickCount == 1)
+                {
+                    if (_uiController != null)
+                    {
+                        _uiController.OnItemClicked(this);
+                    }
                 }
             }
         }

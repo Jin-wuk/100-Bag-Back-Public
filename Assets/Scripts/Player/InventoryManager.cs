@@ -158,5 +158,21 @@ namespace DimensionLooter.Player
         }
         
         public IReadOnlyList<RuntimeItem> GetAllItems() => _items;
+
+        public bool TryAddNextAvailableSlot(RuntimeItem item)
+        {
+            for (int y = 0; y < GridHeight; y++)
+            {
+                for (int x = 0; x < GridWidth; x++)
+                {
+                    if (CanPlaceItem(item, x, y))
+                    {
+                        AddItemAt(item, x, y);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
     }
 }

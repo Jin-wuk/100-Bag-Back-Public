@@ -7,20 +7,23 @@ namespace DimensionLooter.UI
     public class EquipmentUIController : MonoBehaviour
     {
         [SerializeField] private EquipmentManager _equipmentManager;
+        [SerializeField] private System.Collections.Generic.List<EquipmentSlotUI> _slots;
 
-
-
-        private void Start()
+        private void Awake()
         {
-            if (_equipmentManager != null)
+            EquipmentManager.OnManagerCreated += OnManagerCreated;
+
+            if (_equipmentManager == null)
             {
-                _equipmentManager.OnEquipmentChanged += RefreshUI;
-                _equipmentManager.OnEquipmentFailed += ShowErrorMessage;
+                var existing = FindObjectOfType<EquipmentManager>();
+                if (existing != null) OnManagerCreated(existing);
             }
         }
 
         private void OnDestroy()
         {
+            EquipmentManager.OnManagerCreated -= OnManagerCreated;
+
             if (_equipmentManager != null)
             {
                 _equipmentManager.OnEquipmentChanged -= RefreshUI;
@@ -28,27 +31,36 @@ namespace DimensionLooter.UI
             }
         }
 
-        public void Bind(EquipmentManager eqManager)
+        private void OnManagerCreated(EquipmentManager manager)
         {
-            if (_equipmentManager != null)
-            {
-                _equipmentManager.OnEquipmentChanged -= RefreshUI;
-                _equipmentManager.OnEquipmentFailed -= ShowErrorMessage;
-            }
-
-            _equipmentManager = eqManager;
-
+            _equipmentManager = manager;
+            
             if (_equipmentManager != null)
             {
                 _equipmentManager.OnEquipmentChanged += RefreshUI;
                 _equipmentManager.OnEquipmentFailed += ShowErrorMessage;
+
+                if (_slots != null)
+                {
+                    foreach (var slot in _slots)
+                    {
+                        slot.Setup(_equipmentManager);
+                    }
+                }
+                
+                RefreshUI();
             }
         }
 
         private void RefreshUI()
         {
-            // 장착된 장비 아이콘 갱신 로직
-            // 각 부위별 UI 슬롯에 아이콘 할당
+            if (_equipmentManager == null || _slots == null) return;
+
+            foreach (var slot in _slots)
+            {
+                var item = _equipmentManager.GetEquippedItem(slot.SlotType);
+                slot.UpdateSlot(item);
+            }
         }
 
         private void ShowErrorMessage(string msg)

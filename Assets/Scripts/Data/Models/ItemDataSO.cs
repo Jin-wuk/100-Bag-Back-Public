@@ -8,6 +8,7 @@ namespace DimensionLooter.Data.Models
     {
         public int itemID;
         public string itemName;
+        public Sprite itemIcon;
         public ItemCategory category;
         public EquipType equipType;
         public int gridWidth;
@@ -16,5 +17,11 @@ namespace DimensionLooter.Data.Models
         public int bagHeight;
         public int baseValue;
         public ItemRarity rarity;
+
+        [Header("Equipment Stats")]
+        public int hpBonus;
+        public int mpBonus;
+        public int attackBonus;
+        public int defenseBonus;
     }
 }

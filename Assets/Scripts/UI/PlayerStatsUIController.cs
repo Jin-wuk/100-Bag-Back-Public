@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using DimensionLooter.Player;
 
 namespace DimensionLooter.UI
 {
@@ -10,7 +11,38 @@ namespace DimensionLooter.UI
         [SerializeField] private TextMeshProUGUI _attackText;
         [SerializeField] private TextMeshProUGUI _defenseText;
 
-        // 실제로는 PlayerStatManager 등의 이벤트를 구독하여 갱신합니다.
+        private PlayerStatManager _statManager;
+
+        private void Awake()
+        {
+            PlayerStatManager.OnManagerCreated += OnManagerCreated;
+
+            if (_statManager == null)
+            {
+                var existing = FindObjectOfType<PlayerStatManager>();
+                if (existing != null) OnManagerCreated(existing);
+            }
+        }
+
+        private void OnDestroy()
+        {
+            PlayerStatManager.OnManagerCreated -= OnManagerCreated;
+            
+            if (_statManager != null)
+            {
+                _statManager.OnStatsChanged -= UpdateStats;
+            }
+        }
+
+        private void OnManagerCreated(PlayerStatManager manager)
+        {
+            _statManager = manager;
+            _statManager.OnStatsChanged += UpdateStats;
+            
+            // UI가 나중에 활성화(지연 생성)되었을 때를 대비해, 구독 즉시 현재 스탯으로 화면을 1회 강제 동기화합니다.
+            UpdateStats(_statManager.CurrentHp, _statManager.CurrentMp, _statManager.CurrentAttack, _statManager.CurrentDefense);
+        }
+
         public void UpdateStats(int hp, int mp, int atk, int def)
         {
             if (_hpText != null) _hpText.text = $"HP: {hp}";
