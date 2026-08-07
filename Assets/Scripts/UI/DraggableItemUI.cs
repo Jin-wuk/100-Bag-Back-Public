@@ -6,6 +6,7 @@ using DimensionLooter.Player;
 namespace DimensionLooter.UI
 {
     [RequireComponent(typeof(RectTransform))]
+    [RequireComponent(typeof(CanvasGroup))]
     public class DraggableItemUI : MonoBehaviour, IPointerClickHandler
     {
         [Header("UI Elements")]
@@ -33,8 +34,7 @@ namespace DimensionLooter.UI
         private void Awake()
         {
             _rectTransform = GetComponent<RectTransform>();
-            _canvasGroup = gameObject.GetComponent<CanvasGroup>();
-            if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            _canvasGroup = GetComponent<CanvasGroup>();
             
             if (_borderImage != null)
                 _defaultBorderColor = _borderImage.color;

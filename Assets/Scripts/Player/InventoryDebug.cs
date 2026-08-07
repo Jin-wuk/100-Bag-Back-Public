@@ -11,6 +11,9 @@ namespace DimensionLooter.DebugTools
         [Tooltip("테스트용으로 생성할 아이템 데이터 목록")]
         public List<ItemDataSO> testItems;
 
+        [Tooltip("디버그 기능을 활성화할지 여부. 끄면 키 입력이 무시됩니다.")]
+        [SerializeField] private bool _enableDebug = true;
+
         private InventoryManager _inventoryManager;
 
         private void Start()
@@ -20,6 +23,8 @@ namespace DimensionLooter.DebugTools
 
         private void Update()
         {
+            if (!_enableDebug) return;
+
             // O 키를 누르면 무작위 아이템 추가 시도
             if (Input.GetKeyDown(KeyCode.O))
             {

@@ -7,6 +7,7 @@ namespace DimensionLooter.Player
 {
     public class InventoryManager : MonoBehaviour
     {
+        public static event Action<InventoryManager> OnManagerCreated;
         public event Action OnInventoryChanged;
         
         [Header("Grid Settings")]
@@ -21,17 +22,13 @@ namespace DimensionLooter.Player
 
         private void Awake()
         {
+            OnManagerCreated?.Invoke(this);
             InitializeGrid(_initialGridWidth, _initialGridHeight);
         }
 
         private void Start()
         {
-            // 플레이어 스폰 시 씬에 존재하는 UI 컨트롤러를 찾아 자신을 바인딩 (DI)
-            var ui = FindObjectOfType<DimensionLooter.UI.InventoryUIController>(true);
-            if (ui != null)
-            {
-                ui.Bind(this, GetComponent<PlayerInput>());
-            }
+            // UI 바인딩 로직은 이제 뷰(InventoryUIController) 측에서 의존성 역전(DI)을 통해 알아서 수행합니다.
         }
 
         public void InitializeGrid(int width, int height)

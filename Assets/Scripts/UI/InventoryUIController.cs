@@ -27,24 +27,47 @@ namespace DimensionLooter.UI
 
         private void Awake()
         {
+            InventoryManager.OnManagerCreated += OnManagerCreated;
+            PlayerInput.OnInputCreated += OnInputCreated;
+
+            // 이미 존재하는 인스턴스가 있다면 가져오기 (지연 스폰과 초기 스폰 모두 완벽 대응)
+            if (_inventoryManager == null) 
+            {
+                var existing = FindObjectOfType<InventoryManager>();
+                if (existing != null) OnManagerCreated(existing);
+            }
+            if (_playerInput == null)
+            {
+                var existing = FindObjectOfType<PlayerInput>();
+                if (existing != null) OnInputCreated(existing);
+            }
+
             if (_panelRoot != null) _panelRoot.SetActive(false);
             if (_gridContainer != null) _gridLayout = _gridContainer.GetComponent<UnityEngine.UI.GridLayoutGroup>();
         }
 
+        private void OnManagerCreated(InventoryManager manager)
+        {
+            _inventoryManager = manager;
+            _inventoryManager.OnInventoryChanged += RefreshUI;
+        }
+
+        private void OnInputCreated(PlayerInput input)
+        {
+            _playerInput = input;
+            _playerInput.OnInventoryToggle += TogglePanel;
+        }
+
         private void Start()
         {
-            if (_inventoryManager != null)
-            {
-                _inventoryManager.OnInventoryChanged += RefreshUI;
-            }
-            if (_playerInput != null)
-            {
-                _playerInput.OnInventoryToggle += TogglePanel;
-            }
+            // 의존성 탐색은 Awake 시점에 정적 이벤트 구독을 통해 수행됩니다.
         }
 
         private void OnDestroy()
         {
+            InventoryManager.OnManagerCreated -= OnManagerCreated;
+            PlayerInput.OnInputCreated -= OnInputCreated;
+
             if (_inventoryManager != null)
             {
                 _inventoryManager.OnInventoryChanged -= RefreshUI;
@@ -222,24 +245,35 @@ namespace DimensionLooter.UI
                     
                     Vector2 cellSize = _gridLayout.cellSize;
                     Vector2 spacing = _gridLayout.spacing;
+                    float cellTotalX = cellSize.x + spacing.x;
+                    float cellTotalY = cellSize.y + spacing.y;
 
-                    // 아이템 중심점 계산 (Top-Left 기준 절대좌표)
-                    Vector2 oldCenter = new Vector2(
-                        (oldW * cellSize.x + (oldW - 1) * spacing.x) / 2f,
-                        -((oldH * cellSize.y + (oldH - 1) * spacing.y) / 2f)
-                    );
+                    // 1. 현재 마우스가 잡고 있는 셀(칸)의 인덱스 계산
+                    int cx = Mathf.FloorToInt(_dragOffset.x / cellTotalX);
+                    int cy = Mathf.FloorToInt(-_dragOffset.y / cellTotalY);
                     
-                    Vector2 newCenter = new Vector2(
-                        (newW * cellSize.x + (newW - 1) * spacing.x) / 2f,
-                        -((newH * cellSize.y + (newH - 1) * spacing.y) / 2f)
-                    );
+                    // 예외 방지 (마우스가 아이템 경계를 살짝 벗어났을 경우 가장자리로 클램프)
+                    cx = Mathf.Clamp(cx, 0, oldW - 1);
+                    cy = Mathf.Clamp(cy, 0, oldH - 1);
 
-                    // 중심점 기준 마우스 오프셋에 -90도(시계방향) 회전 행렬 적용
-                    Vector2 distToCenter = _dragOffset - oldCenter;
-                    Vector2 rotatedDist = new Vector2(distToCenter.y, -distToCenter.x);
+                    // 2. 90도 시계방향 회전 후 해당 셀의 새로운 인덱스 계산
+                    int new_cx = oldH - 1 - cy;
+                    int new_cy = cx;
 
-                    // 새로운 오프셋 적용
-                    _dragOffset = newCenter + rotatedDist;
+                    // 3. 셀 내부에서의 정밀한 마우스 픽셀 오프셋(Sub-cell offset) 회전 처리
+                    Vector2 oldCellTopLeft = new Vector2(cx * cellTotalX, -cy * cellTotalY);
+                    Vector2 subCellOffset = _dragOffset - oldCellTopLeft;
+
+                    Vector2 cellCenter = new Vector2(cellTotalX / 2f, -cellTotalY / 2f);
+                    Vector2 vc = subCellOffset - cellCenter;
+                    
+                    // 시계방향 90도 회전 (Unity UI 좌표계: Y가 위를 향함)
+                    Vector2 vc_rot = new Vector2(vc.y, -vc.x);
+                    Vector2 newSubCellOffset = cellCenter + vc_rot;
+
+                    // 4. 새로운 마우스 오프셋 적용 (마우스가 잡고 있던 '그 칸'을 계속 유지)
+                    Vector2 newCellTopLeft = new Vector2(new_cx * cellTotalX, -new_cy * cellTotalY);
+                    _dragOffset = newCellTopLeft + newSubCellOffset;
                 }
 
                 // 2. 마우스 따라다니기 (클릭했던 부위 정확히 유지)

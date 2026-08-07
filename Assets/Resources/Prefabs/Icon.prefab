@@ -12,8 +12,9 @@ GameObject:
   - component: {fileID: 8854025266317023189}
   - component: {fileID: -5972275480375149888}
   - component: {fileID: 1696499453985169248}
+  - component: {fileID: 96326106876010326}
   m_Layer: 0
-  m_Name: weapon_icon
+  m_Name: Icon
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -51,8 +52,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3650cc375a499e84095f16d5527a389c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _borderImage: {fileID: 917361354285076749}
-  _iconTransform: {fileID: 8332585512439090100}
+  _borderImage: {fileID: 1696499453985169248}
+  _iconTransform: {fileID: 9082705185536340329}
 --- !u!222 &-5972275480375149888
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -81,7 +82,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 2325ebbcca9e840419cd1dfcbecd19d8, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 0240b69bc2a40074bb00e3cad8ccbd08, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -91,6 +92,18 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!225 &96326106876010326
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1145650698865821164}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1203755444824891109
 GameObject:
   m_ObjectHideFlags: 0
@@ -156,7 +169,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 0240b69bc2a40074bb00e3cad8ccbd08, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 2325ebbcca9e840419cd1dfcbecd19d8, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1

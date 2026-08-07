@@ -8,6 +8,8 @@ namespace DimensionLooter.Player
 {
     public class PlayerInput : MonoBehaviour
     {
+        public static event Action<PlayerInput> OnInputCreated;
+
         public event Action<Vector3> OnTileClicked;
         public event Action OnInventoryToggle;
         
@@ -20,6 +22,11 @@ namespace DimensionLooter.Player
         private Camera _mainCamera;
         private MovementPreview _movementPreview;
         private Grid _grid;
+
+        private void Awake()
+        {
+            OnInputCreated?.Invoke(this);
+        }
 
         private void Start()
         {
