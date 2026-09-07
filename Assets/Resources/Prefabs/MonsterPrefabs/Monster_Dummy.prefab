@@ -11,7 +11,9 @@ GameObject:
   - component: {fileID: 3783667495968826405}
   - component: {fileID: 3912177027287087330}
   - component: {fileID: 9154450581857349445}
-  m_Layer: 4
+  - component: {fileID: 702766565577098796}
+  - component: {fileID: 2004222624177681328}
+  m_Layer: 7
   m_Name: Monster_Dummy
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -130,3 +132,32 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 0.9, y: 0.9}
   m_EdgeRadius: 0
+--- !u!114 &702766565577098796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4769375905301041180}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5ad3fa6c5ab022d458aaaff59fb5b6a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _monsterData: {fileID: 11400000, guid: ec93f5e06e38450439745f4cfab529b7, type: 2}
+  _obstacleLayerMask:
+    serializedVersion: 2
+    m_Bits: 64
+  _warningPrefab: {fileID: 2761942298767711442, guid: ff0c7ec2c426e204f8b85ba4de2b1e80, type: 3}
+--- !u!114 &2004222624177681328
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4769375905301041180}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe9081e08f8ddf34aa3d01b663b29b6b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

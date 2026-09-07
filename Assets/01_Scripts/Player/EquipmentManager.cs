@@ -97,9 +97,10 @@ namespace DimensionLooter.Player
             return _equippedItems.TryGetValue(type, out var item) ? item : null;
         }
 
-        public (int hp, int mp, int atk, int def) GetTotalStats()
+        public (int hp, int mp, int atk, int def, float speed, int range) GetTotalStats()
         {
-            int hp = 0, mp = 0, atk = 0, def = 0;
+            int hp = 0, mp = 0, atk = 0, def = 0, range = 0;
+            float speed = 0f;
             foreach (var item in _equippedItems.Values)
             {
                 if (item != null && item.ItemData != null)
@@ -108,9 +109,11 @@ namespace DimensionLooter.Player
                     mp += item.ItemData.mpBonus;
                     atk += item.ItemData.attackBonus;
                     def += item.ItemData.defenseBonus;
+                    speed += item.ItemData.speedBonus;
+                    range += item.ItemData.rangeBonus;
                 }
             }
-            return (hp, mp, atk, def);
+            return (hp, mp, atk, def, speed, range);
         }
     }
 }

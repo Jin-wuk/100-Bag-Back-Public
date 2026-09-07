@@ -6,4 +6,6 @@ namespace DimensionLooter.Data.Core
     public enum ItemRarity { Common, Rare, Legendary }
     public enum SkillActivationType { Active, Passive }
     public enum SkillRoleType { Interrupt, Survival, Execution, General }
+    public enum GameState { Exploration, Combat }
+    public enum AttackPatternType { SingleTile, Cross, ForwardLine }
 }

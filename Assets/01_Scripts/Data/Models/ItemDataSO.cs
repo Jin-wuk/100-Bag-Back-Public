@@ -23,5 +23,7 @@ namespace DimensionLooter.Data.Models
         public int mpBonus;
         public int attackBonus;
         public int defenseBonus;
+        public float speedBonus;
+        public int rangeBonus;
     }
 }

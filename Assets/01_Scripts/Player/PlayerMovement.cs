@@ -69,6 +69,29 @@ namespace DimensionLooter.Player
             {
                 Vector3 startPos = transform.position;
                 Vector3 endPos = _currentPath[0];
+                Vector3Int currentCell = _grid.WorldToCell(startPos);
+                Vector3Int targetCell = _grid.WorldToCell(endPos);
+
+                // 타일 점유 (Race condition 방지)
+                if (TileSystem.Instance != null)
+                {
+                    if (!TileSystem.Instance.TryOccupyTile(targetCell, gameObject, currentCell))
+                    {
+                        // 점유 실패 시 이동 멈춤
+                        _currentPath.Clear();
+                        break;
+                    }
+                }
+                else
+                {
+                    // Fallback
+                    if (Physics2D.OverlapPoint(endPos, LayerMask.GetMask("Monster")) != null)
+                    {
+                        _currentPath.Clear();
+                        break;
+                    }
+                }
+                
                 _currentPath.RemoveAt(0);
 
                 float elapsedTime = 0f;

@@ -19,5 +19,7 @@ namespace DimensionLooter.Data.Models
         public List<string> traits = new List<string>();
         public int dropPoolID;
         public int goldDropBase;
+        public AttackPatternType attackPattern = AttackPatternType.SingleTile;
+        public float telegraphTime = 1f;
     }
 }
