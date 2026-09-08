@@ -9,27 +9,15 @@ namespace DimensionLooter.Data.Core
     {
         public ItemDataSO ItemData { get; private set; }
         public string InstanceID { get; private set; }
-        public int GridX { get; set; }
-        public int GridY { get; set; }
-        public bool IsRotated { get; set; }
+        public int SlotIndex { get; set; }
+        public int Count { get; set; }
 
         public RuntimeItem(ItemDataSO itemData)
         {
             ItemData = itemData;
             InstanceID = Guid.NewGuid().ToString();
-            GridX = -1;
-            GridY = -1;
-            IsRotated = false;
-        }
-
-        public int GetCurrentWidth()
-        {
-            return IsRotated ? ItemData.gridHeight : ItemData.gridWidth;
-        }
-
-        public int GetCurrentHeight()
-        {
-            return IsRotated ? ItemData.gridWidth : ItemData.gridHeight;
+            SlotIndex = -1;
+            Count = 1;
         }
     }
 }

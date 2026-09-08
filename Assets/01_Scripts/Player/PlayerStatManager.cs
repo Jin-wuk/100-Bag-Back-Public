@@ -39,6 +39,8 @@ namespace DimensionLooter.Player
             {
                 _equipmentManager.OnEquipmentChanged += CalculateStats;
             }
+            var inv = GetComponent<InventoryManager>();
+            if (inv != null) inv.OnInventoryChanged += CalculateStats;
         }
 
         private void OnDisable()
@@ -47,6 +49,8 @@ namespace DimensionLooter.Player
             {
                 _equipmentManager.OnEquipmentChanged -= CalculateStats;
             }
+            var inv = GetComponent<InventoryManager>();
+            if (inv != null) inv.OnInventoryChanged -= CalculateStats;
         }
 
         private void Start()
@@ -62,8 +66,18 @@ namespace DimensionLooter.Player
             CurrentMp = _baseMp + eqStats.mp;
             CurrentAttack = _baseAttack + eqStats.atk;
             CurrentDefense = _baseDefense + eqStats.def;
-            CurrentSpeed = _baseSpeed + eqStats.speed;
             CurrentRange = _baseRange + eqStats.range;
+
+            float speedPenalty = 0f;
+            var inv = GetComponent<InventoryManager>();
+            if (inv != null)
+            {
+                if (inv.CurrentWeight > inv.MaxWeight)
+                {
+                    speedPenalty = (inv.CurrentWeight - inv.MaxWeight) * 0.5f; // 초과 1당 0.5 감소 (예시)
+                }
+            }
+            CurrentSpeed = Mathf.Max(1f, (_baseSpeed + eqStats.speed) - speedPenalty);
 
             OnStatsChanged?.Invoke(CurrentHp, CurrentMp, CurrentAttack, CurrentDefense, CurrentSpeed, CurrentRange);
         }

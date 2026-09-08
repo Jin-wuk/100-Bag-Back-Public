@@ -87,12 +87,18 @@ namespace DimensionLooter.Player
             Vector3 dir = (targetPos - transform.position).normalized;
             if (dir.magnitude > 0.1f) _facingDirection = dir;
 
-            _movement.MoveTo(targetPos);
             CurrentState = PlayerState.Moving;
+            _movement.MoveTo(targetPos);
         }
 
         private void HandleDirectionalInput(Vector2Int dirInt)
         {
+            if (CurrentState == PlayerState.Moving)
+            {
+                _movement.CancelPath();
+                return; // Wait for current tile hop to finish before starting new move
+            }
+            
             if (CurrentState != PlayerState.Idle || _combat.IsAttackOnCooldown) return;
 
             Vector3 direction = new Vector3(dirInt.x, dirInt.y, 0);
@@ -130,8 +136,8 @@ namespace DimensionLooter.Player
             else
             {
                 // Move
-                _movement.MoveTo(targetPos);
                 CurrentState = PlayerState.Moving;
+                _movement.MoveTo(targetPos);
             }
         }
 

@@ -120,10 +120,17 @@ public class CSVImporterWindow : EditorWindow
             so.itemName = cols[1];
             so.category = (ItemCategory)Enum.Parse(typeof(ItemCategory), cols[2], true);
             so.equipType = (EquipType)Enum.Parse(typeof(EquipType), cols[3], true);
-            so.gridWidth = int.Parse(cols[4]);
-            so.gridHeight = int.Parse(cols[5]);
+            so.weight = float.Parse(cols[4]);
+            so.maxStack = int.Parse(cols[5]);
             so.baseValue = int.Parse(cols[6]);
             so.rarity = (ItemRarity)Enum.Parse(typeof(ItemRarity), cols[7], true);
+
+            if (so.equipType == EquipType.Backpack)
+            {
+                // CSV 포맷이 확장되어 가방 스탯이 있을 경우 처리 (임시 방어코드)
+                if (cols.Length > 8 && !string.IsNullOrEmpty(cols[8])) so.bagAddedSlots = int.Parse(cols[8]);
+                if (cols.Length > 9 && !string.IsNullOrEmpty(cols[9])) so.bagMaxWeight = float.Parse(cols[9]);
+            }
 
             AssetDatabase.CreateAsset(so, $"{folder}/Item_{so.itemID}.asset");
         }

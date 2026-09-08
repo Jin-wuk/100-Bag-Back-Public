@@ -59,6 +59,19 @@ namespace DimensionLooter.Player
                 }
                 _moveCoroutine = StartCoroutine(MoveAlongPathCoroutine());
             }
+            else
+            {
+                OnMovementFinished?.Invoke();
+            }
+        }
+
+        public void CancelPath()
+        {
+            if (_isMoving)
+            {
+                _currentPath.Clear();
+                _hasPendingTarget = false;
+            }
         }
 
         private IEnumerator MoveAlongPathCoroutine()

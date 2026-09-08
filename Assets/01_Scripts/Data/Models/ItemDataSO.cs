@@ -11,10 +11,13 @@ namespace DimensionLooter.Data.Models
         public Sprite itemIcon;
         public ItemCategory category;
         public EquipType equipType;
-        public int gridWidth;
-        public int gridHeight;
+        public float weight = 1f;
+        public int maxStack = 1;
+
         [Header("For Backpack Only")]
-        public int bagHeight;
+        public int bagAddedSlots = 10;
+        public float bagMaxWeight = 50f;
+
         public int baseValue;
         public ItemRarity rarity;
 

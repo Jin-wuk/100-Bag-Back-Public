@@ -33,8 +33,7 @@ namespace DimensionLooter.Player
                 return false;
 
             EquipType type = item.ItemData.equipType;
-            int originalX = item.GridX;
-            int originalY = item.GridY;
+            int originalSlot = item.SlotIndex;
 
             // 기존에 장착된 동일 부위 아이템이 있다면 먼저 해제 시도 (인벤토리 공간 확보를 위해 장착할 아이템을 먼저 치워둠)
             if (_equippedItems.TryGetValue(type, out RuntimeItem oldItem) && oldItem != null)
@@ -44,7 +43,7 @@ namespace DimensionLooter.Player
                 if (!Unequip(type))
                 {
                     // 해제 실패 (예: 가방 공간 부족) 시 원래 상태로 복구
-                    _inventoryManager.AddItemAt(item, originalX, originalY);
+                    _inventoryManager.AddItemAt(item, originalSlot);
                     return false;
                 }
             }
@@ -55,14 +54,7 @@ namespace DimensionLooter.Player
 
             if (type == EquipType.Backpack)
             {
-                int newHeight = item.ItemData.bagHeight;
-                if (newHeight < _inventoryManager.GridHeight)
-                {
-                    OnEquipmentFailed?.Invoke("교체하려는 가방의 크기가 작습니다.");
-                    return false;
-                }
-                
-                _inventoryManager.UpdateBagSize(newHeight);
+                _inventoryManager.UpdateBagCapacity(item.ItemData.bagAddedSlots, item.ItemData.bagMaxWeight);
             }
 
             _equippedItems[type] = item;
@@ -83,7 +75,7 @@ namespace DimensionLooter.Player
 
                 if (type == EquipType.Backpack)
                 {
-                    _inventoryManager.UpdateBagSize(4);
+                    _inventoryManager.UpdateBagCapacity(0, 0);
                 }
                 _equippedItems.Remove(type);
                 OnEquipmentChanged?.Invoke();

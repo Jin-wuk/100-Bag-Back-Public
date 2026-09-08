@@ -89,6 +89,9 @@ namespace DimensionLooter.Combat
         private void Die()
         {
             if (_behaviorCoroutine != null) StopCoroutine(_behaviorCoroutine);
+            
+            GlobalEvents.OnMonsterDied?.Invoke(transform.position, _monsterData.dropPoolID);
+            
             Destroy(gameObject);
         }
 
