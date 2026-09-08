@@ -11,14 +11,18 @@ namespace DimensionLooter.Map
         private RuntimeItem _item;
         private SpriteRenderer _spriteRenderer;
 
-        public void Setup(RuntimeItem item)
+        public Vector3Int CellPos { get; private set; }
+
+        public void Setup(RuntimeItem item, Vector3Int cellPos)
         {
             _item = item;
+            CellPos = cellPos;
             _spriteRenderer = GetComponent<SpriteRenderer>();
             
             if (_item != null && _item.ItemData != null)
             {
                 _spriteRenderer.sprite = _item.ItemData.itemIcon;
+                _spriteRenderer.sortingOrder = 10; // 타일맵 위로 올리기 위해 높은 값 할당
                 
                 // 콜라이더 크기를 스프라이트에 맞춤
                 var collider = GetComponent<BoxCollider2D>();
@@ -27,15 +31,26 @@ namespace DimensionLooter.Map
             }
         }
 
-        private void OnMouseDown()
+        public void Setup(RuntimeItem item)
+        {
+            Setup(item, Vector3Int.zero);
+        }
+
+        public void PickUpByPlayer()
         {
             if (_item == null) return;
 
-            // 아이템을 마우스로 집어들었다는 전역 이벤트 발생
-            GlobalEvents.OnItemPickedUpByMouse?.Invoke(_item);
+            bool isPickedUp = false;
+            GlobalEvents.OnItemPickedUpByPlayer?.Invoke(_item, (success) => isPickedUp = success);
             
-            // 맵에서는 사라짐 (풀링 사용 시 Destroy 대신 ReturnToPool 호출)
-            Destroy(gameObject);
+            Debug.Log($"[LootableItem] 픽업 시도 - 아이템: {_item.ItemData.itemName}, 타일: {CellPos}, 인벤토리 수납 성공 여부: {isPickedUp}");
+
+            if (isPickedUp)
+            {
+                TileSystem.Instance.RemoveItemTile(CellPos);
+                Destroy(gameObject);
+            }
         }
+
     }
 }

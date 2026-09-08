@@ -131,41 +131,46 @@ namespace DimensionLooter.UI
         // ================= Drag and Drop Logic =================
 
         private DraggableItemUI _heldItemUI;
-        private bool _ignoreFirstClick;
 
-        private void Update()
+        public void OnItemBeginDrag(DraggableItemUI draggedItem, UnityEngine.EventSystems.PointerEventData eventData)
         {
-            if (_heldItemUI != null)
+            _heldItemUI = draggedItem;
+            _heldItemUI.SetHeldState(true);
+            
+            // 패널 잘림(Mask) 및 가려짐 방지를 위해 가장 최상단의 캔버스를 찾아 부모로 설정합니다.
+            Canvas rootCanvas = GetComponentInParent<Canvas>();
+            RectTransform targetParent = _dragContainer;
+            
+            if (targetParent == null)
             {
-                // 마우스 따라다니기
-                Vector2 localMouse;
-                RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                    _dragContainer != null ? _dragContainer : _gridContainer, 
-                    UnityEngine.Input.mousePosition, null, out localMouse);
-                _heldItemUI.rectTransform.localPosition = localMouse;
+                targetParent = rootCanvas != null ? rootCanvas.GetComponent<RectTransform>() : _gridContainer;
+            }
 
-                // 좌클릭 시 내려놓기
-                if (UnityEngine.Input.GetMouseButtonDown(0))
-                {
-                    if (_ignoreFirstClick)
-                    {
-                        _ignoreFirstClick = false;
-                        return;
-                    }
-                    TryDropHeldItem();
-                }
+            _heldItemUI.transform.SetParent(targetParent, false);
+            
+            // 부모 컨테이너(가 있다면)와 아이템 자체를 하이어라키 맨 아래(렌더링 최상단)로 이동
+            if (_dragContainer != null) _dragContainer.SetAsLastSibling();
+            _heldItemUI.transform.SetAsLastSibling();
+        }
+
+        public void OnItemDrag(DraggableItemUI draggedItem, UnityEngine.EventSystems.PointerEventData eventData)
+        {
+            if (_heldItemUI == draggedItem)
+            {
+                Vector2 localMouse;
+                RectTransform currentParent = (RectTransform)_heldItemUI.transform.parent;
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    currentParent, 
+                    eventData.position, eventData.pressEventCamera, out localMouse);
+                _heldItemUI.rectTransform.localPosition = localMouse;
             }
         }
 
-        public void OnItemClicked(DraggableItemUI clickedItem)
+        public void OnItemEndDrag(DraggableItemUI draggedItem, UnityEngine.EventSystems.PointerEventData eventData)
         {
-            if (_heldItemUI == null)
+            if (_heldItemUI == draggedItem)
             {
-                _heldItemUI = clickedItem;
-                _heldItemUI.SetHeldState(true);
-                // 최상단 컨테이너로 이동시켜서 렌더링 순서 최상단 유지
-                _heldItemUI.transform.SetParent(_dragContainer != null ? _dragContainer : _gridContainer, false);
-                _ignoreFirstClick = true;
+                TryDropHeldItem(eventData.position, eventData.pressEventCamera);
             }
         }
 
@@ -179,7 +184,7 @@ namespace DimensionLooter.UI
             }
         }
 
-        private void TryDropHeldItem()
+        private void TryDropHeldItem(Vector2 screenPosition, Camera cam)
         {
             if (_heldItemUI == null) return;
 
@@ -187,7 +192,7 @@ namespace DimensionLooter.UI
             int targetSlot = -1;
             for (int i = 0; i < _cells.Count; i++)
             {
-                if (RectTransformUtility.RectangleContainsScreenPoint((RectTransform)_cells[i], UnityEngine.Input.mousePosition, null))
+                if (RectTransformUtility.RectangleContainsScreenPoint((RectTransform)_cells[i], screenPosition, cam))
                 {
                     targetSlot = i;
                     break;
@@ -202,13 +207,12 @@ namespace DimensionLooter.UI
                 var droppedItem = _heldItemUI;
                 _heldItemUI = null;
                 
-                if (!_itemUIs.ContainsKey(item)) _itemUIs.Add(item, droppedItem.gameObject);
-                
+                // 기존 위치에서 이동하는 것이라면 스왑을 포함하여 AddItemAt 호출
                 _inventoryManager.AddItemAt(item, targetSlot);
             }
             else
             {
-                // 외부 아이템인데 배치 실패 시 버림
+                // 외부 아이템인데 배치 실패 시 버림 (기존 외부획득 로직 잔재. 필요 시 유지)
                 if (item.SlotIndex < 0)
                 {
                     var player = FindObjectOfType<PlayerController>();
@@ -228,30 +232,5 @@ namespace DimensionLooter.UI
             }
         }
 
-        // ================= External Pickup Logic =================
-
-        private void OnEnable()
-        {
-            DimensionLooter.Core.GlobalEvents.OnItemPickedUpByMouse += HandleExternalItemPickup;
-        }
-
-        private void OnDisable()
-        {
-            DimensionLooter.Core.GlobalEvents.OnItemPickedUpByMouse -= HandleExternalItemPickup;
-        }
-
-        private void HandleExternalItemPickup(RuntimeItem item)
-        {
-            if (_heldItemUI != null) return;
-
-            GameObject itemGo = Instantiate(_draggableItemPrefab);
-            DraggableItemUI draggable = itemGo.GetComponent<DraggableItemUI>();
-            draggable.Setup(item, this);
-            
-            _heldItemUI = draggable;
-            _heldItemUI.transform.SetParent(_dragContainer != null ? _dragContainer : _gridContainer, false);
-            _heldItemUI.SetHeldState(true);
-            _ignoreFirstClick = true;
-        }
     }
 }

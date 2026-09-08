@@ -41,6 +41,7 @@ namespace DimensionLooter.Player
             _input.OnDirectionalInput += HandleDirectionalInput;
             _input.OnSpecialAttackKeyPressed += HandleSpecialAttack;
             _movement.OnMovementFinished += HandleMovementFinished;
+            _movement.OnTileReached += HandleTileReached;
         }
 
         private void Start()
@@ -71,7 +72,10 @@ namespace DimensionLooter.Player
                 _input.OnSpecialAttackKeyPressed -= HandleSpecialAttack;
             }
             if (_movement != null)
+            {
                 _movement.OnMovementFinished -= HandleMovementFinished;
+                _movement.OnTileReached -= HandleTileReached;
+            }
                 
             if (_grid != null && DimensionLooter.Core.TileSystem.Instance != null)
             {
@@ -146,6 +150,28 @@ namespace DimensionLooter.Player
             if (CurrentState != PlayerState.Idle || _combat.IsAttackOnCooldown) return;
 
             _combat.PerformRangedAttack(_projectilePrefab, _projectileSpawnPoint, _stats.CurrentSpeed, _stats.CurrentAttack, _facingDirection);
+        }
+
+        private void HandleTileReached(Vector3 pos)
+        {
+            if (_grid != null && DimensionLooter.Core.TileSystem.Instance != null)
+            {
+                Vector3Int currentCell = _grid.WorldToCell(pos);
+                currentCell.z = 0; // 2D 그리드에서 Z축 오차 방지
+
+                Debug.Log($"[PlayerController] 타일 도착. 검사 좌표: {currentCell}");
+
+                var item = DimensionLooter.Core.TileSystem.Instance.GetItemAtTile(currentCell);
+                if (item != null)
+                {
+                    Debug.Log($"[PlayerController] 아이템 발견! 획득 시도.");
+                    item.PickUpByPlayer();
+                }
+                else
+                {
+                    Debug.Log($"[PlayerController] {currentCell} 위치에 등록된 아이템이 없습니다.");
+                }
+            }
         }
 
         private void HandleMovementFinished()

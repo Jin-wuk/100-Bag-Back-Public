@@ -223,8 +223,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d77dd81edd31fe48931aad2e06343dc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _initialGridWidth: 7
-  _initialGridHeight: 4
+  _baseMaxSlots: 35
+  _baseMaxWeight: 50
 --- !u!114 &6874008522880951106
 MonoBehaviour:
   m_ObjectHideFlags: 0

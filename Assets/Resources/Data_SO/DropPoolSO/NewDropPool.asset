@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dropPoolID: 0
   dropEntries:
-  - itemID: 0
-    dropWeight: 1
   - itemID: 1
-    dropWeight: 5
+    dropWeight: 50
+  - itemID: 2
+    dropWeight: 50

@@ -73,5 +73,31 @@ namespace DimensionLooter.Core
                 _occupiedTiles.Remove(cellPos);
             }
         }
+
+        private Dictionary<Vector3Int, Map.LootableItem> _itemTiles = new Dictionary<Vector3Int, Map.LootableItem>();
+
+        public Map.LootableItem GetItemAtTile(Vector3Int cellPos)
+        {
+            if (_itemTiles.TryGetValue(cellPos, out Map.LootableItem item))
+            {
+                if (item == null)
+                {
+                    _itemTiles.Remove(cellPos);
+                    return null;
+                }
+                return item;
+            }
+            return null;
+        }
+
+        public void RegisterItemTile(Vector3Int cellPos, Map.LootableItem item)
+        {
+            _itemTiles[cellPos] = item;
+        }
+
+        public void RemoveItemTile(Vector3Int cellPos)
+        {
+            _itemTiles.Remove(cellPos);
+        }
     }
 }

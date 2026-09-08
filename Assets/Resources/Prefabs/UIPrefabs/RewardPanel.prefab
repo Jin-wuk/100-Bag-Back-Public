@@ -11,8 +11,6 @@ GameObject:
   - component: {fileID: 7980237071218702735}
   - component: {fileID: 7604290579356964595}
   - component: {fileID: 773290497991606213}
-  - component: {fileID: 3982930336879981148}
-  - component: {fileID: 2741721012472170735}
   m_Layer: 5
   m_Name: RewardPanel
   m_TagString: Untagged
@@ -27,7 +25,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1357485811166839857}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -77,33 +75,3 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &3982930336879981148
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1357485811166839857}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d218010e12d453f4588a2e458fac744b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _equipmentManager: {fileID: 0}
-  _slots: []
---- !u!114 &2741721012472170735
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1357485811166839857}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 96dc4bfb35a25d844b1735325c7cc07f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _hpText: {fileID: 0}
-  _mpText: {fileID: 0}
-  _attackText: {fileID: 0}
-  _defenseText: {fileID: 0}

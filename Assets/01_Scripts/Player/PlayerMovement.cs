@@ -9,6 +9,7 @@ namespace DimensionLooter.Player
     public class PlayerMovement : MonoBehaviour
     {
         public event Action OnMovementFinished;
+        public event Action<Vector3> OnTileReached;
 
         [Header("Movement Settings")]
         [Tooltip("타일 1칸 이동 시 걸리는 시간")]
@@ -127,6 +128,7 @@ namespace DimensionLooter.Player
 
                 // 타일 이동 종료 시점 스냅
                 transform.position = endPos;
+                OnTileReached?.Invoke(endPos);
 
                 // 다음 타일 이동 전, 새로운 목적지가 예약되어 있다면 경로 재계산
                 if (_hasPendingTarget)

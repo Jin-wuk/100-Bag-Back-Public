@@ -29,6 +29,16 @@ namespace DimensionLooter.Combat
             }
         }
 
+        private Grid _gridCache;
+        private Grid _grid
+        {
+            get
+            {
+                if (_gridCache == null) _gridCache = FindObjectOfType<Grid>();
+                return _gridCache;
+            }
+        }
+
         private void OnEnable()
         {
             GlobalEvents.OnMonsterDied += HandleMonsterDeath;
@@ -92,13 +102,69 @@ namespace DimensionLooter.Combat
 
         private void SpawnLootableItem(RuntimeItem item, Vector3 position)
         {
+            Vector3Int cellPos = Vector3Int.zero;
+            Vector3 spawnPos = position;
+
+            if (_grid != null && TileSystem.Instance != null)
+            {
+                Vector3Int startCell = _grid.WorldToCell(position);
+                startCell.z = 0; // 2D 그리드 오차 방지
+                
+                cellPos = GetNearestEmptyItemTile(startCell);
+                spawnPos = _grid.GetCellCenterWorld(cellPos);
+            }
+
             // TODO: 풀링 시스템 연동 필요. 임시로 Instantiate 사용
             GameObject go = new GameObject($"LootableItem_{item.ItemData.itemName}");
-            go.transform.position = position;
+            go.transform.position = spawnPos;
             go.layer = LayerMask.NameToLayer("Default"); // TODO: 상호작용 레이어 설정 시 변경 필요
 
             LootableItem lootable = go.AddComponent<LootableItem>();
-            lootable.Setup(item);
+            lootable.Setup(item, cellPos);
+
+            if (TileSystem.Instance != null)
+            {
+                Debug.Log($"[LootSystem] 아이템 드랍 및 등록 - 이름: {item.ItemData.itemName}, 좌표: {cellPos}");
+                TileSystem.Instance.RegisterItemTile(cellPos, lootable);
+            }
+        }
+
+        private Vector3Int GetNearestEmptyItemTile(Vector3Int startCell)
+        {
+            if (TileSystem.Instance.GetItemAtTile(startCell) == null)
+            {
+                return startCell;
+            }
+
+            Queue<Vector3Int> queue = new Queue<Vector3Int>();
+            HashSet<Vector3Int> visited = new HashSet<Vector3Int>();
+            queue.Enqueue(startCell);
+            visited.Add(startCell);
+
+            Vector3Int[] dirs = { Vector3Int.up, Vector3Int.right, Vector3Int.down, Vector3Int.left,
+                                  new Vector3Int(1, 1, 0), new Vector3Int(1, -1, 0), new Vector3Int(-1, -1, 0), new Vector3Int(-1, 1, 0) };
+
+            while (queue.Count > 0)
+            {
+                Vector3Int curr = queue.Dequeue();
+                
+                foreach (var dir in dirs)
+                {
+                    Vector3Int next = curr + dir;
+                    if (!visited.Contains(next))
+                    {
+                        if (TileSystem.Instance.GetItemAtTile(next) == null)
+                        {
+                            return next;
+                        }
+                        
+                        visited.Add(next);
+                        queue.Enqueue(next);
+                    }
+                }
+            }
+
+            return startCell; // Fallback
         }
     }
 }

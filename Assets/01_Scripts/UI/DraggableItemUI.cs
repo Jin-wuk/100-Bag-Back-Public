@@ -3,16 +3,17 @@ using UnityEngine.EventSystems;
 using DimensionLooter.Data.Core;
 using DimensionLooter.Player;
 using UnityEngine.UI;
+using TMPro;
 
 namespace DimensionLooter.UI
 {
     [RequireComponent(typeof(RectTransform))]
     [RequireComponent(typeof(CanvasGroup))]
-    public class DraggableItemUI : MonoBehaviour, IPointerClickHandler
+    public class DraggableItemUI : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         [Header("UI Elements")]
         [SerializeField] private Image _iconImage;
-        [SerializeField] private Text _countText;
+        [SerializeField] private TextMeshProUGUI _countText;
 
         private RuntimeItem _item;
         private InventoryUIController _uiController;
@@ -32,6 +33,9 @@ namespace DimensionLooter.UI
         {
             _item = item;
             _uiController = uiController;
+
+            if (_iconImage == null) Debug.LogWarning($"[DraggableItemUI] {_item.ItemData.itemName} UI 생성 중 경고: Icon Image가 인스펙터에 연결되지 않았습니다!");
+            if (_countText == null) Debug.LogWarning($"[DraggableItemUI] {_item.ItemData.itemName} UI 생성 중 경고: Count Text가 인스펙터에 연결되지 않았습니다!");
             
             if (_iconImage != null && _item?.ItemData != null)
             {
@@ -57,7 +61,7 @@ namespace DimensionLooter.UI
                 transform.SetAsLastSibling();
                 _canvasGroup.blocksRaycasts = false;
                 _canvasGroup.alpha = 0.8f;
-                // Held 상태일 때는 고정된 마우스 크기로 설정 (예: 60x60)
+                // Held 상태일 때는 고정된 마우스 크기로 설정 (예: 64x64)
                 _rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
                 _rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
                 _rectTransform.sizeDelta = new Vector2(64f, 64f);
@@ -66,6 +70,34 @@ namespace DimensionLooter.UI
             {
                 _canvasGroup.blocksRaycasts = true;
                 _canvasGroup.alpha = 1f;
+                _rectTransform.anchorMin = Vector2.zero;
+                _rectTransform.anchorMax = Vector2.one;
+                _rectTransform.sizeDelta = Vector2.zero;
+                _rectTransform.anchoredPosition = Vector2.zero;
+            }
+        }
+
+        public void OnBeginDrag(PointerEventData eventData)
+        {
+            if (eventData.button == PointerEventData.InputButton.Left)
+            {
+                if (_uiController != null) _uiController.OnItemBeginDrag(this, eventData);
+            }
+        }
+
+        public void OnDrag(PointerEventData eventData)
+        {
+            if (eventData.button == PointerEventData.InputButton.Left)
+            {
+                if (_uiController != null) _uiController.OnItemDrag(this, eventData);
+            }
+        }
+
+        public void OnEndDrag(PointerEventData eventData)
+        {
+            if (eventData.button == PointerEventData.InputButton.Left)
+            {
+                if (_uiController != null) _uiController.OnItemEndDrag(this, eventData);
             }
         }
 
@@ -76,10 +108,6 @@ namespace DimensionLooter.UI
                 if (eventData.clickCount == 2)
                 {
                     if (_uiController != null) _uiController.OnItemDoubleClicked(this);
-                }
-                else if (eventData.clickCount == 1)
-                {
-                    if (_uiController != null) _uiController.OnItemClicked(this);
                 }
             }
         }

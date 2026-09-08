@@ -27,6 +27,30 @@ namespace DimensionLooter.Player
             InitializeBag(_baseMaxSlots, _baseMaxWeight);
         }
 
+        private void OnEnable()
+        {
+            DimensionLooter.Core.GlobalEvents.OnItemPickedUpByPlayer += HandleItemPickedUp;
+        }
+
+        private void OnDisable()
+        {
+            DimensionLooter.Core.GlobalEvents.OnItemPickedUpByPlayer -= HandleItemPickedUp;
+        }
+
+        private void HandleItemPickedUp(RuntimeItem item, Action<bool> onResult)
+        {
+            bool success = TryAddNextAvailableSlot(item);
+            if (success)
+            {
+                Debug.Log($"[Inventory] {item.ItemData.itemName} 획득 성공!");
+            }
+            else
+            {
+                Debug.LogWarning($"[Inventory] 가방이 꽉 찼거나 무거워서 {item.ItemData.itemName}을 획득할 수 없습니다.");
+            }
+            onResult?.Invoke(success);
+        }
+
         public void InitializeBag(int maxSlots, float maxWeight)
         {
             MaxSlots = maxSlots;
