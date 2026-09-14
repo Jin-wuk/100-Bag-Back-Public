@@ -19,5 +19,16 @@ namespace DimensionLooter.Dungeon
                 SceneManager.LoadScene(_dungeonSceneName);
             }
         }
+
+        public void ShowPanel()
+        {
+            gameObject.SetActive(true);
+            // TODO: 필요한 경우 여기에 열림 애니메이션 추가
+        }
+
+        public void HidePanel()
+        {
+            gameObject.SetActive(false);
+        }
     }
 }

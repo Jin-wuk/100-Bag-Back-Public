@@ -114,6 +114,8 @@ namespace DimensionLooter.Combat
                     float lerped = Mathf.Lerp(group.minRolls, group.maxRolls + 0.99f, curveMultiplier);
                     int rolls = Mathf.FloorToInt(lerped);
 
+                    Debug.Log($"[LootSystem] 🎲 '{group.groupName}' 그룹 롤링 횟수 결정: 난수({randomVal:F2}) 👉 커브변환({curveMultiplier:F2}) 👉 최종 [{rolls}회] 굴림! (설정 범위: {group.minRolls}~{group.maxRolls})");
+
                     if (rolls <= 0) continue;
 
                     int totalWeight = group.entries.Sum(e => e.dropWeight);
