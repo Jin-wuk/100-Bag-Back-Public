@@ -12,17 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3772e08d02708747a24934bf7c169b9, type: 3}
   m_Name: RingData
   m_EditorClassIdentifier: 
-  itemID: 0
+  itemID: 15
   itemName: 
   itemIcon: {fileID: 21300000, guid: 7fcb3f89c5fca48408d92ffc9d8f853c, type: 3}
   category: 0
   equipType: 4
-  gridWidth: 1
-  gridHeight: 1
-  bagHeight: 0
+  weight: 1
+  maxStack: 1
+  bagAddedSlots: 10
+  bagMaxWeight: 50
   baseValue: 0
   rarity: 0
   hpBonus: 10
   mpBonus: 0
   attackBonus: 7
   defenseBonus: 0
+  speedBonus: 0
+  rangeBonus: 0

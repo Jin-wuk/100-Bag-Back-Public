@@ -26,6 +26,10 @@ namespace DimensionLooter.Data.Models
         public string groupName = "New Group"; // 기획자 식별용
         public int minRolls = 1;
         public int maxRolls = 1;
+        
+        [Tooltip("X축(0~1): 랜덤 주사위, Y축(0~1): 결과 가중치\n우하향(오목한) 곡선일수록 최소 횟수가 자주 나옵니다.")]
+        public AnimationCurve rollProbabilityCurve = AnimationCurve.Linear(0, 0, 1, 1);
+        
         public List<DropEntry> entries = new List<DropEntry>();
     }
 

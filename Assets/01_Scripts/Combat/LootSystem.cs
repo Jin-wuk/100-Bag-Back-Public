@@ -10,11 +10,18 @@ namespace DimensionLooter.Combat
 {
     public class LootSystem : MonoBehaviour
     {
+        [SerializeField] private LayerMask _obstacleLayerMask; // 벽 너머 드랍 방지용 장애물 레이어
+
         private Dictionary<int, DropPoolSO> _dropPools = new Dictionary<int, DropPoolSO>();
         private Dictionary<int, ItemDataSO> _itemDataCache = new Dictionary<int, ItemDataSO>();
 
         private void Awake()
         {
+            if (_obstacleLayerMask.value == 0)
+            {
+                Debug.LogError("[LootSystem] 치명적 오류: 인스펙터에서 'Obstacle Layer Mask'가 아무것도 선택되지 않았습니다(Nothing). 이로 인해 벽을 인식하지 못하고 벽 안에 아이템이 드랍됩니다!");
+            }
+
             // 리소스 폴더 전체에서 모든 드랍 풀과 아이템 데이터를 찾아 로드하여 캐싱
             var dropPools = Resources.LoadAll<DropPoolSO>("");
             foreach (var pool in dropPools)
@@ -99,7 +106,14 @@ namespace DimensionLooter.Combat
                         continue;
                     }
 
-                    int rolls = Random.Range(group.minRolls, group.maxRolls + 1);
+                    // 애니메이션 커브(우하향 곡선 등)를 적용한 체감형 랜덤 뽑기 횟수 계산
+                    float randomVal = Random.value; // 0.0 ~ 1.0 랜덤값
+                    float curveMultiplier = Mathf.Clamp01(group.rollProbabilityCurve.Evaluate(randomVal));
+                    
+                    // 각 숫자가 공평한 구간을 가지도록(Uniform bucketing) FloorToInt와 0.99f 사용
+                    float lerped = Mathf.Lerp(group.minRolls, group.maxRolls + 0.99f, curveMultiplier);
+                    int rolls = Mathf.FloorToInt(lerped);
+
                     if (rolls <= 0) continue;
 
                     int totalWeight = group.entries.Sum(e => e.dropWeight);
@@ -125,11 +139,12 @@ namespace DimensionLooter.Combat
                                     int maxAmt = entry.maxAmount >= minAmt ? entry.maxAmount : minAmt;
                                     int amount = Random.Range(minAmt, maxAmt + 1);
                                     
+                                    Debug.Log($"[LootSystem] '{group.groupName}' 확률 롤: 총 가중치 {totalWeight} 중 주사위 {randomValue} 나옴 👉 ItemID {entry.itemID} ({amount}개) 당첨!");
                                     SpawnLootableItem(entry.itemID, amount, position);
                                 }
                                 else
                                 {
-                                    Debug.Log($"[LootSystem] 꽝 당첨됨 (itemID가 {entry.itemID})");
+                                    Debug.Log($"[LootSystem] '{group.groupName}' 확률 롤: 총 가중치 {totalWeight} 중 주사위 {randomValue} 나옴 👉 꽝 당첨됨 (ItemID가 {entry.itemID})");
                                 }
                                 break; // 해당 롤(Roll) 종료
                             }
@@ -203,11 +218,6 @@ namespace DimensionLooter.Combat
 
         private Vector3Int GetNearestEmptyItemTile(Vector3Int startCell)
         {
-            if (TileSystem.Instance.GetItemAtTile(startCell) == null)
-            {
-                return startCell;
-            }
-
             Queue<Vector3Int> queue = new Queue<Vector3Int>();
             HashSet<Vector3Int> visited = new HashSet<Vector3Int>();
             queue.Enqueue(startCell);
@@ -220,16 +230,29 @@ namespace DimensionLooter.Combat
             {
                 Vector3Int curr = queue.Dequeue();
                 
+                // 1. 현재 좌표가 장애물(벽)인지 확인
+                Vector2Int currPos2D = new Vector2Int(curr.x, curr.y);
+                bool isObstacle = Pathfinder.IsObstacle(_grid, currPos2D, _obstacleLayerMask);
+
+                // 2. 벽이 아니면서, 다른 아이템이 없는 빈 타일인 경우에만 스폰 위치로 확정
+                if (!isObstacle && TileSystem.Instance.GetItemAtTile(curr) == null)
+                {
+                    return curr;
+                }
+
+                // 3. 만약 현재 타일이 장애물(벽)이라면, 이 타일을 기점으로 더 이상 탐색을 확장하지 않음 (벽 너머 스폰 원천 차단)
+                // 단, 최초 시작점(몬스터 사망 위치)이 벽에 겹쳐있는 예외 상황에서는 바깥으로 빠져나오기 위해 탐색을 허용함
+                if (isObstacle && curr != startCell)
+                {
+                    continue; 
+                }
+
+                // 4. 다음 인접 타일 탐색
                 foreach (var dir in dirs)
                 {
                     Vector3Int next = curr + dir;
                     if (!visited.Contains(next))
                     {
-                        if (TileSystem.Instance.GetItemAtTile(next) == null)
-                        {
-                            return next;
-                        }
-                        
                         visited.Add(next);
                         queue.Enqueue(next);
                     }

@@ -12,17 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b3772e08d02708747a24934bf7c169b9, type: 3}
   m_Name: NecklaceData
   m_EditorClassIdentifier: 
-  itemID: 0
+  itemID: 14
   itemName: 
   itemIcon: {fileID: 21300000, guid: 7c26cea5852c0a04bbf9337761139610, type: 3}
   category: 0
   equipType: 5
-  gridWidth: 1
-  gridHeight: 1
-  bagHeight: 0
+  weight: 1
+  maxStack: 1
+  bagAddedSlots: 10
+  bagMaxWeight: 50
   baseValue: 0
   rarity: 0
   hpBonus: 0
   mpBonus: 10
   attackBonus: 0
   defenseBonus: 7
+  speedBonus: 0
+  rangeBonus: 0
