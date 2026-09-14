@@ -10,11 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 39e76101ba7605c4a9f666fead92d810, type: 3}
-  m_Name: NewDropPool
+  m_Name: NewDropPool 1
   m_EditorClassIdentifier: 
   dropPoolID: 0
-  dropEntries:
+  goldItemID: 1
+  minGold: 0
+  maxGold: 0
+  guaranteedDrops:
   - itemID: 1
-    dropWeight: 50
+    minAmount: 1
+    maxAmount: 2
   - itemID: 2
-    dropWeight: 50
+    minAmount: 1
+    maxAmount: 4
+  - itemID: 3
+    minAmount: 0
+    maxAmount: 3
+  randomDropGroups:
+  - groupName: Equip
+    minRolls: 0
+    maxRolls: 0
+    entries:
+    - itemID: 0
+      dropWeight: 0
+      minAmount: 0
+      maxAmount: 0
