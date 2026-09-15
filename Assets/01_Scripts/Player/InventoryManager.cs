@@ -57,6 +57,7 @@ namespace DimensionLooter.Player
             MaxWeight = maxWeight;
             
             var newSlots = new RuntimeItem[maxSlots];
+            List<RuntimeItem> outOfBoundsItems = new List<RuntimeItem>();
             
             // 기존 아이템 마이그레이션
             for(int i=0; i<_items.Count; i++)
@@ -68,10 +69,35 @@ namespace DimensionLooter.Player
                 }
                 else
                 {
-                    // 슬롯 초과분 등에 대한 처리가 필요하지만 일단 무시 (기존 가방 축소 시 드랍 등)
+                    outOfBoundsItems.Add(item);
                 }
             }
             _slots = newSlots;
+
+            // 초과된 아이템들을 앞쪽 빈 슬롯부터 채워넣음
+            foreach(var item in outOfBoundsItems)
+            {
+                bool placed = false;
+                for (int j = 0; j < maxSlots; j++)
+                {
+                    if (_slots[j] == null)
+                    {
+                        _slots[j] = item;
+                        item.SlotIndex = j;
+                        placed = true;
+                        break;
+                    }
+                }
+                
+                // 새로운 공간에도 빈칸이 없다면 바닥에 드랍
+                if (!placed)
+                {
+                    InternalRemoveItem(item);
+                    var player = FindObjectOfType<PlayerController>();
+                    Vector3 dropPos = player != null ? player.transform.position : Vector3.zero;
+                    DimensionLooter.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(item, dropPos);
+                }
+            }
             RecalculateWeight();
             OnInventoryChanged?.Invoke();
         }

@@ -76,6 +76,7 @@ namespace DimensionLooter.UI
         {
             foreach (Transform child in _gridContainer) Destroy(child.gameObject);
             _cells.Clear();
+            _itemUIs.Clear(); // 슬롯 파괴 시 하위 아이템 객체도 파괴되므로 딕셔너리 초기화 필수
 
             for (int i = 0; i < _inventoryManager.MaxSlots; i++)
             {
@@ -108,10 +109,10 @@ namespace DimensionLooter.UI
 
                 GameObject itemGo;
                 DraggableItemUI draggable;
-                if (!_itemUIs.TryGetValue(item, out itemGo))
+                if (!_itemUIs.TryGetValue(item, out itemGo) || itemGo == null)
                 {
                     itemGo = Instantiate(_draggableItemPrefab);
-                    _itemUIs.Add(item, itemGo);
+                    _itemUIs[item] = itemGo;
                     draggable = itemGo.GetComponent<DraggableItemUI>();
                 }
                 else
