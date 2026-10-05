@@ -8,6 +8,7 @@ namespace BagBack100.Core
         public static TileSystem Instance { get; private set; }
 
         private Dictionary<Vector3Int, GameObject> _occupiedTiles = new Dictionary<Vector3Int, GameObject>();
+        private Dictionary<Vector3Int, float> _dangerExpirations = new Dictionary<Vector3Int, float>();
 
         private void Awake()
         {
@@ -15,9 +16,25 @@ namespace BagBack100.Core
             else Destroy(gameObject);
         }
 
+        // --- Danger Map ---
+        public void SetDanger(Vector3Int cellPos, float duration)
+        {
+            _dangerExpirations[cellPos] = Time.time + duration;
+        }
+
+        public float GetDangerCost(Vector3Int cellPos)
+        {
+            if (_dangerExpirations.TryGetValue(cellPos, out float exp))
+            {
+                if (Time.time < exp) return 50f; // High penalty for dangerous tiles
+                else _dangerExpirations.Remove(cellPos);
+            }
+            return 0f;
+        }
+
+        // --- Occupation ---
         public bool IsTileOccupied(Vector3Int cellPos)
         {
-            // Clean up destroyed objects implicitly
             if (_occupiedTiles.TryGetValue(cellPos, out GameObject entity))
             {
                 if (entity == null)
@@ -48,10 +65,9 @@ namespace BagBack100.Core
         {
             if (IsTileOccupied(targetCell) && _occupiedTiles[targetCell] != entity)
             {
-                return false; // Already occupied by someone else
+                return false; 
             }
 
-            // Remove from current cell if occupied by this entity
             if (_occupiedTiles.ContainsKey(currentCell) && _occupiedTiles[currentCell] == entity)
             {
                 _occupiedTiles.Remove(currentCell);
@@ -74,6 +90,7 @@ namespace BagBack100.Core
             }
         }
 
+        // --- Items ---
         private Dictionary<Vector3Int, Map.LootableItem> _itemTiles = new Dictionary<Vector3Int, Map.LootableItem>();
 
         public Map.LootableItem GetItemAtTile(Vector3Int cellPos)

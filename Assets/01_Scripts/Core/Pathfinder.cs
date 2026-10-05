@@ -78,7 +78,13 @@ namespace BagBack100.Core
                     if (closedSet.Contains(neighborPos) || IsObstacle(grid, neighborPos, obstacleLayerMask))
                         continue;
 
-                    float newCostToNeighbor = currentNode.GCost + GetDistance(currentNode.Position, neighborPos);
+                    float dangerCost = 0f;
+                    if (TileSystem.Instance != null)
+                    {
+                        dangerCost = TileSystem.Instance.GetDangerCost(new Vector3Int(neighborPos.x, neighborPos.y, 0));
+                    }
+
+                    float newCostToNeighbor = currentNode.GCost + GetDistance(currentNode.Position, neighborPos) + dangerCost;
                     Node neighborNode = openList.Find(n => n.Position == neighborPos);
 
                     if (neighborNode == null || newCostToNeighbor < neighborNode.GCost)

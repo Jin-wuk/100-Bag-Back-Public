@@ -162,6 +162,9 @@ namespace BagBack100.Player
             if (BagBack100.Core.TileSystem.Instance != null)
             {
                 occupant = BagBack100.Core.TileSystem.Instance.GetEntityAtTile(targetCellPos);
+                
+                // 위험도 맵(Danger Map) 업데이트: 타겟 타일에 1초간 위험 부여
+                BagBack100.Core.TileSystem.Instance.SetDanger(targetCellPos, 1f);
             }
 
             MonsterController monster = occupant != null ? occupant.GetComponent<MonsterController>() : null;
