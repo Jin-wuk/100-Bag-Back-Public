@@ -12,11 +12,34 @@ namespace BagBack100.Combat
 
         public bool IsAttackOnCooldown { get; private set; } = false;
 
-        public void PerformMeleeAttack(GameObject target, float attackSpeed, int damage, Vector3 direction)
+        public void PerformMeleeAttack(GameObject target, float attackSpeed, int damage, Vector3 direction, GameObject meleePrefab = null, Transform spawnPoint = null, float offset = 0.5f, Vector3? scale = null)
         {
             if (IsAttackOnCooldown) return;
             
             OnMeleeAttack?.Invoke(direction);
+            
+            // 검(근접 무기) 애니메이션 프리팹 생성 및 회전
+            if (meleePrefab != null && spawnPoint != null)
+            {
+                float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+                Vector3 spawnPos = spawnPoint.position + direction.normalized * offset;
+                var slashObj = Instantiate(meleePrefab, spawnPos, Quaternion.Euler(0, 0, angle));
+                
+                // 스케일 조정 (기본값 설정)
+                if (scale.HasValue)
+                {
+                    slashObj.transform.localScale = scale.Value;
+                }
+
+                // 애니메이터 속도 동기화 (기본 클립 길이가 1초라고 가정)
+                var animator = slashObj.GetComponentInChildren<Animator>();
+                if (animator != null)
+                {
+                    animator.speed = attackSpeed;
+                }
+
+                Destroy(slashObj, 1f / attackSpeed);
+            }
             
             if (target != null)
             {

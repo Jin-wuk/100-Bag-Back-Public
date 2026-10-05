@@ -32,7 +32,10 @@ namespace BagBack100.Player
             if (item.ItemData.category != ItemCategory.Equipment)
                 return false;
 
-            EquipType type = item.ItemData.equipType;
+            if (!(item.ItemData is BagBack100.Data.Models.EquipmentDataSO eqData))
+                return false;
+
+            EquipType type = eqData.equipType;
             int originalSlot = item.SlotIndex;
 
             // 기존에 장착된 동일 부위 아이템이 있다면 먼저 해제 시도 (인벤토리 공간 확보를 위해 장착할 아이템을 먼저 치워둠)
@@ -52,9 +55,9 @@ namespace BagBack100.Player
                 _inventoryManager.RemoveItem(item);
             }
 
-            if (type == EquipType.Backpack)
+            if (type == EquipType.Backpack && eqData is BagBack100.Data.Models.BackpackDataSO bagData)
             {
-                _inventoryManager.UpdateBagCapacity(item.ItemData.bagAddedSlots, item.ItemData.bagMaxWeight);
+                _inventoryManager.UpdateBagCapacity(bagData.bagAddedSlots, bagData.bagMaxWeight);
             }
 
             _equippedItems[type] = item;
@@ -89,23 +92,33 @@ namespace BagBack100.Player
             return _equippedItems.TryGetValue(type, out var item) ? item : null;
         }
 
-        public (int hp, int mp, int atk, int def, float speed, int range) GetTotalStats()
+        public (int hp, int mp, int atk, int def, float speed, int range, float atkSpeedBonus, float weaponBaseAtkSpeed) GetTotalStats()
         {
             int hp = 0, mp = 0, atk = 0, def = 0, range = 0;
-            float speed = 0f;
+            float speed = 0f, atkSpeedBonus = 0f, weaponBaseAtkSpeed = 0f;
             foreach (var item in _equippedItems.Values)
             {
-                if (item != null && item.ItemData != null)
+                if (item != null && item.ItemData is BagBack100.Data.Models.EquipmentDataSO eqData)
                 {
-                    hp += item.ItemData.hpBonus;
-                    mp += item.ItemData.mpBonus;
-                    atk += item.ItemData.attackBonus;
-                    def += item.ItemData.defenseBonus;
-                    speed += item.ItemData.speedBonus;
-                    range += item.ItemData.rangeBonus;
+                    hp += eqData.hpBonus;
+                    mp += eqData.mpBonus;
+                    atk += eqData.attackBonus;
+                    def += eqData.defenseBonus;
+                    speed += eqData.speedBonus;
+                    range += eqData.rangeBonus;
+                    
+                    if (eqData is BagBack100.Data.Models.AccessoryDataSO accData)
+                    {
+                        atkSpeedBonus += accData.attackSpeedBonus;
+                    }
+                    
+                    if (eqData is BagBack100.Data.Models.WeaponDataSO weaponData && weaponData.baseAttackSpeed > 0f)
+                    {
+                        weaponBaseAtkSpeed = weaponData.baseAttackSpeed;
+                    }
                 }
             }
-            return (hp, mp, atk, def, speed, range);
+            return (hp, mp, atk, def, speed, range, atkSpeedBonus, weaponBaseAtkSpeed);
         }
     }
 }

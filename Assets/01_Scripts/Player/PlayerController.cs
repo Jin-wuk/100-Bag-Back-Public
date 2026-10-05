@@ -19,6 +19,9 @@ namespace BagBack100.Player
         public PlayerState CurrentState { get; private set; } = PlayerState.Idle;
 
         [Header("Combat Settings")]
+        [SerializeField] private GameObject _meleePrefab;
+        [SerializeField] private float _meleeOffset = 0.5f;
+        [SerializeField] private Vector3 _meleeScale = Vector3.one;
         [SerializeField] private GameObject _projectilePrefab;
         [SerializeField] private Transform _projectileSpawnPoint;
         
@@ -132,33 +135,28 @@ namespace BagBack100.Player
             _movement.MoveTo(targetPos);
         }
 
-        private void HandleAttackInput()
+        private void HandleAttackInput(Vector3Int targetCell)
         {
             if (_combat.IsAttackOnCooldown) return;
 
             if (CurrentState == PlayerState.Moving)
             {
                 // 선입력 (Input Buffering)
-                _bufferedCommand = () => ExecuteMeleeAttack();
+                _bufferedCommand = () => ExecuteMeleeAttack(targetCell);
             }
             else
             {
-                ExecuteMeleeAttack();
+                ExecuteMeleeAttack(targetCell);
             }
         }
 
-        private void ExecuteMeleeAttack()
+        private void ExecuteMeleeAttack(Vector3Int targetCellPos)
         {
             if (_grid == null || _combat.IsAttackOnCooldown) return;
 
             CurrentState = PlayerState.Attacking;
 
-            // 1. 공격할 타일 계산 (현재 타일 + 바라보는 방향)
-            Vector3Int currentCellPos = _grid.WorldToCell(transform.position);
-            Vector3Int aimCellOffset = new Vector3Int(Mathf.RoundToInt(_facingDirection.x), Mathf.RoundToInt(_facingDirection.y), 0);
-            Vector3Int targetCellPos = currentCellPos + aimCellOffset;
-
-            // 2. 타일에서 몬스터 찾기
+            // 1. 타일에서 몬스터 찾기
             GameObject occupant = null;
             if (BagBack100.Core.TileSystem.Instance != null)
             {
@@ -167,8 +165,8 @@ namespace BagBack100.Player
 
             MonsterController monster = occupant != null ? occupant.GetComponent<MonsterController>() : null;
             
-            // 3. 공격 실행 (몬스터가 없어도 헛스윙 및 모션 락 적용)
-            _combat.PerformMeleeAttack(monster != null ? monster.gameObject : null, _stats.CurrentSpeed, _stats.CurrentAttack, _facingDirection);
+            // 2. 공격 실행 (몬스터가 없어도 헛스윙 및 모션 락 적용, 검 프리팹 생성)
+            _combat.PerformMeleeAttack(monster != null ? monster.gameObject : null, _stats.CurrentAttackSpeed, _stats.CurrentAttack, _facingDirection, _meleePrefab, transform, _meleeOffset, _meleeScale);
         }
 
         private void HandleSpecialAttack()

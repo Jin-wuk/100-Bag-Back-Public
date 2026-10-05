@@ -53,9 +53,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac4cb2eba4b2e6140b185c2a53740dae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _obstacleLayerMask:
-    serializedVersion: 2
-    m_Bits: 64
 --- !u!114 &3596104372484188116
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -85,6 +82,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5534a66a06af45743a6fab2bad53c01f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _meleePrefab: {fileID: 5652963309051762746, guid: bafb2bceacc5e0c40930aa2c1279a60f, type: 3}
   _projectilePrefab: {fileID: 3354168463907677501, guid: 4971ea61c23900745a3fb642126e6a1a, type: 3}
   _projectileSpawnPoint: {fileID: 0}
 --- !u!212 &5263338046754277592

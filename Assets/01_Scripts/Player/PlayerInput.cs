@@ -12,7 +12,7 @@ namespace BagBack100.Player
 
         public event Action<Vector2Int> OnMoveInput;
         public event Action<Vector3> OnAimInput;
-        public event Action OnAttackInput;
+        public event Action<Vector3Int> OnAttackInput;
         public event Action OnSpecialAttackKeyPressed;
         public event Action OnInventoryToggle;
         
@@ -20,18 +20,23 @@ namespace BagBack100.Player
         
         private Camera _mainCamera;
         private Grid _grid;
+        private BagBack100.UI.MovementPreview _combatPreview;
+        private PlayerStatManager _stats;
+        
         private float _lastMoveInputTime;
         private float _moveInputDelay = 0.15f; // 연속 이동 입력 딜레이 방지
 
         private void Awake()
         {
             OnInputCreated?.Invoke(this);
+            _stats = GetComponent<PlayerStatManager>();
         }
 
         private void Start()
         {
             _mainCamera = Camera.main;
             _grid = FindObjectOfType<Grid>();
+            _combatPreview = FindObjectOfType<BagBack100.UI.MovementPreview>(true);
         }
 
         private void Update()
@@ -43,6 +48,7 @@ namespace BagBack100.Player
 
             if (IsMovementBlocked || (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
             {
+                if (_combatPreview != null) _combatPreview.Hide();
                 return;
             }
 
@@ -76,14 +82,32 @@ namespace BagBack100.Player
         {
             Vector3 mouseWorldPos = GetMouseWorldPosition();
             
-            // 에이밍 갱신 (마우스 커서 위치를 플레이어 기준 8방향 벡터로 산출)
+            // 8방향 에이밍 갱신
             Vector3 dirToMouse = (mouseWorldPos - transform.position).normalized;
             OnAimInput?.Invoke(dirToMouse);
 
-            // 공격 입력
-            if (Input.GetMouseButtonDown(0))
+            // 타일 프리뷰 갱신
+            if (_grid != null)
             {
-                OnAttackInput?.Invoke();
+                Vector3Int playerCell = _grid.WorldToCell(transform.position);
+                Vector3Int mouseCell = _grid.WorldToCell(mouseWorldPos);
+                
+                int dist = Mathf.Max(Mathf.Abs(playerCell.x - mouseCell.x), Mathf.Abs(playerCell.y - mouseCell.y));
+                bool isInRange = dist > 0 && dist <= _stats.CurrentRange;
+                
+                if (_combatPreview != null)
+                {
+                    _combatPreview.ShowPreview(_grid.GetCellCenterWorld(mouseCell), isInRange);
+                }
+
+                // 공격 입력 (사거리 내일 때만 허용)
+                if (Input.GetMouseButtonDown(0))
+                {
+                    if (isInRange)
+                    {
+                        OnAttackInput?.Invoke(mouseCell);
+                    }
+                }
             }
         }
 
