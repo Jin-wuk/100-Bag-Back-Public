@@ -1,0 +1,254 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using BagBack100.Data.Core;
+using BagBack100.Player;
+
+namespace BagBack100.Hub
+{
+    public class StorageManager : MonoBehaviour
+    {
+        public static event Action<StorageManager> OnManagerCreated;
+        public event Action OnStorageChanged;
+        
+        [Header("Base Settings")]
+        [SerializeField] private int _baseMaxSlots = 30;
+        [SerializeField] private float _baseMaxWeight = 50f;
+
+        public int MaxSlots { get; private set; }
+        public float MaxWeight { get; private set; }
+        public float CurrentWeight { get; private set; }
+
+        private RuntimeItem[] _slots;
+        private List<RuntimeItem> _items = new List<RuntimeItem>();
+
+        private void Awake()
+        {
+            OnManagerCreated?.Invoke(this);
+            InitializeBag(_baseMaxSlots, _baseMaxWeight);
+        }
+
+
+
+        public void InitializeBag(int maxSlots, float maxWeight)
+        {
+            MaxSlots = maxSlots;
+            MaxWeight = maxWeight;
+            
+            var newSlots = new RuntimeItem[maxSlots];
+            List<RuntimeItem> outOfBoundsItems = new List<RuntimeItem>();
+            
+            // 기존 아이템 마이그레이션
+            for(int i=0; i<_items.Count; i++)
+            {
+                var item = _items[i];
+                if (item.SlotIndex >= 0 && item.SlotIndex < maxSlots)
+                {
+                    newSlots[item.SlotIndex] = item;
+                }
+                else
+                {
+                    outOfBoundsItems.Add(item);
+                }
+            }
+            _slots = newSlots;
+
+            // 초과된 아이템들을 앞쪽 빈 슬롯부터 채워넣음
+            foreach(var item in outOfBoundsItems)
+            {
+                bool placed = false;
+                for (int j = 0; j < maxSlots; j++)
+                {
+                    if (_slots[j] == null)
+                    {
+                        _slots[j] = item;
+                        item.SlotIndex = j;
+                        placed = true;
+                        break;
+                    }
+                }
+                
+                // 새로운 공간에도 빈칸이 없다면 바닥에 드랍
+                if (!placed)
+                {
+                    InternalRemoveItem(item);
+                    var player = FindObjectOfType<PlayerController>();
+                    Vector3 dropPos = player != null ? player.transform.position : Vector3.zero;
+                    BagBack100.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(item, dropPos);
+                }
+            }
+            RecalculateWeight();
+            OnStorageChanged?.Invoke();
+        }
+
+        public void UpdateBagCapacity(int addedSlots, float addedWeight)
+        {
+            InitializeBag(_baseMaxSlots + addedSlots, _baseMaxWeight + addedWeight);
+        }
+
+        private void RecalculateWeight()
+        {
+            CurrentWeight = 0f;
+            foreach (var item in _items)
+            {
+                if (item != null && item.ItemData != null)
+                {
+                    CurrentWeight += item.ItemData.weight * item.Count;
+                }
+            }
+        }
+
+        // 아이템을 인벤토리에 넣을 수 있는지 여부 (특정 슬롯 지정 혹은 아무 슬롯)
+        public bool CanAddItem(RuntimeItem item)
+        {
+            // 무게 체크
+            if (CurrentWeight + (item.ItemData.weight * item.Count) > MaxWeight)
+                return false;
+
+            // 스택 가능한지 먼저 확인
+            if (item.ItemData.maxStack > 1)
+            {
+                foreach(var existing in _items)
+                {
+                    if (existing.ItemData.itemID == item.ItemData.itemID && existing.Count + item.Count <= existing.ItemData.maxStack)
+                        return true;
+                }
+            }
+
+            // 빈 슬롯이 있는지 확인
+            for (int i = 0; i < MaxSlots; i++)
+            {
+                if (_slots[i] == null) return true;
+            }
+            return false;
+        }
+
+        // 특정 슬롯 인덱스에 아이템이 배치 가능한지 (스왑 포함)
+        public bool CanPlaceItemAtSlot(RuntimeItem item, int targetSlot)
+        {
+            if (targetSlot < 0 || targetSlot >= MaxSlots) return false;
+            
+            // 만약 현재 인벤토리 외부에서 들어오는 아이템이라면 무게 체크
+            if (item.SlotIndex < 0)
+            {
+                if (CurrentWeight + (item.ItemData.weight * item.Count) > MaxWeight) return false;
+            }
+            return true;
+        }
+
+        // 외부에서 획득하거나 슬롯이동 시
+        public bool AddItemAt(RuntimeItem item, int targetSlot)
+        {
+            if (targetSlot < 0 || targetSlot >= MaxSlots) return false;
+
+            // 대상 슬롯에 무언가 있고, 같은 아이템이며 스택 가능하다면 합침
+            if (_slots[targetSlot] != null && _slots[targetSlot] != item)
+            {
+                var targetItem = _slots[targetSlot];
+                if (targetItem.ItemData.itemID == item.ItemData.itemID && item.ItemData.maxStack > 1)
+                {
+                    int space = targetItem.ItemData.maxStack - targetItem.Count;
+                    if (space >= item.Count)
+                    {
+                        targetItem.Count += item.Count;
+                        if (item.SlotIndex >= 0) InternalRemoveItem(item); // 기존 슬롯에서 제거
+                        RecalculateWeight();
+                        OnStorageChanged?.Invoke();
+                        return true;
+                    }
+                }
+                
+                // 단순 스왑 로직
+                if (item.SlotIndex >= 0)
+                {
+                    // 내부 이동인 경우 스왑
+                    int oldSlot = item.SlotIndex;
+                    _slots[oldSlot] = targetItem;
+                    targetItem.SlotIndex = oldSlot;
+                    
+                    _slots[targetSlot] = item;
+                    item.SlotIndex = targetSlot;
+                    
+                    OnStorageChanged?.Invoke();
+                    return true;
+                }
+                else
+                {
+                    // 외부에서 온 건데 대상 슬롯이 차있고 스택도 안되면 실패
+                    return false;
+                }
+            }
+
+            // 단순 이동/추가
+            if (item.SlotIndex >= 0)
+            {
+                _slots[item.SlotIndex] = null;
+            }
+            
+            _slots[targetSlot] = item;
+            item.SlotIndex = targetSlot;
+            
+            if (!_items.Contains(item)) _items.Add(item);
+
+            RecalculateWeight();
+            OnStorageChanged?.Invoke();
+            return true;
+        }
+
+        private void InternalRemoveItem(RuntimeItem item)
+        {
+            if (item == null || !_items.Contains(item)) return;
+
+            if (item.SlotIndex >= 0 && item.SlotIndex < MaxSlots)
+            {
+                _slots[item.SlotIndex] = null;
+            }
+            _items.Remove(item);
+            item.SlotIndex = -1;
+        }
+
+        public void RemoveItem(RuntimeItem item)
+        {
+            InternalRemoveItem(item);
+            RecalculateWeight();
+            OnStorageChanged?.Invoke();
+        }
+
+        public IReadOnlyList<RuntimeItem> GetAllItems() => _items;
+
+        public bool TryAddNextAvailableSlot(RuntimeItem item)
+        {
+            if (!CanAddItem(item)) return false;
+
+            // 1. 스택 시도
+            if (item.ItemData.maxStack > 1)
+            {
+                foreach(var existing in _items)
+                {
+                    if (existing.ItemData.itemID == item.ItemData.itemID)
+                    {
+                        if (existing.Count + item.Count <= existing.ItemData.maxStack)
+                        {
+                            existing.Count += item.Count;
+                            if (item.SlotIndex >= 0) InternalRemoveItem(item);
+                            RecalculateWeight();
+                            OnStorageChanged?.Invoke();
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // 2. 빈 슬롯 탐색
+            for (int i = 0; i < MaxSlots; i++)
+            {
+                if (_slots[i] == null)
+                {
+                    AddItemAt(item, i);
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+}

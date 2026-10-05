@@ -1,8 +1,8 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using DimensionLooter.Player;
+using BagBack100.Player;
 
-namespace DimensionLooter.Dungeon
+namespace BagBack100.Dungeon
 {
     [RequireComponent(typeof(Collider2D))]
     public class DungeonExit : MonoBehaviour

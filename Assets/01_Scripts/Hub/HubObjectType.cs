@@ -1,9 +1,10 @@
-namespace DimensionLooter.Hub
+namespace BagBack100.Hub
 {
     public enum HubObjectType
     {
         DungeonPortal,
         Blacksmith,
-        Shop
+        Shop,
+        Storage
     }
 }

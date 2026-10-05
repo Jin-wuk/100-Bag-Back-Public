@@ -1,9 +1,9 @@
 using UnityEngine;
 using System;
-using DimensionLooter.Data.Core;
-using DimensionLooter.Hub;
+using BagBack100.Data.Core;
+using BagBack100.Hub;
 
-namespace DimensionLooter.Core
+namespace BagBack100.Core
 {
     public static class GlobalEvents
     {

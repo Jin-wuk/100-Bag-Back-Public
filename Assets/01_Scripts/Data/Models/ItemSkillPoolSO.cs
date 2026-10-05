@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-namespace DimensionLooter.Data.Models
+namespace BagBack100.Data.Models
 {
     [System.Serializable]
     public struct SkillRollEntry
@@ -10,7 +10,7 @@ namespace DimensionLooter.Data.Models
         public int rollWeight;
     }
 
-    [CreateAssetMenu(fileName = "NewItemSkillPool", menuName = "DimensionLooter/Data/ItemSkillPool")]
+    [CreateAssetMenu(fileName = "NewItemSkillPool", menuName = "BagBack100/Data/ItemSkillPool")]
     public class ItemSkillPoolSO : ScriptableObject
     {
         public int itemID;

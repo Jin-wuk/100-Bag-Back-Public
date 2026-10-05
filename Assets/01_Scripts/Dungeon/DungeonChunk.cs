@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace DimensionLooter.Dungeon
+namespace BagBack100.Dungeon
 {
     public class DungeonChunk : MonoBehaviour
     {

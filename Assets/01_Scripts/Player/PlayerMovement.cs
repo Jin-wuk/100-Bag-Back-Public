@@ -2,9 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using DimensionLooter.Core;
+using BagBack100.Core;
 
-namespace DimensionLooter.Player
+namespace BagBack100.Player
 {
     public class PlayerMovement : MonoBehaviour
     {
@@ -115,13 +115,9 @@ namespace DimensionLooter.Player
                     elapsedTime += Time.deltaTime;
                     float t = Mathf.Clamp01(elapsedTime / _moveDurationPerTile);
                     
-                    // 선형 이동(X, Y)
+                    // 고속 슬라이딩 (선형 이동)
                     Vector3 lerpedPos = Vector3.Lerp(startPos, endPos, t);
                     
-                    // 통통 튀는(Hopping) Y축 오프셋 추가 (Mathf.Sin 활용: 0 -> 1 -> 0)
-                    float hopOffset = Mathf.Sin(t * Mathf.PI) * _hopHeight;
-                    lerpedPos.y += hopOffset;
-
                     transform.position = lerpedPos;
                     yield return null; // Update 내 GC 방지를 위해 yield return null 만 사용
                 }

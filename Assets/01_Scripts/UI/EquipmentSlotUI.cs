@@ -1,10 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using DimensionLooter.Data.Core;
-using DimensionLooter.Player;
+using BagBack100.Data.Core;
+using BagBack100.Player;
 
-namespace DimensionLooter.UI
+namespace BagBack100.UI
 {
     public class EquipmentSlotUI : MonoBehaviour, IPointerClickHandler
     {

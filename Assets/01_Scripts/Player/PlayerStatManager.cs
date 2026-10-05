@@ -1,8 +1,8 @@
 using System;
 using UnityEngine;
-using DimensionLooter.Player;
+using BagBack100.Player;
 
-namespace DimensionLooter.Player
+namespace BagBack100.Player
 {
     [RequireComponent(typeof(EquipmentManager))]
     public class PlayerStatManager : MonoBehaviour

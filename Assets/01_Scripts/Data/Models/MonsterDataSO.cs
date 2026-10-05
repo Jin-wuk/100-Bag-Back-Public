@@ -1,10 +1,10 @@
 using UnityEngine;
 using System.Collections.Generic;
-using DimensionLooter.Data.Core;
+using BagBack100.Data.Core;
 
-namespace DimensionLooter.Data.Models
+namespace BagBack100.Data.Models
 {
-    [CreateAssetMenu(fileName = "NewMonsterData", menuName = "DimensionLooter/Data/MonsterData")]
+    [CreateAssetMenu(fileName = "NewMonsterData", menuName = "BagBack100/Data/MonsterData")]
     public class MonsterDataSO : ScriptableObject
     {
         public int monsterID;

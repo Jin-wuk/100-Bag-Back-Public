@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using DimensionLooter.Data.Core;
+using BagBack100.Data.Core;
 
-namespace DimensionLooter.Player
+namespace BagBack100.Player
 {
     public class InventoryManager : MonoBehaviour
     {
@@ -29,12 +29,12 @@ namespace DimensionLooter.Player
 
         private void OnEnable()
         {
-            DimensionLooter.Core.GlobalEvents.OnItemPickedUpByPlayer += HandleItemPickedUp;
+            BagBack100.Core.GlobalEvents.OnItemPickedUpByPlayer += HandleItemPickedUp;
         }
 
         private void OnDisable()
         {
-            DimensionLooter.Core.GlobalEvents.OnItemPickedUpByPlayer -= HandleItemPickedUp;
+            BagBack100.Core.GlobalEvents.OnItemPickedUpByPlayer -= HandleItemPickedUp;
         }
 
         private void HandleItemPickedUp(RuntimeItem item, Action<bool> onResult)
@@ -95,7 +95,7 @@ namespace DimensionLooter.Player
                     InternalRemoveItem(item);
                     var player = FindObjectOfType<PlayerController>();
                     Vector3 dropPos = player != null ? player.transform.position : Vector3.zero;
-                    DimensionLooter.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(item, dropPos);
+                    BagBack100.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(item, dropPos);
                 }
             }
             RecalculateWeight();

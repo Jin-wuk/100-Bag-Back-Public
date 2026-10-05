@@ -1,11 +1,11 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using DimensionLooter.Data.Models;
-using DimensionLooter.Player;
-using DimensionLooter.Core;
+using BagBack100.Data.Models;
+using BagBack100.Player;
+using BagBack100.Core;
 
-namespace DimensionLooter.Combat
+namespace BagBack100.Combat
 {
     public enum MonsterState { Idle, Chase, Telegraphing }
 

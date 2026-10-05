@@ -1,8 +1,8 @@
 using UnityEngine;
-using DimensionLooter.Data.Core;
-using DimensionLooter.Core;
+using BagBack100.Data.Core;
+using BagBack100.Core;
 
-namespace DimensionLooter.Map
+namespace BagBack100.Map
 {
     [RequireComponent(typeof(SpriteRenderer))]
     [RequireComponent(typeof(BoxCollider2D))]

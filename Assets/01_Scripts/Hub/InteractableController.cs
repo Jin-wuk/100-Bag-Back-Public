@@ -1,8 +1,8 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-using DimensionLooter.Core;
+using BagBack100.Core;
 
-namespace DimensionLooter.Hub
+namespace BagBack100.Hub
 {
     [RequireComponent(typeof(Collider2D))]
     public class InteractableController : MonoBehaviour

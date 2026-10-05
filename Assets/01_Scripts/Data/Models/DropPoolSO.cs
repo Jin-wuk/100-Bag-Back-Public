@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-namespace DimensionLooter.Data.Models
+namespace BagBack100.Data.Models
 {
     [System.Serializable]
     public struct FixedDropEntry
@@ -33,7 +33,7 @@ namespace DimensionLooter.Data.Models
         public List<DropEntry> entries = new List<DropEntry>();
     }
 
-    [CreateAssetMenu(fileName = "NewDropPool", menuName = "DimensionLooter/Data/DropPool")]
+    [CreateAssetMenu(fileName = "NewDropPool", menuName = "BagBack100/Data/DropPool")]
     public class DropPoolSO : ScriptableObject
     {
         public int dropPoolID;

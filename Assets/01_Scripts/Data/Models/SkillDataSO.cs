@@ -1,9 +1,9 @@
 using UnityEngine;
-using DimensionLooter.Data.Core;
+using BagBack100.Data.Core;
 
-namespace DimensionLooter.Data.Models
+namespace BagBack100.Data.Models
 {
-    [CreateAssetMenu(fileName = "NewSkillData", menuName = "DimensionLooter/Data/SkillData")]
+    [CreateAssetMenu(fileName = "NewSkillData", menuName = "BagBack100/Data/SkillData")]
     public class SkillDataSO : ScriptableObject
     {
         public string skillID;

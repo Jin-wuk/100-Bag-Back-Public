@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace DimensionLooter.Hub
+namespace BagBack100.Hub
 {
     [RequireComponent(typeof(SpriteRenderer))]
     public class OutlineEffect : MonoBehaviour
@@ -9,7 +9,6 @@ namespace DimensionLooter.Hub
         private Color _originalColor;
         
         [SerializeField] private Color _highlightColor = Color.yellow;
-        [SerializeField] private float _colorMultiplier = 1.2f;
 
         private void Awake()
         {

@@ -1,9 +1,9 @@
 using UnityEngine;
-using DimensionLooter.Data.Core;
+using BagBack100.Data.Core;
 
-namespace DimensionLooter.Data.Models
+namespace BagBack100.Data.Models
 {
-    [CreateAssetMenu(fileName = "NewItemData", menuName = "DimensionLooter/Data/ItemData")]
+    [CreateAssetMenu(fileName = "NewItemData", menuName = "BagBack100/Data/ItemData")]
     public class ItemDataSO : ScriptableObject
     {
         public int itemID;

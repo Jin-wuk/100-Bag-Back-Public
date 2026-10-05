@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using DimensionLooter.Data.Core;
+using BagBack100.Data.Core;
 
-namespace DimensionLooter.Player
+namespace BagBack100.Player
 {
     [RequireComponent(typeof(InventoryManager))]
     public class EquipmentManager : MonoBehaviour

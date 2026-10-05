@@ -1,8 +1,8 @@
 using UnityEngine;
 
-namespace DimensionLooter.Data.Models
+namespace BagBack100.Data.Models
 {
-    [CreateAssetMenu(fileName = "NewHeatModifier", menuName = "DimensionLooter/Data/HeatModifier")]
+    [CreateAssetMenu(fileName = "NewHeatModifier", menuName = "BagBack100/Data/HeatModifier")]
     public class HeatModifierSO : ScriptableObject
     {
         public string modifierID;

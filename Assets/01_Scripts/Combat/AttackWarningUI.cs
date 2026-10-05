@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
-namespace DimensionLooter.Combat
+namespace BagBack100.Combat
 {
     public class AttackWarningUI : MonoBehaviour
     {

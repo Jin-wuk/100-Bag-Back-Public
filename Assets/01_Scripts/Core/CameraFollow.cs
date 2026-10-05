@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace DimensionLooter.Core
+namespace BagBack100.Core
 {
     public class CameraFollow : MonoBehaviour
     {

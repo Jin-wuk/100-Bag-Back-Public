@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace DimensionLooter.Dungeon
+namespace BagBack100.Dungeon
 {
     public class DungeonEntranceUI : MonoBehaviour
     {

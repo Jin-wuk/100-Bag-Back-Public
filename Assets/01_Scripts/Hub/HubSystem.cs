@@ -1,8 +1,8 @@
 using UnityEngine;
-using DimensionLooter.Core;
-using DimensionLooter.Dungeon;
+using BagBack100.Core;
+using BagBack100.Dungeon;
 
-namespace DimensionLooter.Hub
+namespace BagBack100.Hub
 {
     /// <summary>
     /// 허브 내 시스템 및 상태를 관리하는 2계층 System.
@@ -12,6 +12,8 @@ namespace DimensionLooter.Hub
     {
         [Header("UI References")]
         [SerializeField] private DungeonEntranceUI _dungeonEntranceUI;
+        [SerializeField] private GameObject _storageUIPanel;
+        [SerializeField] private GameObject _inventoryUIPanel;
 
         private void OnEnable()
         {
@@ -46,6 +48,11 @@ namespace DimensionLooter.Hub
                 case HubObjectType.Shop:
                     Debug.Log("[HubSystem] 상점 클릭됨: 상점 패널 오픈 요청");
                     // TODO: UIManager에 상점 패널 오픈 이벤트 전달
+                    break;
+                case HubObjectType.Storage:
+                    Debug.Log("[HubSystem] 창고 클릭됨: 창고 및 인벤토리 UI 오픈");
+                    if (_storageUIPanel != null) _storageUIPanel.SetActive(true);
+                    if (_inventoryUIPanel != null) _inventoryUIPanel.SetActive(true);
                     break;
                 default:
                     Debug.LogWarning($"[HubSystem] 처리되지 않은 오브젝트 타입: {objectType}");

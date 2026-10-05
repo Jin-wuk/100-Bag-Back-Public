@@ -1,11 +1,11 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-using DimensionLooter.Data.Core;
-using DimensionLooter.Player;
+using BagBack100.Data.Core;
+using BagBack100.Player;
 using UnityEngine.UI;
 using TMPro;
 
-namespace DimensionLooter.UI
+namespace BagBack100.UI
 {
     [RequireComponent(typeof(RectTransform))]
     [RequireComponent(typeof(CanvasGroup))]
@@ -16,7 +16,7 @@ namespace DimensionLooter.UI
         [SerializeField] private TextMeshProUGUI _countText;
 
         private RuntimeItem _item;
-        private InventoryUIController _uiController;
+        private IItemContainerUI _uiController;
         private RectTransform _rectTransform;
         private CanvasGroup _canvasGroup;
         
@@ -29,7 +29,7 @@ namespace DimensionLooter.UI
             _canvasGroup = GetComponent<CanvasGroup>();
         }
 
-        public void Setup(RuntimeItem item, InventoryUIController uiController)
+        public void Setup(RuntimeItem item, IItemContainerUI uiController)
         {
             _item = item;
             _uiController = uiController;

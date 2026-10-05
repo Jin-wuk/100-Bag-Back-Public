@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace DimensionLooter.UI
+namespace BagBack100.UI
 {
     [RequireComponent(typeof(SpriteRenderer))]
     public class MovementPreview : MonoBehaviour

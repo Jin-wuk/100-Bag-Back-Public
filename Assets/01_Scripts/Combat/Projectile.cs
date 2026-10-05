@@ -1,7 +1,7 @@
 using UnityEngine;
-using DimensionLooter.Player;
+using BagBack100.Player;
 
-namespace DimensionLooter.Combat
+namespace BagBack100.Combat
 {
     public class Projectile : MonoBehaviour
     {

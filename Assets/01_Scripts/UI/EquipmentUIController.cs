@@ -1,8 +1,8 @@
 using UnityEngine;
-using DimensionLooter.Player;
-using DimensionLooter.Data.Core;
+using BagBack100.Player;
+using BagBack100.Data.Core;
 
-namespace DimensionLooter.UI
+namespace BagBack100.UI
 {
     public class EquipmentUIController : MonoBehaviour
     {

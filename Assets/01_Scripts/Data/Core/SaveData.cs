@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace DimensionLooter.Data.Core
+namespace BagBack100.Data.Core
 {
     [Serializable]
     public class InventorySaveData

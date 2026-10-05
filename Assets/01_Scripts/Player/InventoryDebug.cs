@@ -1,10 +1,10 @@
 //using UnityEngine;
-//using DimensionLooter.Data.Models;
-//using DimensionLooter.Data.Core;
-//using DimensionLooter.Player;
+//using BagBack100.Data.Models;
+//using BagBack100.Data.Core;
+//using BagBack100.Player;
 //using System.Collections.Generic;
 
-//namespace DimensionLooter.DebugTools
+//namespace BagBack100.DebugTools
 //{
 //    public class InventoryDebug : MonoBehaviour
 //    {

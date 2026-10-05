@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace DimensionLooter.Dungeon.Data
+namespace BagBack100.Dungeon.Data
 {
     [Serializable]
     public class ChunkSlot
@@ -11,7 +11,7 @@ namespace DimensionLooter.Dungeon.Data
         public List<GameObject> possibleChunkPrefabs = new List<GameObject>();
     }
 
-    [CreateAssetMenu(fileName = "NewDungeonData", menuName = "DimensionLooter/DungeonData")]
+    [CreateAssetMenu(fileName = "NewDungeonData", menuName = "BagBack100/DungeonData")]
     public class DungeonData : ScriptableObject
     {
         [Header("Chunk Layout Settings")]

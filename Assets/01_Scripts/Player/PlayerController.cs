@@ -1,7 +1,7 @@
 using UnityEngine;
-using DimensionLooter.Combat;
+using BagBack100.Combat;
 
-namespace DimensionLooter.Player
+namespace BagBack100.Player
 {
     public enum PlayerState
     {
@@ -30,6 +30,8 @@ namespace DimensionLooter.Player
         private Vector3 _facingDirection = Vector3.down;
         private Grid _grid;
 
+        private System.Action _bufferedCommand;
+
         private void Awake()
         {
             _input = GetComponent<PlayerInput>();
@@ -37,17 +39,19 @@ namespace DimensionLooter.Player
             _combat = GetComponent<EntityCombat>();
             _stats = GetComponent<PlayerStatManager>();
             
-            _input.OnTileClicked += HandleTileClicked;
-            _input.OnDirectionalInput += HandleDirectionalInput;
+            _input.OnMoveInput += HandleMoveInput;
+            _input.OnAimInput += HandleAimInput;
+            _input.OnAttackInput += HandleAttackInput;
             _input.OnSpecialAttackKeyPressed += HandleSpecialAttack;
             _movement.OnMovementFinished += HandleMovementFinished;
             _movement.OnTileReached += HandleTileReached;
+            _combat.OnAttackFinished += HandleAttackFinished;
         }
 
         private void Start()
         {
             _grid = FindObjectOfType<Grid>();
-            if (Camera.main != null && Camera.main.TryGetComponent<DimensionLooter.Core.CameraFollow>(out var cameraFollow))
+            if (Camera.main != null && Camera.main.TryGetComponent<BagBack100.Core.CameraFollow>(out var cameraFollow))
             {
                 cameraFollow.SetTarget(this.transform);
             }
@@ -57,9 +61,9 @@ namespace DimensionLooter.Player
             }
             
             // Register initial tile
-            if (_grid != null && DimensionLooter.Core.TileSystem.Instance != null)
+            if (_grid != null && BagBack100.Core.TileSystem.Instance != null)
             {
-                DimensionLooter.Core.TileSystem.Instance.RegisterInitialTile(_grid.WorldToCell(transform.position), gameObject);
+                BagBack100.Core.TileSystem.Instance.RegisterInitialTile(_grid.WorldToCell(transform.position), gameObject);
             }
         }
 
@@ -67,8 +71,9 @@ namespace DimensionLooter.Player
         {
             if (_input != null)
             {
-                _input.OnTileClicked -= HandleTileClicked;
-                _input.OnDirectionalInput -= HandleDirectionalInput;
+                _input.OnMoveInput -= HandleMoveInput;
+                _input.OnAimInput -= HandleAimInput;
+                _input.OnAttackInput -= HandleAttackInput;
                 _input.OnSpecialAttackKeyPressed -= HandleSpecialAttack;
             }
             if (_movement != null)
@@ -76,73 +81,94 @@ namespace DimensionLooter.Player
                 _movement.OnMovementFinished -= HandleMovementFinished;
                 _movement.OnTileReached -= HandleTileReached;
             }
-                
-            if (_grid != null && DimensionLooter.Core.TileSystem.Instance != null)
+            if (_combat != null)
             {
-                DimensionLooter.Core.TileSystem.Instance.ReleaseTile(_grid.WorldToCell(transform.position), gameObject);
+                _combat.OnAttackFinished -= HandleAttackFinished;
+            }
+                
+            if (_grid != null && BagBack100.Core.TileSystem.Instance != null)
+            {
+                BagBack100.Core.TileSystem.Instance.ReleaseTile(_grid.WorldToCell(transform.position), gameObject);
             }
         }
 
-        private void HandleTileClicked(Vector3 targetPos)
+        private void HandleAttackFinished()
+        {
+            if (CurrentState == PlayerState.Attacking)
+            {
+                CurrentState = PlayerState.Idle;
+            }
+        }
+
+        private void HandleAimInput(Vector3 aimDir)
+        {
+            if (CurrentState == PlayerState.Attacking) return;
+            
+            // 8방향 스냅(Snap)
+            float angle = Mathf.Atan2(aimDir.y, aimDir.x) * Mathf.Rad2Deg;
+            float snappedAngle = Mathf.Round(angle / 45f) * 45f;
+            float rad = snappedAngle * Mathf.Deg2Rad;
+            _facingDirection = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0).normalized;
+        }
+
+        private void HandleMoveInput(Vector2Int moveDir)
         {
             if (CurrentState == PlayerState.Attacking || _combat.IsAttackOnCooldown) return;
             
-            // Update facing direction
-            Vector3 dir = (targetPos - transform.position).normalized;
-            if (dir.magnitude > 0.1f) _facingDirection = dir;
-
-            CurrentState = PlayerState.Moving;
-            _movement.MoveTo(targetPos);
-        }
-
-        private void HandleDirectionalInput(Vector2Int dirInt)
-        {
             if (CurrentState == PlayerState.Moving)
             {
                 _movement.CancelPath();
-                return; // Wait for current tile hop to finish before starting new move
+                return;
             }
-            
-            if (CurrentState != PlayerState.Idle || _combat.IsAttackOnCooldown) return;
-
-            Vector3 direction = new Vector3(dirInt.x, dirInt.y, 0);
-            _facingDirection = direction;
 
             if (_grid == null) return;
 
             Vector3Int currentCellPos = _grid.WorldToCell(transform.position);
-            Vector3Int targetCellPos = currentCellPos + new Vector3Int(dirInt.x, dirInt.y, 0);
+            Vector3Int targetCellPos = currentCellPos + new Vector3Int(moveDir.x, moveDir.y, 0);
             Vector3 targetPos = _grid.GetCellCenterWorld(targetCellPos);
 
-            // Check for monster in the target tile
+            // 이동 (몬스터 유무 관계없이 이동 시도)
+            CurrentState = PlayerState.Moving;
+            _movement.MoveTo(targetPos);
+        }
+
+        private void HandleAttackInput()
+        {
+            if (_combat.IsAttackOnCooldown) return;
+
+            if (CurrentState == PlayerState.Moving)
+            {
+                // 선입력 (Input Buffering)
+                _bufferedCommand = () => ExecuteMeleeAttack();
+            }
+            else
+            {
+                ExecuteMeleeAttack();
+            }
+        }
+
+        private void ExecuteMeleeAttack()
+        {
+            if (_grid == null || _combat.IsAttackOnCooldown) return;
+
+            CurrentState = PlayerState.Attacking;
+
+            // 1. 공격할 타일 계산 (현재 타일 + 바라보는 방향)
+            Vector3Int currentCellPos = _grid.WorldToCell(transform.position);
+            Vector3Int aimCellOffset = new Vector3Int(Mathf.RoundToInt(_facingDirection.x), Mathf.RoundToInt(_facingDirection.y), 0);
+            Vector3Int targetCellPos = currentCellPos + aimCellOffset;
+
+            // 2. 타일에서 몬스터 찾기
             GameObject occupant = null;
-            if (DimensionLooter.Core.TileSystem.Instance != null)
+            if (BagBack100.Core.TileSystem.Instance != null)
             {
-                occupant = DimensionLooter.Core.TileSystem.Instance.GetEntityAtTile(targetCellPos);
-            }
-            else
-            {
-                Collider2D col = Physics2D.OverlapPoint(targetPos);
-                if (col != null) occupant = col.gameObject;
+                occupant = BagBack100.Core.TileSystem.Instance.GetEntityAtTile(targetCellPos);
             }
 
-            MonsterController monster = null;
-            if (occupant != null)
-            {
-                monster = occupant.GetComponent<MonsterController>();
-            }
-
-            if (monster != null)
-            {
-                // Bump Attack
-                _combat.PerformMeleeAttack(monster.gameObject, _stats.CurrentSpeed, _stats.CurrentAttack, direction);
-            }
-            else
-            {
-                // Move
-                CurrentState = PlayerState.Moving;
-                _movement.MoveTo(targetPos);
-            }
+            MonsterController monster = occupant != null ? occupant.GetComponent<MonsterController>() : null;
+            
+            // 3. 공격 실행 (몬스터가 없어도 헛스윙 및 모션 락 적용)
+            _combat.PerformMeleeAttack(monster != null ? monster.gameObject : null, _stats.CurrentSpeed, _stats.CurrentAttack, _facingDirection);
         }
 
         private void HandleSpecialAttack()
@@ -154,29 +180,32 @@ namespace DimensionLooter.Player
 
         private void HandleTileReached(Vector3 pos)
         {
-            if (_grid != null && DimensionLooter.Core.TileSystem.Instance != null)
+            if (_grid != null && BagBack100.Core.TileSystem.Instance != null)
             {
                 Vector3Int currentCell = _grid.WorldToCell(pos);
                 currentCell.z = 0; // 2D 그리드에서 Z축 오차 방지
 
-                Debug.Log($"[PlayerController] 타일 도착. 검사 좌표: {currentCell}");
-
-                var item = DimensionLooter.Core.TileSystem.Instance.GetItemAtTile(currentCell);
+                var item = BagBack100.Core.TileSystem.Instance.GetItemAtTile(currentCell);
                 if (item != null)
                 {
-                    Debug.Log($"[PlayerController] 아이템 발견! 획득 시도.");
                     item.PickUpByPlayer();
                 }
-                else
-                {
-                    Debug.Log($"[PlayerController] {currentCell} 위치에 등록된 아이템이 없습니다.");
-                }
+            }
+            
+            // 타일 안착 시 선입력 커맨드 실행
+            if (_bufferedCommand != null)
+            {
+                _bufferedCommand.Invoke();
+                _bufferedCommand = null;
             }
         }
 
         private void HandleMovementFinished()
         {
-            CurrentState = PlayerState.Idle;
+            if (CurrentState == PlayerState.Moving)
+            {
+                CurrentState = PlayerState.Idle;
+            }
         }
     }
 }

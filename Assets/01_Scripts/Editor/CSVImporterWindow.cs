@@ -4,8 +4,8 @@
 //using System.IO;
 //using System.Collections.Generic;
 //using System.Text.RegularExpressions;
-//using DimensionLooter.Data.Core;
-//using DimensionLooter.Data.Models;
+//using BagBack100.Data.Core;
+//using BagBack100.Data.Models;
 
 //public class CSVImporterWindow : EditorWindow
 //{
@@ -17,7 +17,7 @@
 //    public TextAsset questCSV;
 //    public TextAsset heatCSV;
 
-//    [MenuItem("DimensionLooter/CSV Importer")]
+//    [MenuItem("BagBack100/CSV Importer")]
 //    public static void ShowWindow()
 //    {
 //        GetWindow<CSVImporterWindow>("CSV Importer");

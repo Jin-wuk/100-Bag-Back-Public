@@ -1,13 +1,13 @@
 using UnityEngine;
 using UnityEngine.UI;
-using DimensionLooter.Player;
-using DimensionLooter.Data.Core;
+using BagBack100.Player;
+using BagBack100.Data.Core;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace DimensionLooter.UI
+namespace BagBack100.UI
 {
-    public class InventoryUIController : MonoBehaviour
+    public class InventoryUIController : MonoBehaviour, IItemContainerUI
     {
         [Header("References")]
         [SerializeField] private InventoryManager _inventoryManager;
@@ -55,6 +55,16 @@ namespace DimensionLooter.UI
             if (_inventoryManager != null) _inventoryManager.OnInventoryChanged -= RefreshUI;
             _inventoryManager = invManager;
             if (_inventoryManager != null) _inventoryManager.OnInventoryChanged += RefreshUI;
+        }
+
+        
+        public bool CanPlaceItem(RuntimeItem item, int slotIndex) => _inventoryManager.CanPlaceItemAtSlot(item, slotIndex);
+        public void RemoveItem(RuntimeItem item) => _inventoryManager.RemoveItem(item);
+        public int GetSlotIndex(Transform cellTransform) => _cells.IndexOf(cellTransform);
+        public void MoveItemFrom(RuntimeItem item, int targetSlot, IItemContainerUI sourceContainer)
+        {
+            sourceContainer.RemoveItem(item);
+            _inventoryManager.AddItemAt(item, targetSlot);
         }
 
         private int _lastMaxSlots = -1;
@@ -202,6 +212,7 @@ namespace DimensionLooter.UI
 
             RuntimeItem item = _heldItemUI.Item;
 
+            
             if (targetSlot >= 0 && _inventoryManager.CanPlaceItemAtSlot(item, targetSlot))
             {
                 _heldItemUI.SetHeldState(false);
@@ -211,14 +222,36 @@ namespace DimensionLooter.UI
                 // 기존 위치에서 이동하는 것이라면 스왑을 포함하여 AddItemAt 호출
                 _inventoryManager.AddItemAt(item, targetSlot);
             }
-            else
+            else if (targetSlot < 0)
             {
+                // 다른 컨테이너(창고 등)로 드래그했는지 확인
+                var pointerData = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current) { position = screenPosition };
+                var results = new List<UnityEngine.EventSystems.RaycastResult>();
+                UnityEngine.EventSystems.EventSystem.current.RaycastAll(pointerData, results);
+                
+                foreach (var result in results)
+                {
+                    var otherContainer = result.gameObject.GetComponentInParent<IItemContainerUI>();
+                    if (otherContainer != null && (object)otherContainer != this)
+                    {
+                        int otherSlot = otherContainer.GetSlotIndex(result.gameObject.transform);
+                        if (otherSlot >= 0 && otherContainer.CanPlaceItem(item, otherSlot))
+                        {
+                            otherContainer.MoveItemFrom(item, otherSlot, this);
+                            _heldItemUI.SetHeldState(false);
+                            Destroy(_heldItemUI.gameObject);
+                            _heldItemUI = null;
+                            return;
+                        }
+                    }
+                }
+
                 // 외부 아이템인데 배치 실패 시 버림 (기존 외부획득 로직 잔재. 필요 시 유지)
                 if (item.SlotIndex < 0)
                 {
                     var player = FindObjectOfType<PlayerController>();
                     Vector3 dropPos = player != null ? player.transform.position : Vector3.zero;
-                    DimensionLooter.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(item, dropPos);
+                    BagBack100.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(item, dropPos);
                     
                     Destroy(_heldItemUI.gameObject);
                     _heldItemUI = null;
@@ -231,6 +264,27 @@ namespace DimensionLooter.UI
                     _heldItemUI = null;
                 }
             }
+            else
+            {
+                // 외부 아이템인데 배치 실패 시 버림 (기존 외부획득 로직 잔재. 필요 시 유지)
+                if (item.SlotIndex < 0)
+                {
+                    var player = FindObjectOfType<PlayerController>();
+                    Vector3 dropPos = player != null ? player.transform.position : Vector3.zero;
+                    BagBack100.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(item, dropPos);
+                    
+                    Destroy(_heldItemUI.gameObject);
+                    _heldItemUI = null;
+                }
+                else
+                {
+                    // 원래 위치로 원상복구
+                    _heldItemUI.SetHeldState(false);
+                    _heldItemUI.transform.SetParent(_cells[item.SlotIndex], false);
+                    _heldItemUI = null;
+                }
+            }
+
         }
 
     }

@@ -1,4 +1,4 @@
-namespace DimensionLooter.Data.Core
+namespace BagBack100.Data.Core
 {
     public enum MonsterType { Normal, Elite, Boss }
     public enum ItemCategory { Equipment, Consumable, Material, Key }

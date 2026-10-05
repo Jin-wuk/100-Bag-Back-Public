@@ -1,12 +1,12 @@
 using UnityEngine;
 using System.Collections.Generic;
-using DimensionLooter.Core;
-using DimensionLooter.Data.Models;
-using DimensionLooter.Data.Core;
-using DimensionLooter.Map;
+using BagBack100.Core;
+using BagBack100.Data.Models;
+using BagBack100.Data.Core;
+using BagBack100.Map;
 using System.Linq;
 
-namespace DimensionLooter.Combat
+namespace BagBack100.Combat
 {
     public class LootSystem : MonoBehaviour
     {

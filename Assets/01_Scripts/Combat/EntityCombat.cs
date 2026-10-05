@@ -1,9 +1,9 @@
 using UnityEngine;
 using System;
 using System.Collections;
-using DimensionLooter.Player;
+using BagBack100.Player;
 
-namespace DimensionLooter.Combat
+namespace BagBack100.Combat
 {
     public class EntityCombat : MonoBehaviour
     {
@@ -18,17 +18,20 @@ namespace DimensionLooter.Combat
             
             OnMeleeAttack?.Invoke(direction);
             
-            var targetMonster = target.GetComponent<MonsterController>();
-            if (targetMonster != null)
+            if (target != null)
             {
-                targetMonster.TakeDamage(damage);
-            }
-            else
-            {
-                var targetPlayer = target.GetComponent<PlayerStatManager>();
-                if (targetPlayer != null)
+                var targetMonster = target.GetComponent<MonsterController>();
+                if (targetMonster != null)
                 {
-                    targetPlayer.TakeDamage(damage);
+                    targetMonster.TakeDamage(damage);
+                }
+                else
+                {
+                    var targetPlayer = target.GetComponent<PlayerStatManager>();
+                    if (targetPlayer != null)
+                    {
+                        targetPlayer.TakeDamage(damage);
+                    }
                 }
             }
             
@@ -57,11 +60,14 @@ namespace DimensionLooter.Combat
             StartCoroutine(CooldownRoutine(1f / attackSpeed));
         }
 
+        public event Action OnAttackFinished;
+
         private IEnumerator CooldownRoutine(float duration)
         {
             IsAttackOnCooldown = true;
             yield return new WaitForSeconds(duration);
             IsAttackOnCooldown = false;
+            OnAttackFinished?.Invoke();
         }
     }
 }

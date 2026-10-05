@@ -1,8 +1,8 @@
 using UnityEngine;
 
-namespace DimensionLooter.Data.Models
+namespace BagBack100.Data.Models
 {
-    [CreateAssetMenu(fileName = "NewNPCQuest", menuName = "DimensionLooter/Data/NPCQuest")]
+    [CreateAssetMenu(fileName = "NewNPCQuest", menuName = "BagBack100/Data/NPCQuest")]
     public class NPCQuestSO : ScriptableObject
     {
         public int questID;

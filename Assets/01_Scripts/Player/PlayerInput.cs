@@ -1,29 +1,27 @@
 using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using DimensionLooter.Core;
-using DimensionLooter.UI;
+using BagBack100.Core;
+using BagBack100.UI;
 
-namespace DimensionLooter.Player
+namespace BagBack100.Player
 {
     public class PlayerInput : MonoBehaviour
     {
         public static event Action<PlayerInput> OnInputCreated;
 
-        public event Action<Vector3> OnTileClicked;
-        public event Action<Vector2Int> OnDirectionalInput;
+        public event Action<Vector2Int> OnMoveInput;
+        public event Action<Vector3> OnAimInput;
+        public event Action OnAttackInput;
         public event Action OnSpecialAttackKeyPressed;
         public event Action OnInventoryToggle;
         
         public bool IsMovementBlocked { get; set; } = false;
         
-        [Header("Settings")]
-        [Tooltip("경로 탐색 시 장애물로 인식할 레이어")]
-        [SerializeField] private LayerMask _obstacleLayerMask;
-
         private Camera _mainCamera;
-        private MovementPreview _movementPreview;
         private Grid _grid;
+        private float _lastMoveInputTime;
+        private float _moveInputDelay = 0.15f; // 연속 이동 입력 딜레이 방지
 
         private void Awake()
         {
@@ -34,41 +32,39 @@ namespace DimensionLooter.Player
         {
             _mainCamera = Camera.main;
             _grid = FindObjectOfType<Grid>();
-            _movementPreview = FindObjectOfType<MovementPreview>(true);
-            
-            if (_movementPreview == null)
-            {
-                Debug.LogWarning("씬에 MovementPreview 오브젝트가 없습니다. 미리보기가 동작하지 않습니다.");
-            }
         }
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.I))
+            if (Input.GetKeyDown(KeyCode.I) || Input.GetKeyDown(KeyCode.Tab))
             {
                 OnInventoryToggle?.Invoke();
             }
 
             if (IsMovementBlocked || (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
             {
-                if (_movementPreview != null) _movementPreview.Hide();
                 return;
             }
 
-            HandleKeyboardInput();
-            HandleMouseInput();
+            HandleAimAndAttackInput();
+            HandleKeyboardMoveInput();
         }
 
-        private void HandleKeyboardInput()
+        private void HandleKeyboardMoveInput()
         {
-            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))
-                OnDirectionalInput?.Invoke(Vector2Int.up);
-            else if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))
-                OnDirectionalInput?.Invoke(Vector2Int.down);
-            else if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
-                OnDirectionalInput?.Invoke(Vector2Int.left);
-            else if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
-                OnDirectionalInput?.Invoke(Vector2Int.right);
+            // WASD 이동 처리
+            Vector2Int moveDir = Vector2Int.zero;
+            
+            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow)) moveDir = Vector2Int.up;
+            else if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) moveDir = Vector2Int.down;
+            else if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) moveDir = Vector2Int.left;
+            else if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) moveDir = Vector2Int.right;
+
+            if (moveDir != Vector2Int.zero && Time.time - _lastMoveInputTime > _moveInputDelay)
+            {
+                _lastMoveInputTime = Time.time;
+                OnMoveInput?.Invoke(moveDir);
+            }
 
             if (Input.GetKeyDown(KeyCode.Z))
             {
@@ -76,24 +72,18 @@ namespace DimensionLooter.Player
             }
         }
 
-        private void HandleMouseInput()
+        private void HandleAimAndAttackInput()
         {
             Vector3 mouseWorldPos = GetMouseWorldPosition();
-            if (_grid == null) return;
             
-            Vector3Int cellPos = _grid.WorldToCell(mouseWorldPos);
-            Vector2Int tilePos = new Vector2Int(cellPos.x, cellPos.y);
+            // 에이밍 갱신 (마우스 커서 위치를 플레이어 기준 8방향 벡터로 산출)
+            Vector3 dirToMouse = (mouseWorldPos - transform.position).normalized;
+            OnAimInput?.Invoke(dirToMouse);
 
-            UpdatePreview(tilePos, cellPos);
-
+            // 공격 입력
             if (Input.GetMouseButtonDown(0))
             {
-                bool isObstacle = Pathfinder.IsObstacle(_grid, tilePos, _obstacleLayerMask);
-                if (!isObstacle)
-                {
-                    Vector3 targetPos = _grid.GetCellCenterWorld(cellPos);
-                    OnTileClicked?.Invoke(targetPos);
-                }
+                OnAttackInput?.Invoke();
             }
         }
 
@@ -109,13 +99,6 @@ namespace DimensionLooter.Player
 
             mouseScreenPos.z = -_mainCamera.transform.position.z;
             return _mainCamera.ScreenToWorldPoint(mouseScreenPos);
-        }
-
-        private void UpdatePreview(Vector2Int tilePos, Vector3Int cellPos)
-        {
-            if (_movementPreview == null || _grid == null) return;
-            bool isObstacle = Pathfinder.IsObstacle(_grid, tilePos, _obstacleLayerMask);
-            _movementPreview.ShowPreview(_grid.GetCellCenterWorld(cellPos), !isObstacle);
         }
     }
 }

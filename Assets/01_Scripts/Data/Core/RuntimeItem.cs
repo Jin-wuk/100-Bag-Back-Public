@@ -1,8 +1,8 @@
 using System;
-using DimensionLooter.Data.Models;
+using BagBack100.Data.Models;
 using UnityEngine;
 
-namespace DimensionLooter.Data.Core
+namespace BagBack100.Data.Core
 {
     [Serializable]
     public class RuntimeItem

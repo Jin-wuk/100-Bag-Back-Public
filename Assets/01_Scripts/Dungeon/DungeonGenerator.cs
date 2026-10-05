@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using DimensionLooter.Dungeon.Data;
+using BagBack100.Dungeon.Data;
 
-namespace DimensionLooter.Dungeon
+namespace BagBack100.Dungeon
 {
     public class DungeonGenerator : MonoBehaviour
     {
