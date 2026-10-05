@@ -7,7 +7,6 @@ namespace BagBack100.Data.Models
     {
         [Header("Weapon Specific")]
         public float baseAttackSpeed = 1f; 
-        // 추후 무기 고유 이펙트 프리팹 등을 여기에 추가 가능
-        // public GameObject weaponPrefab;
+        public GameObject weaponPrefab; // 무기 전용 공격 이펙트 (프리팹)
     }
 }

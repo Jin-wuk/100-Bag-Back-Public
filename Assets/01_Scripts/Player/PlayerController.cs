@@ -19,7 +19,6 @@ namespace BagBack100.Player
         public PlayerState CurrentState { get; private set; } = PlayerState.Idle;
 
         [Header("Combat Settings")]
-        [SerializeField] private GameObject _meleePrefab;
         [SerializeField] private float _meleeOffset = 0.5f;
         [SerializeField] private Vector3 _meleeScale = Vector3.one;
         [SerializeField] private GameObject _projectilePrefab;
@@ -29,6 +28,7 @@ namespace BagBack100.Player
         private PlayerMovement _movement;
         private EntityCombat _combat;
         private PlayerStatManager _stats;
+        private EquipmentManager _equipment;
 
         private Vector3 _facingDirection = Vector3.down;
         private Grid _grid;
@@ -41,6 +41,7 @@ namespace BagBack100.Player
             _movement = GetComponent<PlayerMovement>();
             _combat = GetComponent<EntityCombat>();
             _stats = GetComponent<PlayerStatManager>();
+            _equipment = GetComponent<EquipmentManager>();
             
             _input.OnMoveInput += HandleMoveInput;
             _input.OnAimInput += HandleAimInput;
@@ -165,8 +166,19 @@ namespace BagBack100.Player
 
             MonsterController monster = occupant != null ? occupant.GetComponent<MonsterController>() : null;
             
+            // 현재 장착 중인 무기 가져오기
+            GameObject currentMeleePrefab = null;
+            if (_equipment != null)
+            {
+                var weaponItem = _equipment.GetEquippedItem(BagBack100.Data.Core.EquipType.Weapon);
+                if (weaponItem != null && weaponItem.ItemData is BagBack100.Data.Models.WeaponDataSO weaponData)
+                {
+                    currentMeleePrefab = weaponData.weaponPrefab;
+                }
+            }
+
             // 2. 공격 실행 (몬스터가 없어도 헛스윙 및 모션 락 적용, 검 프리팹 생성)
-            _combat.PerformMeleeAttack(monster != null ? monster.gameObject : null, _stats.CurrentAttackSpeed, _stats.CurrentAttack, _facingDirection, _meleePrefab, transform, _meleeOffset, _meleeScale);
+            _combat.PerformMeleeAttack(monster != null ? monster.gameObject : null, _stats.CurrentAttackSpeed, _stats.CurrentAttack, _facingDirection, currentMeleePrefab, transform, _meleeOffset, _meleeScale);
         }
 
         private void HandleSpecialAttack()

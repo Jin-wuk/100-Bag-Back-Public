@@ -29,6 +29,9 @@ MonoBehaviour:
   - itemID: 12
     minAmount: 1
     maxAmount: 1
+  - itemID: 21
+    minAmount: 1
+    maxAmount: 1
   randomDropGroups:
   - groupName: Equip
     minRolls: 1
