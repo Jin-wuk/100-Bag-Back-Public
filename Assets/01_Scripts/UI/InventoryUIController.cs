@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using BagBack100.Player;
+using BagBack100.Hub;
 using BagBack100.Data.Core;
 using System.Collections.Generic;
 using System.Linq;
@@ -208,6 +209,54 @@ namespace BagBack100.UI
             {
                 TryDropHeldItem(eventData.position, eventData.pressEventCamera);
             }
+        }
+
+        private void Update()
+        {
+            if (_heldItemUI == null && Input.GetKeyDown(KeyCode.E))
+            {
+                TryQuickTransferItemUnderMouse();
+            }
+        }
+
+        private void TryQuickTransferItemUnderMouse()
+        {
+            if (_inventoryManager == null) return;
+
+            var storageUI = FindObjectOfType<StorageUIController>();
+            if (storageUI == null || !storageUI.gameObject.activeInHierarchy) return;
+
+            var storageManager = FindObjectOfType<StorageManager>();
+            if (storageManager == null) return;
+
+            int hoveredSlot = GetSlotIndexAtScreenPos(Input.mousePosition);
+            if (hoveredSlot < 0) return;
+
+            RuntimeItem item = _inventoryManager.GetItemAtSlot(hoveredSlot);
+            if (item == null) return;
+
+            if (storageManager.CanAddItem(item))
+            {
+                _inventoryManager.RemoveItem(item);
+                storageManager.TryAddNextAvailableSlot(item);
+            }
+        }
+
+        private int GetSlotIndexAtScreenPos(Vector2 screenPosition)
+        {
+            Canvas rootCanvas = GetComponentInParent<Canvas>();
+            Camera uiCamera = (rootCanvas != null && rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                ? rootCanvas.worldCamera
+                : null;
+
+            for (int i = 0; i < _cells.Count; i++)
+            {
+                if (_cells[i] != null && RectTransformUtility.RectangleContainsScreenPoint((RectTransform)_cells[i], screenPosition, uiCamera))
+                {
+                    return i;
+                }
+            }
+            return -1;
         }
 
         public void OnItemDoubleClicked(DraggableItemUI clickedItem)

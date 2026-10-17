@@ -38,8 +38,23 @@ namespace BagBack100.UI
 
         private void OnInputCreated(PlayerInput input)
         {
+            if (_playerInput != null)
+            {
+                _playerInput.OnInventoryToggle -= ToggleInventoryScreen;
+            }
             _playerInput = input;
-            _playerInput.OnInventoryToggle += ToggleInventoryScreen;
+            if (_playerInput != null)
+            {
+                _playerInput.OnInventoryToggle += ToggleInventoryScreen;
+            }
+        }
+
+        private void Update()
+        {
+            if (_inventoryScreenRoot != null && _inventoryScreenRoot.activeSelf && Input.GetKeyDown(KeyCode.Escape))
+            {
+                CloseInventoryScreen();
+            }
         }
 
         private void ToggleInventoryScreen()
@@ -48,7 +63,7 @@ namespace BagBack100.UI
 
             bool isActive = !_inventoryScreenRoot.activeSelf;
             
-            // 순수하게 'I' 키로 인벤토리를 열 때는 보상 패널을 끔
+            // 순수하게 'Tab' 키로 인벤토리를 열 때는 보상 패널을 끔
             if (isActive && _rewardPanel != null)
             {
                 _rewardPanel.SetActive(false);
@@ -59,6 +74,18 @@ namespace BagBack100.UI
             if (_playerInput != null)
             {
                 _playerInput.IsMovementBlocked = isActive;
+            }
+        }
+
+        public void CloseInventoryScreen()
+        {
+            if (_inventoryScreenRoot == null) return;
+
+            _inventoryScreenRoot.SetActive(false);
+
+            if (_playerInput != null)
+            {
+                _playerInput.IsMovementBlocked = false;
             }
         }
 

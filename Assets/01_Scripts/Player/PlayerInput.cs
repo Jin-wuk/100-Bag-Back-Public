@@ -41,7 +41,7 @@ namespace BagBack100.Player
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.I) || Input.GetKeyDown(KeyCode.Tab))
+            if (Input.GetKeyDown(KeyCode.Tab))
             {
                 OnInventoryToggle?.Invoke();
             }

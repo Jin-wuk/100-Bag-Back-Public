@@ -65,6 +65,10 @@ namespace BagBack100.Hub
             {
                 CloseAllPanels();
             }
+            else if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                ToggleInventoryUI();
+            }
         }
 
         private void HandleHubObjectClicked(HubObjectType objectType)
@@ -97,6 +101,22 @@ namespace BagBack100.Hub
                 default:
                     Debug.LogWarning($"[HubSystem] 처리되지 않은 오브젝트 타입: {objectType}");
                     break;
+            }
+        }
+
+        public void ToggleInventoryUI()
+        {
+            if (_inventoryUIPanel == null) return;
+
+            if (_inventoryUIPanel.activeInHierarchy)
+            {
+                CloseStorageUI();
+            }
+            else
+            {
+                if (_dungeonEntranceUI != null) _dungeonEntranceUI.HidePanel();
+                if (_storageUIPanel != null) _storageUIPanel.SetActive(false);
+                SetPanelAndParentsActive(_inventoryUIPanel, true);
             }
         }
 

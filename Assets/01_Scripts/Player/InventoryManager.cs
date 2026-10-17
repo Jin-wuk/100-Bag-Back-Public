@@ -159,21 +159,27 @@ namespace BagBack100.Player
             if (CurrentWeight + (item.ItemData.weight * item.Count) > MaxWeight)
                 return false;
 
-            // 스택 가능한지 먼저 확인
-            if (item.ItemData.maxStack > 1)
-            {
-                foreach(var existing in _items)
-                {
-                    if (existing.ItemData.itemID == item.ItemData.itemID && existing.Count + item.Count <= existing.ItemData.maxStack)
-                        return true;
-                }
-            }
-
-            // 빈 슬롯이 있는지 확인
+            // 빈 슬롯이 하나라도 있으면 수용 가능
             for (int i = 0; i < MaxSlots; i++)
             {
                 if (_slots[i] == null) return true;
             }
+
+            // 빈 슬롯이 없더라도 스택 가능한 여유 공간 합계가 충분하면 수용 가능
+            if (item.ItemData.maxStack > 1)
+            {
+                int availableSpace = 0;
+                for (int i = 0; i < MaxSlots; i++)
+                {
+                    var existing = _slots[i];
+                    if (existing != null && existing != item && existing.ItemData.itemID == item.ItemData.itemID)
+                    {
+                        availableSpace += Mathf.Max(0, existing.ItemData.maxStack - existing.Count);
+                        if (availableSpace >= item.Count) return true;
+                    }
+                }
+            }
+
             return false;
         }
 
@@ -286,22 +292,33 @@ namespace BagBack100.Player
 
         public IReadOnlyList<RuntimeItem> GetAllItems() => _items;
 
+        public RuntimeItem GetItemAtSlot(int slotIndex)
+        {
+            if (_slots == null || slotIndex < 0 || slotIndex >= MaxSlots) return null;
+            return _slots[slotIndex];
+        }
+
         public bool TryAddNextAvailableSlot(RuntimeItem item)
         {
             if (!CanAddItem(item)) return false;
 
             bool isInternal = _items.Contains(item);
 
-            // 1. 스택 시도
+            // 1. 중첩 가능한 아이템이면 상단 왼쪽(0번 슬롯)부터 기존 스택에 우선 합산
             if (item.ItemData.maxStack > 1)
             {
-                foreach(var existing in _items)
+                for (int i = 0; i < MaxSlots; i++)
                 {
-                    if (existing != item && existing.ItemData.itemID == item.ItemData.itemID)
+                    var existing = _slots[i];
+                    if (existing != null && existing != item && existing.ItemData.itemID == item.ItemData.itemID && existing.Count < existing.ItemData.maxStack)
                     {
-                        if (existing.Count + item.Count <= existing.ItemData.maxStack)
+                        int space = existing.ItemData.maxStack - existing.Count;
+                        int addCount = Mathf.Min(space, item.Count);
+                        existing.Count += addCount;
+                        item.Count -= addCount;
+
+                        if (item.Count <= 0)
                         {
-                            existing.Count += item.Count;
                             if (isInternal) InternalRemoveItem(item);
                             RecalculateWeight();
                             NotifyInventoryChanged();
@@ -311,7 +328,7 @@ namespace BagBack100.Player
                 }
             }
 
-            // 2. 빈 슬롯 탐색
+            // 2. 남은 수량(또는 중첩 불가 아이템)은 가장 상단 왼쪽(0번 슬롯) 빈칸부터 채움
             for (int i = 0; i < MaxSlots; i++)
             {
                 if (_slots[i] == null)

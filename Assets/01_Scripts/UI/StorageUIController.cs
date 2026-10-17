@@ -211,6 +211,54 @@ namespace BagBack100.UI
             }
         }
 
+        private void Update()
+        {
+            if (_heldItemUI == null && Input.GetKeyDown(KeyCode.E))
+            {
+                TryQuickTransferItemUnderMouse();
+            }
+        }
+
+        private void TryQuickTransferItemUnderMouse()
+        {
+            if (_storageManager == null) return;
+
+            var invUI = FindObjectOfType<InventoryUIController>();
+            if (invUI == null || !invUI.gameObject.activeInHierarchy) return;
+
+            var inventoryManager = FindObjectOfType<InventoryManager>();
+            if (inventoryManager == null) return;
+
+            int hoveredSlot = GetSlotIndexAtScreenPos(Input.mousePosition);
+            if (hoveredSlot < 0) return;
+
+            RuntimeItem item = _storageManager.GetItemAtSlot(hoveredSlot);
+            if (item == null) return;
+
+            if (inventoryManager.CanAddItem(item))
+            {
+                _storageManager.RemoveItem(item);
+                inventoryManager.TryAddNextAvailableSlot(item);
+            }
+        }
+
+        private int GetSlotIndexAtScreenPos(Vector2 screenPosition)
+        {
+            Canvas rootCanvas = GetComponentInParent<Canvas>();
+            Camera uiCamera = (rootCanvas != null && rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                ? rootCanvas.worldCamera
+                : null;
+
+            for (int i = 0; i < _cells.Count; i++)
+            {
+                if (_cells[i] != null && RectTransformUtility.RectangleContainsScreenPoint((RectTransform)_cells[i], screenPosition, uiCamera))
+                {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
         public void OnItemDoubleClicked(DraggableItemUI clickedItem)
         {
             if (_heldItemUI != null || clickedItem == null || clickedItem.Item == null || _storageManager == null) return;
