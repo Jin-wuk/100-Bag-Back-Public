@@ -1,22 +1,24 @@
-# 스크립트 종속성 맵: 플레이어 시스템 (Player System)
+# 스크립트 종속성 맵: 플레이어 및 익스트랙션 데이터 시스템 (Player & Extraction System)
 
-본 문서는 플레이어의 이동, 입력 처리, 경로 탐색 및 관련 UI를 담당하는 스크립트들의 역할과 종속성을 파악하기 위한 아키텍처 지도입니다. `01_Feature_Checklist.md`의 SRP 및 디커플링 원칙을 준수하여 설계되었습니다.
+본 문서는 플레이어의 이동, 스탯/사망, 인벤토리·장비·창고 관리 및 씬 전환 간 데이터 영속성을 담당하는 스크립트들의 아키텍처 지도입니다.
 
-## 📁 `Assets/Scripts/Player/`
-플레이어 캐릭터에 부착되는 컴포넌트들로, FSM과 입력을 처리합니다.
-- **`PlayerController.cs`**: 플레이어의 상태(Idle, Moving)를 관리하는 FSM이자 진입점(Facade)입니다. `PlayerInput`의 이벤트를 구독하여 `PlayerMovement`로 명령을 하달합니다.
-- **`PlayerInput.cs`**: 마우스 클릭 및 호버 상태를 감지하여 타일 위치를 계산합니다. `EventSystem`을 통해 UI 클릭 시 이동을 무시하며, `MovementPreview`에 시각적 업데이트를 요청합니다.
-- **`PlayerMovement.cs`**: `Pathfinder`가 반환한 경로(A*)를 바탕으로 코루틴 기반의 실제 이동(통통 튀는 Hopping 연출 포함)을 수행합니다. 타일 중앙 도달 전까지는 경로 수정을 지연시키는 제약 조건 로직이 포함되어 있습니다.
+## 📁 `Assets/01_Scripts/Data/Core/`
+- **`SaveData.cs` (`PlayerSessionData`)**: `02_HubScene` ↔ `03_DungeonScene` 씬 전환 간 인벤토리(`InventoryItems`), 장착 장비(`EquippedItems`), 허브 창고(`StorageItems`) 런타임 데이터를 보존하는 영속 컨테이너입니다. 사망 시 `ClearPlayerLoadoutOnDeath()`를 통해 창고 아이템은 보존하고 인벤토리 및 장착 장비를 모두 증발시킵니다.
 
-## 📁 `Assets/Scripts/Core/`
-게임 전반에서 공용으로 사용될 수 있는 핵심 유틸리티 및 로직입니다.
-- **`Pathfinder.cs`**: A* 알고리즘을 구현한 정적 헬퍼 클래스입니다. `Physics2D.OverlapPoint`를 사용해 장애물 레이어(`Wall`)를 판별하며, 타일 단위의 경로 리스트를 반환합니다.
-- **`CameraFollow.cs`**: 설정된 대상(Target)을 부드럽게 추적(`Vector3.SmoothDamp` 사용)하는 카메라 스크립트입니다. 던전 진입 시 `PlayerController`가 스스로를 카메라의 추적 대상으로 등록(DI)합니다.
+## 📁 `Assets/01_Scripts/Player/`
+- **`PlayerController.cs`**: 플레이어의 상태(Idle, Moving)를 관리하는 진입점(Facade)입니다.
+- **`PlayerInput.cs`**: WASD 4방향 이동, 마우스 8방향 조준 및 인벤토리(`I`) 입력을 처리합니다.
+- **`PlayerMovement.cs`**: 그리드 타일 기반 이동을 수행합니다.
+- **`PlayerStatManager.cs`**: `MaxHp`/`MaxMp`와 `CurrentHp`/`CurrentMp`를 분리 관리하여 아이템 습득 시 체력이 초기화되는 문제를 방지합니다. `CurrentHp <= 0` 도달 시 `HandleDeath()`를 호출하여 가방과 장착 장비를 모두 증발시키고 `02_HubScene`으로 복귀시킵니다.
+- **`InventoryManager.cs`**: 플레이어 가방 슬롯 및 무게를 관리하며, `Awake` 시 `PlayerSessionData`에서 아이템과 가방 용량 보너스를 복원하고 변경 시 자동 동기화합니다.
+- **`EquipmentManager.cs`**: 장착 장비를 부위별로 관리하며, `Awake` 시 `PlayerSessionData`에서 장착 상태를 복원하고 변경 시 자동 동기화합니다.
 
-## 📁 `Assets/Scripts/UI/`
-- **`MovementPreview.cs`**: 플레이어 이동 전, 마우스 커서 위치의 타일 이동 가능 여부(흰색/빨간색)를 시각적으로 표시하는 오버레이 스프라이트 로직입니다.
+## 📁 `Assets/01_Scripts/Hub/` & `Assets/01_Scripts/UI/`
+- **`StorageManager.cs`**: 허브 개인 창고 슬롯을 관리하며 `PlayerSessionData.StorageItems`와 동기화합니다.
+- **`HubSystem.cs`**: 허브 오브젝트 클릭 이벤트를 수신하며, 허브 씬 내 `StorageManager`/`InventoryManager`/`EquipmentManager` 존재를 보장합니다. 창고(`HubObjectType.Storage`) 클릭 시 창고 UI(`_storageUIPanel`)와 인벤토리/장비 통합 UI(`_inventoryUIPanel`)를 동시에 활성화합니다 (`ESC` 키로 닫기 지원).
+- **`InventoryUIController.cs` / `StorageUIController.cs` / `EquipmentUIController.cs`**: `IItemContainerUI` 인터페이스를 통해 인벤토리↔창고 간 드래그 앤 드롭 이동 및 더블클릭 장착/이동을 처리합니다.
 
 ---
-**[종속성 흐름]**
-마우스 이동/클릭 ➡️ `PlayerInput` 감지 ➡️ `Pathfinder` 장애물 확인 ➡️ `MovementPreview` 표시 
-➡️ 클릭 시 `PlayerController`로 이벤트 전달 ➡️ `PlayerMovement`가 경로 재탐색 및 코루틴 이동 실행 ➡️ 이동하는 플레이어 transform을 `CameraFollow`가 추적.
+**[익스트랙션 루프 흐름]**
+1. **생환 (탈출 성공)**: `DungeonExit` 도달 ➡️ `PlayerSessionData`에 동기화된 인벤토리·장비 보존 ➡️ `02_HubScene` 로드 ➡️ 창고 클릭 시 창고 UI + 인벤토리/장비 UI 동시 표시 및 아이템 보관.
+2. **사망 (탈출 실패)**: `PlayerStatManager.TakeDamage` (`CurrentHp <= 0`) ➡️ `HandleDeath()` ➡️ `EquipmentManager.ClearEquipment()` & `InventoryManager.ClearInventory()` & `PlayerSessionData.ClearPlayerLoadoutOnDeath()` (가방+장착 장비 전량 증발, 창고는 유지) ➡️ `02_HubScene` 복귀.

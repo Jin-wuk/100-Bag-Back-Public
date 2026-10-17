@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
-using BagBack100.Player;
+using UnityEngine.SceneManagement;
+using BagBack100.Data.Core;
 
 namespace BagBack100.Player
 {
@@ -19,6 +20,11 @@ namespace BagBack100.Player
         [SerializeField] private float _baseAttackSpeed = 1f; // 초당 공격 횟수
         [SerializeField] private int _baseRange = 1;
 
+        [Header("Death Settings")]
+        [SerializeField] private string _hubSceneName = "02_HubScene";
+
+        public int MaxHp { get; private set; }
+        public int MaxMp { get; private set; }
         public int CurrentHp { get; private set; }
         public int CurrentMp { get; private set; }
         public int CurrentAttack { get; private set; }
@@ -28,10 +34,15 @@ namespace BagBack100.Player
         public int CurrentRange { get; private set; }
 
         private EquipmentManager _equipmentManager;
+        private InventoryManager _inventoryManager;
+        private bool _isInitialized = false;
+        private bool _isDead = false;
 
         private void Awake()
         {
             _equipmentManager = GetComponent<EquipmentManager>();
+            _inventoryManager = GetComponent<InventoryManager>();
+            CalculateStats();
             OnManagerCreated?.Invoke(this);
         }
 
@@ -41,8 +52,10 @@ namespace BagBack100.Player
             {
                 _equipmentManager.OnEquipmentChanged += CalculateStats;
             }
-            var inv = GetComponent<InventoryManager>();
-            if (inv != null) inv.OnInventoryChanged += CalculateStats;
+            if (_inventoryManager != null)
+            {
+                _inventoryManager.OnInventoryChanged += CalculateStats;
+            }
         }
 
         private void OnDisable()
@@ -51,8 +64,10 @@ namespace BagBack100.Player
             {
                 _equipmentManager.OnEquipmentChanged -= CalculateStats;
             }
-            var inv = GetComponent<InventoryManager>();
-            if (inv != null) inv.OnInventoryChanged -= CalculateStats;
+            if (_inventoryManager != null)
+            {
+                _inventoryManager.OnInventoryChanged -= CalculateStats;
+            }
         }
 
         private void Start()
@@ -62,22 +77,33 @@ namespace BagBack100.Player
 
         private void CalculateStats()
         {
-            var eqStats = _equipmentManager.GetTotalStats();
+            var eqStats = _equipmentManager != null
+                ? _equipmentManager.GetTotalStats()
+                : (hp: 0, mp: 0, atk: 0, def: 0, speed: 0f, range: 0, atkSpeedBonus: 0f, weaponBaseAtkSpeed: 0f);
 
-            CurrentHp = _baseHp + eqStats.hp;
-            CurrentMp = _baseMp + eqStats.mp;
+            MaxHp = Mathf.Max(1, _baseHp + eqStats.hp);
+            MaxMp = Mathf.Max(0, _baseMp + eqStats.mp);
+
+            if (!_isInitialized)
+            {
+                CurrentHp = MaxHp;
+                CurrentMp = MaxMp;
+                _isInitialized = true;
+            }
+            else
+            {
+                CurrentHp = Mathf.Clamp(CurrentHp, 0, MaxHp);
+                CurrentMp = Mathf.Clamp(CurrentMp, 0, MaxMp);
+            }
+
             CurrentAttack = _baseAttack + eqStats.atk;
             CurrentDefense = _baseDefense + eqStats.def;
             CurrentRange = _baseRange + eqStats.range;
 
             float speedPenalty = 0f;
-            var inv = GetComponent<InventoryManager>();
-            if (inv != null)
+            if (_inventoryManager != null && _inventoryManager.CurrentWeight > _inventoryManager.MaxWeight)
             {
-                if (inv.CurrentWeight > inv.MaxWeight)
-                {
-                    speedPenalty = (inv.CurrentWeight - inv.MaxWeight) * 0.5f; // 초과 1당 0.5 감소 (예시)
-                }
+                speedPenalty = (_inventoryManager.CurrentWeight - _inventoryManager.MaxWeight) * 0.5f;
             }
             CurrentSpeed = Mathf.Max(1f, (_baseSpeed + eqStats.speed) - speedPenalty);
             
@@ -91,15 +117,46 @@ namespace BagBack100.Player
 
         public void TakeDamage(int damage)
         {
+            if (_isDead) return;
+
             CurrentHp -= damage;
             if (CurrentHp < 0) CurrentHp = 0;
-            Debug.Log($"[Player] {damage} 피해를 입음! 남은 HP: {CurrentHp}");
+            Debug.Log($"[Player] {damage} 피해를 입음! 남은 HP: {CurrentHp}/{MaxHp}");
             OnStatsChanged?.Invoke(CurrentHp, CurrentMp, CurrentAttack, CurrentDefense, CurrentSpeed, CurrentRange);
             
+            if (CurrentHp <= 0)
+            {
+                HandleDeath();
+                return;
+            }
+
             var renderer = GetComponentInChildren<SpriteRenderer>();
             if (renderer != null)
             {
                 StartCoroutine(FlashRedRoutine(renderer));
+            }
+        }
+
+        private void HandleDeath()
+        {
+            if (_isDead) return;
+            _isDead = true;
+
+            Debug.Log("[Player] 사망! 인벤토리 및 장착 장비가 모두 증발하고 허브로 복귀합니다.");
+
+            if (_equipmentManager != null)
+            {
+                _equipmentManager.ClearEquipment();
+            }
+            if (_inventoryManager != null)
+            {
+                _inventoryManager.ClearInventory();
+            }
+            PlayerSessionData.ClearPlayerLoadoutOnDeath();
+
+            if (!string.IsNullOrEmpty(_hubSceneName))
+            {
+                SceneManager.LoadScene(_hubSceneName, LoadSceneMode.Single);
             }
         }
 
@@ -113,10 +170,9 @@ namespace BagBack100.Player
 
         public void Heal(int amount)
         {
-            var eqStats = _equipmentManager != null ? _equipmentManager.GetTotalStats() : (hp:0, mp:0, atk:0, def:0, speed:0f, range:0, atkSpeedBonus:0f, weaponBaseAtkSpeed:0f);
-            int maxHp = _baseHp + eqStats.hp;
-            CurrentHp += amount;
-            if (CurrentHp > maxHp) CurrentHp = maxHp;
+            if (_isDead) return;
+
+            CurrentHp = Mathf.Clamp(CurrentHp + amount, 0, MaxHp);
             OnStatsChanged?.Invoke(CurrentHp, CurrentMp, CurrentAttack, CurrentDefense, CurrentSpeed, CurrentRange);
         }
     }

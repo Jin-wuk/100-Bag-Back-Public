@@ -31,18 +31,29 @@ namespace BagBack100.UI
             if (_gridContainer != null) _gridLayout = _gridContainer.GetComponent<GridLayoutGroup>();
             
             StorageManager.OnManagerCreated += OnManagerCreated;
-            if (_storageManager == null) 
-            {
-                var existing = FindObjectOfType<StorageManager>();
-                if (existing != null) OnManagerCreated(existing);
-            }
+            var existing = _storageManager != null ? _storageManager : FindObjectOfType<StorageManager>();
+            if (existing != null) OnManagerCreated(existing);
         }
 
         private void OnManagerCreated(StorageManager manager)
         {
+            if (_storageManager != null) _storageManager.OnStorageChanged -= RefreshUI;
             _storageManager = manager;
-            _storageManager.OnStorageChanged += RefreshUI;
+            if (_storageManager != null)
+            {
+                _storageManager.OnStorageChanged -= RefreshUI;
+                _storageManager.OnStorageChanged += RefreshUI;
+            }
             RefreshUI();
+        }
+
+        private void OnEnable()
+        {
+            var existing = _storageManager != null ? _storageManager : FindObjectOfType<StorageManager>();
+            if (existing != null)
+            {
+                OnManagerCreated(existing);
+            }
         }
 
         private void OnDestroy()
@@ -56,14 +67,26 @@ namespace BagBack100.UI
             if (_storageManager != null) _storageManager.OnStorageChanged -= RefreshUI;
             _storageManager = invManager;
             if (_storageManager != null) _storageManager.OnStorageChanged += RefreshUI;
+            RefreshUI();
         }
 
         
-        public bool CanPlaceItem(RuntimeItem item, int slotIndex) => _storageManager.CanPlaceItemAtSlot(item, slotIndex);
-        public void RemoveItem(RuntimeItem item) => _storageManager.RemoveItem(item);
-        public int GetSlotIndex(Transform cellTransform) => _cells.IndexOf(cellTransform);
+        public bool CanPlaceItem(RuntimeItem item, int slotIndex) => _storageManager != null && _storageManager.CanPlaceItemAtSlot(item, slotIndex);
+        public void RemoveItem(RuntimeItem item) => _storageManager?.RemoveItem(item);
+        public int GetSlotIndex(Transform cellTransform)
+        {
+            Transform current = cellTransform;
+            while (current != null && current != _gridContainer)
+            {
+                int idx = _cells.IndexOf(current);
+                if (idx >= 0) return idx;
+                current = current.parent;
+            }
+            return -1;
+        }
         public void MoveItemFrom(RuntimeItem item, int targetSlot, IItemContainerUI sourceContainer)
         {
+            if (_storageManager == null || !_storageManager.CanPlaceItemAtSlot(item, targetSlot)) return;
             sourceContainer.RemoveItem(item);
             _storageManager.AddItemAt(item, targetSlot);
         }
@@ -72,9 +95,9 @@ namespace BagBack100.UI
 
         private void RefreshUI()
         {
-            if (_storageManager == null) return;
+            if (_storageManager == null || _gridContainer == null || _gridCellPrefab == null || _draggableItemPrefab == null) return;
 
-            if (_lastMaxSlots != _storageManager.MaxSlots)
+            if (_lastMaxSlots != _storageManager.MaxSlots || _cells.Count != _storageManager.MaxSlots)
             {
                 DrawGrid();
                 _lastMaxSlots = _storageManager.MaxSlots;
@@ -107,7 +130,7 @@ namespace BagBack100.UI
             {
                 if (!currentItems.Contains(kvp.Key))
                 {
-                    Destroy(kvp.Value);
+                    if (kvp.Value != null) Destroy(kvp.Value);
                     toRemove.Add(kvp.Key);
                 }
             }
@@ -134,8 +157,10 @@ namespace BagBack100.UI
                 // 현재 드래그 중인 아이템이 아니면 원래 슬롯에 배치
                 if (draggable != _heldItemUI)
                 {
-                    draggable.Setup(item, this);
                     itemGo.transform.SetParent(_cells[item.SlotIndex], false);
+                    draggable.Setup(item, this);
+                    draggable.rectTransform.anchoredPosition = Vector2.zero;
+                    draggable.rectTransform.localPosition = Vector3.zero;
                 }
             }
         }
@@ -149,11 +174,11 @@ namespace BagBack100.UI
             _heldItemUI = draggedItem;
             _heldItemUI.SetHeldState(true);
             
-            // 패널 잘림(Mask) 및 가려짐 방지를 위해 가장 최상단의 캔버스를 찾아 부모로 설정합니다.
+            // 패널 잘림(Mask) 및 타 패널(인벤토리 등)에 가려짐 방지를 위해 최상단 캔버스를 우선 부모로 설정합니다.
             Canvas rootCanvas = GetComponentInParent<Canvas>();
             RectTransform targetParent = _dragContainer;
             
-            if (targetParent == null)
+            if (targetParent == null || (rootCanvas != null && targetParent.IsChildOf(transform)))
             {
                 targetParent = rootCanvas != null ? rootCanvas.GetComponent<RectTransform>() : _gridContainer;
             }
@@ -161,7 +186,7 @@ namespace BagBack100.UI
             _heldItemUI.transform.SetParent(targetParent, false);
             
             // 부모 컨테이너(가 있다면)와 아이템 자체를 하이어라키 맨 아래(렌더링 최상단)로 이동
-            if (_dragContainer != null) _dragContainer.SetAsLastSibling();
+            if (_dragContainer != null && targetParent == _dragContainer) _dragContainer.SetAsLastSibling();
             _heldItemUI.transform.SetAsLastSibling();
         }
 
@@ -188,11 +213,14 @@ namespace BagBack100.UI
 
         public void OnItemDoubleClicked(DraggableItemUI clickedItem)
         {
-            if (_heldItemUI != null) return;
-            var equipmentManager = FindObjectOfType<EquipmentManager>();
-            if (equipmentManager != null)
+            if (_heldItemUI != null || clickedItem == null || clickedItem.Item == null || _storageManager == null) return;
+
+            var inventoryManager = FindObjectOfType<InventoryManager>();
+            if (inventoryManager != null && inventoryManager.CanAddItem(clickedItem.Item))
             {
-                equipmentManager.TryEquip(clickedItem.Item);
+                var item = clickedItem.Item;
+                _storageManager.RemoveItem(item);
+                inventoryManager.TryAddNextAvailableSlot(item);
             }
         }
 
@@ -214,10 +242,9 @@ namespace BagBack100.UI
             RuntimeItem item = _heldItemUI.Item;
 
             
-            if (targetSlot >= 0 && _storageManager.CanPlaceItemAtSlot(item, targetSlot))
+            if (targetSlot >= 0 && _storageManager != null && _storageManager.CanPlaceItemAtSlot(item, targetSlot))
             {
                 _heldItemUI.SetHeldState(false);
-                var droppedItem = _heldItemUI;
                 _heldItemUI = null;
                 
                 // 기존 위치에서 이동하는 것이라면 스왑을 포함하여 AddItemAt 호출
@@ -226,67 +253,65 @@ namespace BagBack100.UI
             else if (targetSlot < 0)
             {
                 // 다른 컨테이너(인벤토리 등)로 드래그했는지 확인
-                var pointerData = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current) { position = screenPosition };
-                var results = new List<UnityEngine.EventSystems.RaycastResult>();
-                UnityEngine.EventSystems.EventSystem.current.RaycastAll(pointerData, results);
-                
-                foreach (var result in results)
+                if (UnityEngine.EventSystems.EventSystem.current != null)
                 {
-                    var otherContainer = result.gameObject.GetComponentInParent<IItemContainerUI>();
-                    if (otherContainer != null && (object)otherContainer != this)
+                    var pointerData = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current) { position = screenPosition };
+                    var results = new List<UnityEngine.EventSystems.RaycastResult>();
+                    UnityEngine.EventSystems.EventSystem.current.RaycastAll(pointerData, results);
+                    
+                    foreach (var result in results)
                     {
-                        int otherSlot = otherContainer.GetSlotIndex(result.gameObject.transform);
-                        if (otherSlot >= 0 && otherContainer.CanPlaceItem(item, otherSlot))
+                        var otherContainer = result.gameObject.GetComponentInParent<IItemContainerUI>();
+                        if (otherContainer != null && (object)otherContainer != this)
                         {
-                            otherContainer.MoveItemFrom(item, otherSlot, this);
-                            _heldItemUI.SetHeldState(false);
-                            Destroy(_heldItemUI.gameObject);
-                            _heldItemUI = null;
-                            return;
+                            int otherSlot = otherContainer.GetSlotIndex(result.gameObject.transform);
+                            if (otherSlot >= 0 && otherContainer.CanPlaceItem(item, otherSlot))
+                            {
+                                _heldItemUI.SetHeldState(false);
+                                Destroy(_heldItemUI.gameObject);
+                                _heldItemUI = null;
+                                otherContainer.MoveItemFrom(item, otherSlot, this);
+                                return;
+                            }
                         }
                     }
                 }
 
-                // 외부 아이템인데 배치 실패 시 버림 (기존 외부획득 로직 잔재. 필요 시 유지)
-                if (item.SlotIndex < 0)
-                {
-                    var player = FindObjectOfType<PlayerController>();
-                    Vector3 dropPos = player != null ? player.transform.position : Vector3.zero;
-                    BagBack100.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(item, dropPos);
-                    
-                    Destroy(_heldItemUI.gameObject);
-                    _heldItemUI = null;
-                }
-                else
-                {
-                    // 원래 위치로 원상복구
-                    _heldItemUI.SetHeldState(false);
-                    _heldItemUI.transform.SetParent(_cells[item.SlotIndex], false);
-                    _heldItemUI = null;
-                }
+                ReturnOrDropHeldItem(item);
             }
             else
             {
-                // 외부 아이템인데 배치 실패 시 버림 (기존 외부획득 로직 잔재. 필요 시 유지)
-                if (item.SlotIndex < 0)
-                {
-                    var player = FindObjectOfType<PlayerController>();
-                    Vector3 dropPos = player != null ? player.transform.position : Vector3.zero;
-                    BagBack100.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(item, dropPos);
-                    
-                    Destroy(_heldItemUI.gameObject);
-                    _heldItemUI = null;
-                }
-                else
-                {
-                    // 원래 위치로 원상복구
-                    _heldItemUI.SetHeldState(false);
-                    _heldItemUI.transform.SetParent(_cells[item.SlotIndex], false);
-                    _heldItemUI = null;
-                }
+                ReturnOrDropHeldItem(item);
             }
-
         }
 
+        private void ReturnOrDropHeldItem(RuntimeItem item)
+        {
+            if (_heldItemUI == null) return;
+
+            if (item.SlotIndex < 0)
+            {
+                var player = FindObjectOfType<PlayerController>();
+                Vector3 dropPos = player != null ? player.transform.position : Vector3.zero;
+                BagBack100.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(item, dropPos);
+                
+                Destroy(_heldItemUI.gameObject);
+                _heldItemUI = null;
+            }
+            else if (item.SlotIndex < _cells.Count)
+            {
+                _heldItemUI.SetHeldState(false);
+                _heldItemUI.transform.SetParent(_cells[item.SlotIndex], false);
+                _heldItemUI.rectTransform.anchoredPosition = Vector2.zero;
+                _heldItemUI.rectTransform.localPosition = Vector3.zero;
+                _heldItemUI = null;
+            }
+            else
+            {
+                _heldItemUI.SetHeldState(false);
+                _heldItemUI = null;
+                RefreshUI();
+            }
+        }
     }
 }

@@ -23,8 +23,29 @@ namespace BagBack100.Player
 
         private void Awake()
         {
+            RestoreFromSession();
             OnManagerCreated?.Invoke(this);
-            InitializeBag(_baseMaxSlots, _baseMaxWeight);
+        }
+
+        private void RestoreFromSession()
+        {
+            _items.Clear();
+            foreach (var savedItem in PlayerSessionData.InventoryItems)
+            {
+                if (savedItem != null && savedItem.ItemData != null)
+                {
+                    _items.Add(savedItem);
+                }
+            }
+
+            PlayerSessionData.GetEquippedBackpackBonus(out int addedSlots, out float addedWeight);
+            InitializeBag(_baseMaxSlots + addedSlots, _baseMaxWeight + addedWeight);
+        }
+
+        private void NotifyInventoryChanged()
+        {
+            PlayerSessionData.SaveInventory(_items);
+            OnInventoryChanged?.Invoke();
         }
 
         private void OnEnable()
@@ -63,7 +84,7 @@ namespace BagBack100.Player
             for(int i=0; i<_items.Count; i++)
             {
                 var item = _items[i];
-                if (item.SlotIndex >= 0 && item.SlotIndex < maxSlots)
+                if (item.SlotIndex >= 0 && item.SlotIndex < maxSlots && newSlots[item.SlotIndex] == null)
                 {
                     newSlots[item.SlotIndex] = item;
                 }
@@ -99,12 +120,22 @@ namespace BagBack100.Player
                 }
             }
             RecalculateWeight();
-            OnInventoryChanged?.Invoke();
+            NotifyInventoryChanged();
         }
 
         public void UpdateBagCapacity(int addedSlots, float addedWeight)
         {
             InitializeBag(_baseMaxSlots + addedSlots, _baseMaxWeight + addedWeight);
+        }
+
+        public void ClearInventory()
+        {
+            _items.Clear();
+            MaxSlots = _baseMaxSlots;
+            MaxWeight = _baseMaxWeight;
+            _slots = new RuntimeItem[MaxSlots];
+            CurrentWeight = 0f;
+            NotifyInventoryChanged();
         }
 
         private void RecalculateWeight()
@@ -122,6 +153,8 @@ namespace BagBack100.Player
         // 아이템을 인벤토리에 넣을 수 있는지 여부 (특정 슬롯 지정 혹은 아무 슬롯)
         public bool CanAddItem(RuntimeItem item)
         {
+            if (item == null || item.ItemData == null) return false;
+
             // 무게 체크
             if (CurrentWeight + (item.ItemData.weight * item.Count) > MaxWeight)
                 return false;
@@ -147,12 +180,26 @@ namespace BagBack100.Player
         // 특정 슬롯 인덱스에 아이템이 배치 가능한지 (스왑 포함)
         public bool CanPlaceItemAtSlot(RuntimeItem item, int targetSlot)
         {
-            if (targetSlot < 0 || targetSlot >= MaxSlots) return false;
+            if (item == null || item.ItemData == null || targetSlot < 0 || targetSlot >= MaxSlots)
+                return false;
             
-            // 만약 현재 인벤토리 외부에서 들어오는 아이템이라면 무게 체크
-            if (item.SlotIndex < 0)
+            bool isInternal = _items.Contains(item);
+
+            // 인벤토리 외부(창고 등)에서 들어오는 아이템이라면 무게 및 대상 슬롯 상태 체크
+            if (!isInternal)
             {
                 if (CurrentWeight + (item.ItemData.weight * item.Count) > MaxWeight) return false;
+
+                if (_slots[targetSlot] != null)
+                {
+                    var targetItem = _slots[targetSlot];
+                    if (targetItem.ItemData.itemID != item.ItemData.itemID ||
+                        item.ItemData.maxStack <= 1 ||
+                        targetItem.Count + item.Count > targetItem.ItemData.maxStack)
+                    {
+                        return false;
+                    }
+                }
             }
             return true;
         }
@@ -160,7 +207,9 @@ namespace BagBack100.Player
         // 외부에서 획득하거나 슬롯이동 시
         public bool AddItemAt(RuntimeItem item, int targetSlot)
         {
-            if (targetSlot < 0 || targetSlot >= MaxSlots) return false;
+            if (item == null || targetSlot < 0 || targetSlot >= MaxSlots) return false;
+
+            bool isInternal = _items.Contains(item);
 
             // 대상 슬롯에 무언가 있고, 같은 아이템이며 스택 가능하다면 합침
             if (_slots[targetSlot] != null && _slots[targetSlot] != item)
@@ -172,15 +221,15 @@ namespace BagBack100.Player
                     if (space >= item.Count)
                     {
                         targetItem.Count += item.Count;
-                        if (item.SlotIndex >= 0) InternalRemoveItem(item); // 기존 슬롯에서 제거
+                        if (isInternal) InternalRemoveItem(item); // 기존 슬롯에서 제거
                         RecalculateWeight();
-                        OnInventoryChanged?.Invoke();
+                        NotifyInventoryChanged();
                         return true;
                     }
                 }
                 
                 // 단순 스왑 로직
-                if (item.SlotIndex >= 0)
+                if (isInternal && item.SlotIndex >= 0 && item.SlotIndex < MaxSlots)
                 {
                     // 내부 이동인 경우 스왑
                     int oldSlot = item.SlotIndex;
@@ -190,7 +239,7 @@ namespace BagBack100.Player
                     _slots[targetSlot] = item;
                     item.SlotIndex = targetSlot;
                     
-                    OnInventoryChanged?.Invoke();
+                    NotifyInventoryChanged();
                     return true;
                 }
                 else
@@ -201,7 +250,7 @@ namespace BagBack100.Player
             }
 
             // 단순 이동/추가
-            if (item.SlotIndex >= 0)
+            if (isInternal && item.SlotIndex >= 0 && item.SlotIndex < MaxSlots)
             {
                 _slots[item.SlotIndex] = null;
             }
@@ -209,10 +258,10 @@ namespace BagBack100.Player
             _slots[targetSlot] = item;
             item.SlotIndex = targetSlot;
             
-            if (!_items.Contains(item)) _items.Add(item);
+            if (!isInternal) _items.Add(item);
 
             RecalculateWeight();
-            OnInventoryChanged?.Invoke();
+            NotifyInventoryChanged();
             return true;
         }
 
@@ -220,7 +269,7 @@ namespace BagBack100.Player
         {
             if (item == null || !_items.Contains(item)) return;
 
-            if (item.SlotIndex >= 0 && item.SlotIndex < MaxSlots)
+            if (item.SlotIndex >= 0 && item.SlotIndex < MaxSlots && _slots[item.SlotIndex] == item)
             {
                 _slots[item.SlotIndex] = null;
             }
@@ -232,7 +281,7 @@ namespace BagBack100.Player
         {
             InternalRemoveItem(item);
             RecalculateWeight();
-            OnInventoryChanged?.Invoke();
+            NotifyInventoryChanged();
         }
 
         public IReadOnlyList<RuntimeItem> GetAllItems() => _items;
@@ -241,19 +290,21 @@ namespace BagBack100.Player
         {
             if (!CanAddItem(item)) return false;
 
+            bool isInternal = _items.Contains(item);
+
             // 1. 스택 시도
             if (item.ItemData.maxStack > 1)
             {
                 foreach(var existing in _items)
                 {
-                    if (existing.ItemData.itemID == item.ItemData.itemID)
+                    if (existing != item && existing.ItemData.itemID == item.ItemData.itemID)
                     {
                         if (existing.Count + item.Count <= existing.ItemData.maxStack)
                         {
                             existing.Count += item.Count;
-                            if (item.SlotIndex >= 0) InternalRemoveItem(item);
+                            if (isInternal) InternalRemoveItem(item);
                             RecalculateWeight();
-                            OnInventoryChanged?.Invoke();
+                            NotifyInventoryChanged();
                             return true;
                         }
                     }

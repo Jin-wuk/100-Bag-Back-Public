@@ -13,48 +13,48 @@ graph TD
 
     %% Managers & Core Logic
     subgraph Logic Layer
-        DG[DungeonGenerator.cs\n- Map Grid Generation\n- Start/Exit Logic]
+        DG[DungeonGenerator.cs\n- Mode: FixedMap / ProceduralChunks\n- Flood Fill (BFS) & Zone Spawning]
     end
 
     %% Views & Objects
     subgraph View/Object Layer
-        DC[DungeonChunk.cs\n- Initialize Entities\n- Activate Exit/Spawn]
+        DZ[DungeonZone.cs\n- Start / Combat / Chest / Corridor / Exit\n- Box Bounds & Gizmos]
+        DC[DungeonChunk.cs\n- Post-MVP 개별 청크]
         DE[DungeonExit.cs\n- Trigger Detection\n- Scene Transition]
         UI[DungeonEntranceUI.cs\n- Enter Dungeon]
     end
 
     %% Dependencies
     UI -->|LoadScene| DG
-    DG -->|Reads Config| DD
-    DG -->|Instantiate & Init| DC
-    DG -->|Pass Exit Prefab| DC
-    DC -->|Instantiate| DE
+    DG -->|FixedMap: Flood Fill & Zone 스캔| DZ
+    DG -->|FixedMap: Instantiate| DE
+    DG -->|Procedural: Reads Config| DD
+    DG -->|Procedural: Instantiate & Init| DC
+    DC -->|Instantiate Exit| DE
 ```
 
 ## 2. 핵심 클래스 역할 명세 (Class Roles)
 
-### 2.1. `DungeonData` (`ScriptableObject`)
-*   **역할**: 맵 생성 규칙과 스폰될 프리팹들의 정적 데이터 보관.
-*   **주요 속성**: 
-    *   `gridWidth`, `gridHeight`, `chunkOffset`: 전체 맵 그리드 설정.
-    *   `chunkSlots`: 각 위치별 등장할 수 있는 청크 프리팹 후보군.
-    *   `monsterPrefab`, `trapPrefab`, **`exitPrefab`**: 런타임에 동적으로 생성(Instantiate)할 오브젝트 원본.
+### 2.1. `DungeonGenerator` (`MonoBehaviour`)
+*   **역할**: 던전 씬 진입 시 맵 생성 및 엔티티 스폰을 전담하는 메인 매니저.
+*   **지원 모드**:
+    1.  `FixedMap` (MVP 현행 - 구역 & Flood Fill 기반):
+        *   `Start` 구역에서 플레이어를 스폰한 뒤, 해당 타일로부터 **4방향 BFS(Flood Fill)**를 수행하여 벽 안쪽의 실제 도달 가능한 바닥 타일(`FloorTilemap` 있음 & `WallTilemap` 없음 & 장애물 없음)과 이동 걸음 수를 산출. (벽 뒤의 빈 공간 100% 배제)
+        *   실제 미로 이동 걸음 수가 가장 먼 `Exit` 구역 후보 중 1곳에 탈출 포탈 생성.
+        *   `Chest`, `Combat`, `Corridor` 구역 및 구역 미지정 일반 복도에 최소 간격(`_minMonsterSpacing`)과 출발 안전 반경(`_startSafeStepRadius`)을 준수하여 상자/몬스터/함정 비중복 스폰.
+    2.  `ProceduralChunks` (Post-MVP): `DungeonData`를 읽어 2x2 또는 3x3으로 청크 프리팹들을 절차적으로 조립 배치.
 
-### 2.2. `DungeonGenerator` (`MonoBehaviour`)
-*   **역할**: `DungeonScene` 진입 시 초기화를 담당하는 메인 매니저.
-*   **핵심 로직**:
-    1.  `DungeonData`를 기반으로 청크 그리드 생성 및 배치 (`GenerateDungeon`).
-    2.  생성된 청크 중 랜덤 1곳을 플레이어 시작 위치로 지정 및 플레이어 스폰.
-    3.  시작 위치와 가장 거리가 먼 3개의 청크 후보군 중 랜덤 1곳을 탈출구로 선정 (`DetermineStartAndExit`).
+### 2.2. `DungeonZone` (`MonoBehaviour`)
+*   **역할**: 통짜 미로 맵 위에 사각형 영역(`_size` 또는 `BoxCollider2D`)으로 배치되어 구역의 성격(`Start`, `Combat`, `Chest`, `Corridor`, `Exit`)과 스폰 수량을 정의.
+*   **특징**:
+    *   에디터 씬 뷰에서 구역 타입별 색상 반투명 기즈모(Gizmo) 렌더링.
+    *   런타임 시 `BoxCollider2D`가 붙어 있으면 자동으로 비활성화하여 물리 충돌 간섭 방지.
 
 ### 2.3. `DungeonChunk` (`MonoBehaviour`)
-*   **역할**: 개별 청크 단위의 내부 스폰 포인트 관리.
-*   **핵심 로직**:
-    *   `Initialize()`: 몬스터와 함정을 지정된 `Transform` 위치 배열 중 랜덤하게 골라 인스턴스화.
-    *   `ActivateExitPoint()`: `DungeonData`로부터 전달받은 `exitPrefab`을 자신의 `_exitPoint` 위치에 생성.
+*   **역할**: 절차적 생성(Post-MVP) 시 개별 분할 청크의 내부 스폰 지점 관리 (또는 레거시 통짜맵 폴백).
 
-### 2.4. `DungeonExit` (`MonoBehaviour`)
-*   **역할**: 탈출구(포탈)의 상호작용 및 씬 전환 처리.
-*   **특징 (제약 조건 준수)**:
-    *   `OnTriggerEnter2D`에서 `TryGetComponent<PlayerController>`를 사용하여 대상이 플레이어인지 확인 (Magic String 방지).
-    *   `SceneManager.LoadScene(..., LoadSceneMode.Single)`를 통해 허브 씬으로 전환하여, 이전 던전 씬의 모든 동적 생성 데이터를 확실하게 메모리에서 파괴 및 초기화 (메모리 누수 원천 차단).
+### 2.4. `DungeonData` (`ScriptableObject`)
+*   **역할**: 맵 생성 규칙과 기본 프리팹들의 정적 데이터 보관.
+
+### 2.5. `DungeonExit` (`MonoBehaviour`)
+*   **역할**: 탈출구(포탈)의 상호작용 및 씬 전환 처리 (`LoadSceneMode.Single`).

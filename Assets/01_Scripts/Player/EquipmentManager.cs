@@ -19,7 +19,26 @@ namespace BagBack100.Player
         private void Awake()
         {
             _inventoryManager = GetComponent<InventoryManager>();
+            RestoreFromSession();
             OnManagerCreated?.Invoke(this);
+        }
+
+        private void RestoreFromSession()
+        {
+            _equippedItems.Clear();
+            foreach (var kvp in PlayerSessionData.EquippedItems)
+            {
+                if (kvp.Value != null && kvp.Value.ItemData != null)
+                {
+                    _equippedItems[kvp.Key] = kvp.Value;
+                }
+            }
+        }
+
+        private void NotifyEquipmentChanged()
+        {
+            PlayerSessionData.SaveEquipment(_equippedItems);
+            OnEquipmentChanged?.Invoke();
         }
 
         private void Start()
@@ -29,7 +48,7 @@ namespace BagBack100.Player
 
         public bool TryEquip(RuntimeItem item)
         {
-            if (item.ItemData.category != ItemCategory.Equipment)
+            if (item == null || item.ItemData == null || item.ItemData.category != ItemCategory.Equipment)
                 return false;
 
             if (!(item.ItemData is BagBack100.Data.Models.EquipmentDataSO eqData))
@@ -62,7 +81,7 @@ namespace BagBack100.Player
 
             _equippedItems[type] = item;
             
-            OnEquipmentChanged?.Invoke();
+            NotifyEquipmentChanged();
             return true;
         }
 
@@ -81,10 +100,20 @@ namespace BagBack100.Player
                     _inventoryManager.UpdateBagCapacity(0, 0);
                 }
                 _equippedItems.Remove(type);
-                OnEquipmentChanged?.Invoke();
+                NotifyEquipmentChanged();
                 return true;
             }
             return false;
+        }
+
+        public void ClearEquipment()
+        {
+            _equippedItems.Clear();
+            if (_inventoryManager != null)
+            {
+                _inventoryManager.UpdateBagCapacity(0, 0);
+            }
+            NotifyEquipmentChanged();
         }
 
         public RuntimeItem GetEquippedItem(EquipType type)

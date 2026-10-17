@@ -43,7 +43,9 @@ namespace BagBack100.Dungeon
                 return;
             }
 
-            // LoadSceneMode.Single로 로드하여 기존 던전 씬 데이터 파괴 및 초기화
+            Debug.Log($"[DungeonExit] 탈출 성공! 인벤토리({BagBack100.Data.Core.PlayerSessionData.InventoryItems.Count}개) 및 장착 장비({BagBack100.Data.Core.PlayerSessionData.EquippedItems.Count}개) 보존하여 허브로 귀환합니다.");
+
+            // LoadSceneMode.Single로 로드하여 기존 던전 씬 데이터 파괴 및 초기화 (아이템 데이터는 PlayerSessionData에 보존됨)
             SceneManager.LoadScene(_hubSceneName, LoadSceneMode.Single);
         }
     }

@@ -13,10 +13,16 @@ namespace BagBack100.UI
         {
             EquipmentManager.OnManagerCreated += OnManagerCreated;
 
-            if (_equipmentManager == null)
+            var existing = _equipmentManager != null ? _equipmentManager : FindObjectOfType<EquipmentManager>();
+            if (existing != null) OnManagerCreated(existing);
+        }
+
+        private void OnEnable()
+        {
+            var existing = _equipmentManager != null ? _equipmentManager : FindObjectOfType<EquipmentManager>();
+            if (existing != null)
             {
-                var existing = FindObjectOfType<EquipmentManager>();
-                if (existing != null) OnManagerCreated(existing);
+                OnManagerCreated(existing);
             }
         }
 
@@ -33,6 +39,12 @@ namespace BagBack100.UI
 
         private void OnManagerCreated(EquipmentManager manager)
         {
+            if (_equipmentManager != null)
+            {
+                _equipmentManager.OnEquipmentChanged -= RefreshUI;
+                _equipmentManager.OnEquipmentFailed -= ShowErrorMessage;
+            }
+
             _equipmentManager = manager;
             
             if (_equipmentManager != null)
@@ -44,7 +56,7 @@ namespace BagBack100.UI
                 {
                     foreach (var slot in _slots)
                     {
-                        slot.Setup(_equipmentManager);
+                        if (slot != null) slot.Setup(_equipmentManager);
                     }
                 }
                 
