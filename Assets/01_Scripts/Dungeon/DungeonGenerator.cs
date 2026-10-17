@@ -227,6 +227,22 @@ namespace BagBack100.Dungeon
                     SpawnEntitiesInCells(unzonedCorridorCells, _corridorMonsterCount, _monsterPrefabPool, defaultMonster, reachableSteps, occupiedCells, spawnedMonsterCells, true);
                 }
             }
+
+            InitializeFogOfWar(playerStartCell);
+        }
+
+        private void InitializeFogOfWar(Vector3Int playerStartCell)
+        {
+            FogOfWarSystem fog = FogOfWarSystem.Instance;
+            if (fog == null)
+            {
+                fog = FindObjectOfType<FogOfWarSystem>();
+            }
+            if (fog == null)
+            {
+                fog = gameObject.AddComponent<FogOfWarSystem>();
+            }
+            fog.Initialize(_grid, _floorTilemap, _wallTilemap, _obstacleLayerMask, playerStartCell);
         }
 
         private Vector3Int FindBestStartCell(DungeonZone startZone)
@@ -468,6 +484,13 @@ namespace BagBack100.Dungeon
 
             GameObject exitPrefab = _fixedExitPrefab != null ? _fixedExitPrefab : (_dungeonData != null ? _dungeonData.exitPrefab : null);
             _fixedMapChunk.ActivateFarthestExitPoint(spawnPos, exitPrefab, _farthestExitCandidateCount);
+
+            if (_grid != null)
+            {
+                Vector3Int startCell = _grid.WorldToCell(spawnPos);
+                startCell.z = 0;
+                InitializeFogOfWar(startCell);
+            }
         }
 
         #endregion
@@ -557,6 +580,13 @@ namespace BagBack100.Dungeon
                 
                 DungeonChunk exitChunk = distanceList[randomExitIndex];
                 exitChunk.ActivateFarthestExitPoint(spawnPos, _dungeonData.exitPrefab, 1);
+            }
+
+            if (_grid != null)
+            {
+                Vector3Int startCell = _grid.WorldToCell(spawnPos);
+                startCell.z = 0;
+                InitializeFogOfWar(startCell);
             }
         }
 

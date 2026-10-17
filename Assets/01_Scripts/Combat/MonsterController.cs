@@ -3,6 +3,7 @@ using System.Collections;
 using BagBack100.Data.Models;
 using BagBack100.Player;
 using BagBack100.Core;
+using BagBack100.Dungeon;
 
 namespace BagBack100.Combat
 {
@@ -25,6 +26,12 @@ namespace BagBack100.Combat
 
         private IMonsterState _currentState;
         private Coroutine _behaviorCoroutine;
+        private SpriteRenderer[] _renderers;
+
+        private void Awake()
+        {
+            _renderers = GetComponentsInChildren<SpriteRenderer>(true);
+        }
 
         public void Initialize(MonsterDataSO data)
         {
@@ -47,6 +54,11 @@ namespace BagBack100.Combat
             {
                 TileSystem.Instance.RegisterInitialTile(Grid.WorldToCell(transform.position), gameObject);
             }
+
+            if (FogOfWarSystem.Instance != null)
+            {
+                FogOfWarSystem.Instance.RegisterMonster(this);
+            }
             
             ChangeState(new MeleeIdleState());
             _behaviorCoroutine = StartCoroutine(BehaviorRoutine());
@@ -54,9 +66,26 @@ namespace BagBack100.Combat
         
         private void OnDestroy()
         {
+            if (FogOfWarSystem.Instance != null)
+            {
+                FogOfWarSystem.Instance.UnregisterMonster(this);
+            }
+
             if (Grid != null && TileSystem.Instance != null)
             {
                 TileSystem.Instance.ReleaseTile(Grid.WorldToCell(transform.position), gameObject);
+            }
+        }
+
+        public void SetVisibleByFog(bool isVisible)
+        {
+            if (_renderers == null) return;
+            for (int i = 0; i < _renderers.Length; i++)
+            {
+                if (_renderers[i] != null)
+                {
+                    _renderers[i].enabled = isVisible;
+                }
             }
         }
 
@@ -90,6 +119,16 @@ namespace BagBack100.Combat
 
         public IEnumerator MoveToTileRoutine(Vector3 endPos)
         {
+            if (FogOfWarSystem.Instance != null && Grid != null)
+            {
+                Vector3Int destCell = Grid.WorldToCell(endPos);
+                destCell.z = 0;
+                if (FogOfWarSystem.Instance.IsCellVisible(destCell))
+                {
+                    SetVisibleByFog(true);
+                }
+            }
+
             float duration = 0.3f;
             float elapsed = 0f;
             Vector3 startPos = transform.position;
@@ -104,6 +143,11 @@ namespace BagBack100.Combat
                 yield return null;
             }
             transform.position = endPos;
+
+            if (FogOfWarSystem.Instance != null)
+            {
+                FogOfWarSystem.Instance.UpdateSingleMonsterVisibility(this);
+            }
         }
 
         public event System.Action OnDamaged;

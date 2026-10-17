@@ -65,9 +65,15 @@ namespace BagBack100.Player
             }
             
             // Register initial tile
-            if (_grid != null && BagBack100.Core.TileSystem.Instance != null)
+            if (_grid != null)
             {
-                BagBack100.Core.TileSystem.Instance.RegisterInitialTile(_grid.WorldToCell(transform.position), gameObject);
+                Vector3Int startCell = _grid.WorldToCell(transform.position);
+                startCell.z = 0;
+                if (BagBack100.Core.TileSystem.Instance != null)
+                {
+                    BagBack100.Core.TileSystem.Instance.RegisterInitialTile(startCell, gameObject);
+                }
+                BagBack100.Core.GlobalEvents.OnPlayerCellChanged?.Invoke(startCell);
             }
         }
 
@@ -193,15 +199,20 @@ namespace BagBack100.Player
 
         private void HandleTileReached(Vector3 pos)
         {
-            if (_grid != null && BagBack100.Core.TileSystem.Instance != null)
+            if (_grid != null)
             {
                 Vector3Int currentCell = _grid.WorldToCell(pos);
                 currentCell.z = 0; // 2D 그리드에서 Z축 오차 방지
 
-                var item = BagBack100.Core.TileSystem.Instance.GetItemAtTile(currentCell);
-                if (item != null)
+                BagBack100.Core.GlobalEvents.OnPlayerCellChanged?.Invoke(currentCell);
+
+                if (BagBack100.Core.TileSystem.Instance != null)
                 {
-                    item.PickUpByPlayer();
+                    var item = BagBack100.Core.TileSystem.Instance.GetItemAtTile(currentCell);
+                    if (item != null)
+                    {
+                        item.PickUpByPlayer();
+                    }
                 }
             }
             

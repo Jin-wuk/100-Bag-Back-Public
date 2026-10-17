@@ -18,5 +18,8 @@ namespace BagBack100.Core
 
         // 허브 상호작용: 포탈, 대장간, 상점 등을 클릭했을 때 (HubObjectType)
         public static Action<HubObjectType> OnHubObjectClicked;
+
+        // 플레이어가 타일을 이동하여 셀 좌표가 변경되었을 때 (Fog of War 등 갱신용)
+        public static Action<Vector3Int> OnPlayerCellChanged;
     }
 }
