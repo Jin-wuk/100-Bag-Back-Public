@@ -12,7 +12,7 @@ namespace BagBack100.Player
         public event Action<Vector3> OnTileReached;
 
         [Header("Movement Settings")]
-        [Tooltip("타일 1칸 이동 시 걸리는 시간")]
+        [Tooltip("기본 이동 속도(10) 기준 타일 1칸 이동 시 걸리는 시간")]
         [SerializeField] private float _moveDurationPerTile = 0.3f;
         [Tooltip("이동 시 통통 튀는 최대 높이")]
         [SerializeField] private float _hopHeight = 0.5f;
@@ -25,10 +25,25 @@ namespace BagBack100.Player
         private Vector3 _pendingTarget;
         private bool _hasPendingTarget = false;
         private Grid _grid;
+        private PlayerStatManager _stats;
+        private Animator _animator;
+
+        private void Awake()
+        {
+            _stats = GetComponent<PlayerStatManager>();
+            _animator = GetComponentInChildren<Animator>();
+        }
 
         private void Start()
         {
             _grid = FindObjectOfType<Grid>();
+        }
+
+        public float GetCurrentMoveDuration()
+        {
+            // 기본 Speed = 10f 일 때 _moveDurationPerTile(0.3초) 소요. Speed가 높을수록 이동 시간이 단축됨.
+            float currentSpeed = (_stats != null && _stats.CurrentSpeed > 0.1f) ? _stats.CurrentSpeed : 10f;
+            return Mathf.Clamp(_moveDurationPerTile * (10f / currentSpeed), 0.08f, 1.0f);
         }
 
         public void MoveTo(Vector3 targetPos)
@@ -108,12 +123,18 @@ namespace BagBack100.Player
                 
                 _currentPath.RemoveAt(0);
 
+                float duration = GetCurrentMoveDuration();
+                if (_animator != null)
+                {
+                    _animator.speed = _moveDurationPerTile / Mathf.Max(0.05f, duration);
+                }
+
                 float elapsedTime = 0f;
 
-                while (elapsedTime < _moveDurationPerTile)
+                while (elapsedTime < duration)
                 {
                     elapsedTime += Time.deltaTime;
-                    float t = Mathf.Clamp01(elapsedTime / _moveDurationPerTile);
+                    float t = Mathf.Clamp01(elapsedTime / duration);
                     
                     // 고속 슬라이딩 (선형 이동)
                     Vector3 lerpedPos = Vector3.Lerp(startPos, endPos, t);
@@ -134,6 +155,10 @@ namespace BagBack100.Player
                 }
             }
 
+            if (_animator != null)
+            {
+                _animator.speed = 1f;
+            }
             _isMoving = false;
             OnMovementFinished?.Invoke();
         }

@@ -64,14 +64,20 @@ namespace BagBack100.Combat
             return Instance;
         }
 
-        #region 1. Weapon / Skill Effect Prefab Pooling
+        #region 1. Weapon / Skill Effect Prefab Pooling (Animation Duration Synced)
 
-        public GameObject SpawnPooledEffect(GameObject prefab, Vector3 position, Quaternion rotation, Vector3 scale, float duration, float animSpeed = 1f)
+        /// <summary>
+        /// 공격 시간(targetDuration)과 이펙트 프리팹의 실제 AnimationClip 길이를 100% 동기화하여 재생하고,
+        /// 마지막 프레임이 끝나는 즉시 비활성화하여 잔상이 남지 않도록 풀에 반납합니다.
+        /// </summary>
+        public GameObject SpawnPooledEffect(GameObject prefab, Vector3 position, Quaternion rotation, Vector3 scale, float targetDuration)
         {
+            float safeDuration = Mathf.Max(0.05f, targetDuration);
+
             if (prefab == null)
             {
                 // 프리팹이 없을 경우 절차적 베기/충격파 이펙트로 폴백
-                SpawnProceduralHitFlash(position, scale.x * 0.9f, new Color(1f, 0.95f, 0.7f, 0.85f), Mathf.Min(0.25f, duration));
+                SpawnProceduralHitFlash(position, Mathf.Abs(scale.x) * 0.9f, new Color(1f, 0.95f, 0.7f, 0.85f), Mathf.Min(0.25f, safeDuration));
                 return null;
             }
 
@@ -97,12 +103,18 @@ namespace BagBack100.Combat
             instance.transform.localScale = scale;
             instance.SetActive(true);
 
-            // 애니메이터 초기화 및 속도 동기화
+            // 애니메이터 클립 실제 길이 추출 및 공격 시간(safeDuration)과 1:1 재생 속도 동기화
             var animator = instance.GetComponentInChildren<Animator>();
             if (animator != null)
             {
-                animator.speed = animSpeed;
-                animator.Play(0, -1, 0f);
+                animator.Rebind();
+                animator.Update(0f);
+
+                float clipLength = GetPrimaryClipLength(animator);
+                // 클립 실제 길이를 목표 공격 시간(safeDuration)에 정확히 맞춤
+                animator.speed = clipLength / safeDuration;
+                animator.Play(0, 0, 0f);
+                animator.Update(0f);
             }
 
             // 파티클 시스템이 있다면 재시작
@@ -113,13 +125,54 @@ namespace BagBack100.Combat
                 particles[i].Play();
             }
 
-            StartCoroutine(ReturnPrefabRoutine(prefabId, instance, duration));
+            StartCoroutine(ReturnPrefabSyncedRoutine(prefabId, instance, animator, safeDuration));
             return instance;
         }
 
-        private IEnumerator ReturnPrefabRoutine(int prefabId, GameObject instance, float delay)
+        private float GetPrimaryClipLength(Animator animator)
         {
-            yield return new WaitForSeconds(delay);
+            if (animator == null) return 1f;
+
+            AnimatorClipInfo[] clipInfos = animator.GetCurrentAnimatorClipInfo(0);
+            if (clipInfos != null && clipInfos.Length > 0 && clipInfos[0].clip != null)
+            {
+                return Mathf.Max(0.05f, clipInfos[0].clip.length);
+            }
+
+            if (animator.runtimeAnimatorController != null)
+            {
+                AnimationClip[] clips = animator.runtimeAnimatorController.animationClips;
+                if (clips != null && clips.Length > 0 && clips[0] != null)
+                {
+                    return Mathf.Max(0.05f, clips[0].length);
+                }
+            }
+
+            return 1f;
+        }
+
+        private IEnumerator ReturnPrefabSyncedRoutine(int prefabId, GameObject instance, Animator animator, float maxDuration)
+        {
+            float elapsed = 0f;
+
+            // 공격 시간이 다 되거나, 애니메이터 마지막 프레임(normalizedTime >= 0.98)이 끝나는 즉시 루프 종료 (마지막 먼지 프레임 잔류 원천 차단)
+            while (elapsed < maxDuration)
+            {
+                if (instance == null || !instance.activeSelf) yield break;
+
+                if (animator != null && elapsed > 0.01f)
+                {
+                    AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+                    if (stateInfo.normalizedTime >= 0.98f)
+                    {
+                        break;
+                    }
+                }
+
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
             if (instance == null) yield break;
 
             instance.SetActive(false);

@@ -45,8 +45,7 @@ namespace BagBack100.Combat
                     spawnPos,
                     Quaternion.Euler(0f, 0f, angle),
                     finalScale,
-                    effectDuration,
-                    safeAtkSpeed
+                    effectDuration
                 );
             }
             
@@ -90,8 +89,7 @@ namespace BagBack100.Combat
                     spawnPos,
                     Quaternion.Euler(0f, 0f, angle),
                     scale,
-                    effectDuration,
-                    safeAtkSpeed
+                    effectDuration
                 );
             }
 
