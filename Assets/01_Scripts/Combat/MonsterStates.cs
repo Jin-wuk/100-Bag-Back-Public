@@ -137,11 +137,7 @@ namespace BagBack100.Combat
             Vector3 targetPos = context.Player.transform.position;
             Vector3 cellTargetPos = context.Grid.GetCellCenterWorld(context.Grid.WorldToCell(targetPos));
             
-            if (context.WarningPrefab != null)
-            {
-                var warning = Object.Instantiate(context.WarningPrefab);
-                warning.ShowWarning(cellTargetPos, context.Data.telegraphTime);
-            }
+            context.SpawnWarning(cellTargetPos, context.Data.telegraphTime);
 
             yield return new WaitForSeconds(context.Data.telegraphTime);
 
@@ -196,14 +192,9 @@ namespace BagBack100.Combat
                             Vector3Int cellPos = centerCell + new Vector3Int(x, y, 0);
                             Vector3 worldPos = context.Grid.GetCellCenterWorld(cellPos);
                             
-                            // 맵 바깥이나 벽 너머는 무시할 수도 있지만 임시로 전부 표시
-                            if (context.WarningPrefab != null)
-                            {
-                                var warning = Object.Instantiate(context.WarningPrefab);
-                                // 폭발이 터지는 동시점까지 남은 시간만큼만 UI 유지
-                                float remainingTime = totalTelegraphTime - (stepTime * r) + 0.2f; 
-                                warning.ShowWarning(worldPos, remainingTime);
-                            }
+                            // 폭발이 터지는 동시점까지 남은 시간만큼만 UI 유지
+                            float remainingTime = totalTelegraphTime - (stepTime * r) + 0.2f; 
+                            context.SpawnWarning(worldPos, remainingTime);
                         }
                     }
                 }

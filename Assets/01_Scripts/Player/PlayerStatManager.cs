@@ -122,6 +122,7 @@ namespace BagBack100.Player
             CurrentHp -= damage;
             if (CurrentHp < 0) CurrentHp = 0;
             Debug.Log($"[Player] {damage} 피해를 입음! 남은 HP: {CurrentHp}/{MaxHp}");
+            BagBack100.Core.GlobalEvents.OnEntityDamaged?.Invoke(transform.position, damage, false, true);
             OnStatsChanged?.Invoke(CurrentHp, CurrentMp, CurrentAttack, CurrentDefense, CurrentSpeed, CurrentRange);
             
             if (CurrentHp <= 0)

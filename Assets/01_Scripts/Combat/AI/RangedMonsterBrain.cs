@@ -50,9 +50,10 @@ namespace BagBack100.Combat
         {
             if (_isEvading || _context.Player == null) return;
             
-            // 하체와 상체의 기존 루틴을 강제 정지 (Interrupt)
+            // 하체와 상체의 기존 루틴을 강제 정지 (Interrupt) 및 기존 장판 회수
             if (_locomotionCoroutine != null) _context.StopCoroutine(_locomotionCoroutine);
             if (_combatCoroutine != null) _context.StopCoroutine(_combatCoroutine);
+            _context.ClearActiveWarnings();
             
             _evasionCoroutine = _context.StartCoroutine(EvasionAndCounterRoutine());
         }
@@ -151,11 +152,7 @@ namespace BagBack100.Combat
             Vector3 targetPos = _context.Player.transform.position;
             Vector3 cellTargetPos = _context.Grid.GetCellCenterWorld(_context.Grid.WorldToCell(targetPos));
             
-            if (_context.WarningPrefab != null)
-            {
-                var warning = Object.Instantiate(_context.WarningPrefab);
-                warning.ShowWarning(cellTargetPos, _context.Data.telegraphTime);
-            }
+            _context.SpawnWarning(cellTargetPos, _context.Data.telegraphTime);
 
             yield return new WaitForSeconds(_context.Data.telegraphTime);
             

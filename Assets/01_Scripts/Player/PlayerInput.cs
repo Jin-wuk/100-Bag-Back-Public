@@ -13,6 +13,8 @@ namespace BagBack100.Player
         public event Action<Vector2Int> OnMoveInput;
         public event Action<Vector3> OnAimInput;
         public event Action<Vector3Int> OnAttackInput;
+        public event Action OnChargeStartInput;
+        public event Action OnChargeReleaseInput;
         public event Action OnSpecialAttackKeyPressed;
         public event Action OnInventoryToggle;
         
@@ -100,7 +102,7 @@ namespace BagBack100.Player
                     _combatPreview.ShowPreview(_grid.GetCellCenterWorld(mouseCell), isInRange);
                 }
 
-                // 공격 입력 (사거리 내일 때만 허용)
+                // 좌클릭: 일반 콤보 공격 입력 (사거리 내일 때만 허용)
                 if (Input.GetMouseButtonDown(0))
                 {
                     if (isInRange)
@@ -108,6 +110,17 @@ namespace BagBack100.Player
                         OnAttackInput?.Invoke(mouseCell);
                     }
                 }
+
+                // 우클릭: 홀드 차징 강공격 입력
+                if (Input.GetMouseButtonDown(1))
+                {
+                    OnChargeStartInput?.Invoke();
+                }
+            }
+
+            if (Input.GetMouseButtonUp(1))
+            {
+                OnChargeReleaseInput?.Invoke();
             }
         }
 

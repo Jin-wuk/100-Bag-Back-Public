@@ -21,5 +21,11 @@ namespace BagBack100.Core
 
         // 플레이어가 타일을 이동하여 셀 좌표가 변경되었을 때 (Fog of War 등 갱신용)
         public static Action<Vector3Int> OnPlayerCellChanged;
+
+        // 엔티티(몬스터/플레이어) 피격 시: 월드 위치, 데미지량, 강타(3타/차징) 여부, 플레이어 피격 여부
+        public static Action<Vector3, int, bool, bool> OnEntityDamaged;
+
+        // 카메라 흔들림 및 역경직 요청: 강도(Intensity), 지속시간(Duration), 히트스톱 시간(HitStop)
+        public static Action<float, float, float> OnCombatImpact;
     }
 }

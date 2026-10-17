@@ -29,3 +29,8 @@ MonoBehaviour:
   rangeBonus: 0
   baseAttackSpeed: 1
   weaponPrefab: {fileID: 5652963309051762746, guid: bafb2bceacc5e0c40930aa2c1279a60f, type: 3}
+  comboEffectPrefabs:
+  - {fileID: 1722152014586669308, guid: 9755639ac5cc2594483fe3b96673a18d, type: 3}
+  - {fileID: 8971279854123532412, guid: f727da53fe75909438c4b8ef78703ca7, type: 3}
+  - {fileID: 5499414533194603393, guid: 95ffedff569491d40b0060199f7975f1, type: 3}
+  chargedEffectPrefab: {fileID: 0}
