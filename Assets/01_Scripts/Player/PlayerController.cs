@@ -62,6 +62,10 @@ namespace BagBack100.Player
         private bool _isChargeReady = false;
         private readonly List<GameObject> _chargedTargetBuffer = new List<GameObject>();
 
+        public float ChargeProgress { get; private set; } = 0f;
+        public int ChargeLineLength => _chargeLineLength;
+        public Vector3 FacingDirection => _facingDirection;
+
         private void Awake()
         {
             _input = GetComponent<PlayerInput>();
@@ -285,6 +289,7 @@ namespace BagBack100.Player
 
             CurrentState = PlayerState.Charging;
             _isChargeReady = false;
+            ChargeProgress = 0f;
 
             if (_chargeCoroutine != null) StopCoroutine(_chargeCoroutine);
             _chargeCoroutine = StartCoroutine(ChargeHoldRoutine());
@@ -295,6 +300,8 @@ namespace BagBack100.Player
             float elapsed = 0f;
             Color origColor = Color.white;
             Vector3 origScale = _spriteRenderer != null ? _spriteRenderer.transform.localScale : Vector3.one;
+
+            int lastUnlockedTile = 1;
 
             while (elapsed < _chargeDuration)
             {
@@ -308,7 +315,16 @@ namespace BagBack100.Player
                 }
 
                 elapsed += Time.deltaTime;
-                float t = Mathf.Clamp01(elapsed / _chargeDuration);
+                float t = Mathf.Clamp01(elapsed / Mathf.Max(0.05f, _chargeDuration));
+                ChargeProgress = t;
+
+                // 중간 단계 타일이 해금될 때마다 가벼운 플래시 피드백
+                int currentUnlockedTile = 1 + Mathf.FloorToInt(t * Mathf.Max(0, _chargeLineLength - 1));
+                if (currentUnlockedTile > lastUnlockedTile && currentUnlockedTile < _chargeLineLength)
+                {
+                    lastUnlockedTile = currentUnlockedTile;
+                    CombatFeedbackSystem.EnsureInstance().SpawnProceduralHitFlash(transform.position, 0.75f, new Color(1f, 0.9f, 0.4f, 0.6f), 0.12f);
+                }
 
                 if (_spriteRenderer != null)
                 {
@@ -323,6 +339,7 @@ namespace BagBack100.Player
 
             // 완충 도달!
             _isChargeReady = true;
+            ChargeProgress = 1f;
             CombatFeedbackSystem.EnsureInstance().SpawnProceduralHitFlash(transform.position, 1.1f, new Color(1f, 0.9f, 0.2f, 0.85f), 0.18f);
 
             // 완충 상태에서 마우스 우클릭을 유지하는 동안 강렬한 황금빛 유지
@@ -336,7 +353,7 @@ namespace BagBack100.Player
                 yield return null;
             }
 
-            // 완충 상태에서 우클릭을 떼면 2칸 직선 강공격 발동
+            // 완충 상태에서 우클릭을 떼면 N칸 직선 강공격 발동
             CancelChargeVisuals(origColor, origScale);
             _chargeCoroutine = null;
             ExecuteChargedLineAttack();
@@ -354,17 +371,14 @@ namespace BagBack100.Player
                     StopCoroutine(_chargeCoroutine);
                     _chargeCoroutine = null;
                 }
-                if (_spriteRenderer != null)
-                {
-                    _spriteRenderer.color = Color.white;
-                    _spriteRenderer.transform.localScale = Vector3.one;
-                }
+                CancelChargeVisuals(Color.white, Vector3.one);
                 CurrentState = PlayerState.Idle;
             }
         }
 
         private void CancelChargeVisuals(Color origColor, Vector3 origScale)
         {
+            ChargeProgress = 0f;
             if (_spriteRenderer != null)
             {
                 _spriteRenderer.color = origColor;
@@ -381,6 +395,7 @@ namespace BagBack100.Player
             }
 
             _isChargeReady = false;
+            ChargeProgress = 0f;
             CurrentState = PlayerState.Attacking;
 
             // 조준 방향을 그리드 오프셋(dx, dy)으로 변환하여 전방 N칸(기본 2칸) 직선 타일 산출
@@ -429,9 +444,10 @@ namespace BagBack100.Player
             }
 
             int chargedDamage = Mathf.Max(1, Mathf.RoundToInt(_stats.CurrentAttack * _chargeDamageMultiplier));
-            // 2칸 직선 범위를 덮도록 오프셋과 스케일 확장
-            float lineOffset = _meleeOffset + (_grid.cellSize.x * 0.5f);
-            Vector3 lineScale = new Vector3(_meleeScale.x * 1.75f, _meleeScale.y * 1.45f, _meleeScale.z);
+            // N칸 직선 범위를 덮도록 오프셋과 스케일 확장
+            int extraTiles = Mathf.Max(0, _chargeLineLength - 1);
+            float lineOffset = _meleeOffset + (_grid.cellSize.x * 0.5f * extraTiles);
+            Vector3 lineScale = new Vector3(_meleeScale.x * (1f + 0.75f * extraTiles), _meleeScale.y * 1.45f, _meleeScale.z);
 
             _combat.PerformMultiTargetMeleeAttack(
                 _chargedTargetBuffer,

@@ -24,6 +24,7 @@ namespace BagBack100.Player
         private Grid _grid;
         private BagBack100.UI.MovementPreview _combatPreview;
         private PlayerStatManager _stats;
+        private PlayerController _playerController;
         
         private float _lastMoveInputTime;
         private float _moveInputDelay = 0.15f; // 연속 이동 입력 딜레이 방지
@@ -32,6 +33,7 @@ namespace BagBack100.Player
         {
             OnInputCreated?.Invoke(this);
             _stats = GetComponent<PlayerStatManager>();
+            _playerController = GetComponent<PlayerController>();
         }
 
         private void Start()
@@ -99,7 +101,24 @@ namespace BagBack100.Player
                 
                 if (_combatPreview != null)
                 {
-                    _combatPreview.ShowPreview(_grid.GetCellCenterWorld(mouseCell), isInRange);
+                    if (_playerController != null && _playerController.CurrentState == PlayerState.Charging)
+                    {
+                        Vector3 facing = _playerController.FacingDirection;
+                        Vector2Int stepDir = new Vector2Int(Mathf.RoundToInt(facing.x), Mathf.RoundToInt(facing.y));
+                        if (stepDir == Vector2Int.zero) stepDir = Vector2Int.down;
+
+                        _combatPreview.ShowChargeLinePreview(
+                            _grid,
+                            playerCell,
+                            stepDir,
+                            _playerController.ChargeLineLength,
+                            _playerController.ChargeProgress
+                        );
+                    }
+                    else
+                    {
+                        _combatPreview.ShowPreview(_grid.GetCellCenterWorld(mouseCell), isInRange);
+                    }
                 }
 
                 // 좌클릭: 일반 콤보 공격 입력 (사거리 내일 때만 허용)
