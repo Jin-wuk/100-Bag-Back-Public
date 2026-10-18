@@ -147,7 +147,7 @@ MonoBehaviour:
   _monsterData: {fileID: 11400000, guid: ec93f5e06e38450439745f4cfab529b7, type: 2}
   _obstacleLayerMask:
     serializedVersion: 2
-    m_Bits: 192
+    m_Bits: 64
   _warningPrefab: {fileID: 2761942298767711442, guid: ff0c7ec2c426e204f8b85ba4de2b1e80, type: 3}
   _defaultProjectilePrefab: {fileID: 0}
 --- !u!114 &2004222624177681328

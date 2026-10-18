@@ -22,6 +22,10 @@ namespace BagBack100.UI
             _spriteRenderer = GetComponent<SpriteRenderer>();
             _baseLocalScale = transform.localScale;
             _lineRenderers.Add(_spriteRenderer);
+            if (_spriteRenderer != null && _spriteRenderer.sprite == null)
+            {
+                Debug.LogWarning("[MovementPreview] SpriteRenderer에 Sprite가 할당되지 않았습니다! MovementPreview 프리팹의 Sprite를 확인해주세요.");
+            }
             Hide(); // 기본적으로 숨김
         }
 

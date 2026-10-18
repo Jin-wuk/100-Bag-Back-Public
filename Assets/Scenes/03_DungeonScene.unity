@@ -675,7 +675,7 @@ MonoBehaviour:
   _obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 192
-  _droppedItemFogMode: 0
+  _droppedItemFogMode: 1
 --- !u!1001 &1811054646
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -724,13 +724,21 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5949406577458236170, guid: 26e5ddcf777669241a2be382fd37d064, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 0240b69bc2a40074bb00e3cad8ccbd08, type: 3}
+    - target: {fileID: 5949406577458236170, guid: 26e5ddcf777669241a2be382fd37d064, type: 3}
+      propertyPath: m_WasSpriteAssigned
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8481942133169383068, guid: 26e5ddcf777669241a2be382fd37d064, type: 3}
       propertyPath: m_Name
       value: MovementPreview
       objectReference: {fileID: 0}
     - target: {fileID: 8481942133169383068, guid: 26e5ddcf777669241a2be382fd37d064, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

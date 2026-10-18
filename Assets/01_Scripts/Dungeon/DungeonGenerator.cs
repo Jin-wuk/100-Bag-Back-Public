@@ -66,11 +66,36 @@ namespace BagBack100.Dungeon
         private Grid _grid;
         private List<DungeonChunk> _spawnedChunks = new List<DungeonChunk>();
 
+        public static DungeonGenerator Instance { get; private set; }
+
         public DungeonMode Mode => _mode;
+        public Tilemap FloorTilemap => _floorTilemap;
+        public Tilemap WallTilemap => _wallTilemap;
+
+        private void Awake()
+        {
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+            else if (Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            if (_grid == null) _grid = FindObjectOfType<Grid>();
+            AutoBindTilemapsIfNeeded();
+        }
+
+        public bool IsCellWalkable(Vector3Int cell)
+        {
+            return IsTileWalkable(cell);
+        }
 
         private void Start()
         {
-            _grid = FindObjectOfType<Grid>();
+            if (_grid == null) _grid = FindObjectOfType<Grid>();
 
             if (_mode == DungeonMode.FixedMap)
             {

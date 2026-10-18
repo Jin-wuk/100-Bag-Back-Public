@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using BagBack100.Core;
 using BagBack100.Data.Core;
+using BagBack100.Dungeon;
 
 namespace BagBack100.Monster
 {
@@ -245,10 +246,25 @@ namespace BagBack100.Monster
         public static bool CanStepToCell(MonsterController monster, Vector3Int cell)
         {
             cell.z = 0;
-            if (Pathfinder.IsObstacle(monster.Grid, new Vector2Int(cell.x, cell.y), monster.ObstacleLayerMask))
+
+            // 1. 던전 타일맵 유효성 (바닥 존재 여부 & 벽 타일 여부 & 물리 콜라이더)
+            if (DungeonGenerator.Instance != null)
             {
-                return false;
+                if (!DungeonGenerator.Instance.IsCellWalkable(cell))
+                {
+                    return false;
+                }
             }
+            else
+            {
+                // 던전 제너레이터가 없는 씬용 폴백
+                if (Pathfinder.IsObstacle(monster.Grid, new Vector2Int(cell.x, cell.y), monster.ObstacleLayerMask))
+                {
+                    return false;
+                }
+            }
+
+            // 2. 다른 엔티티(몬스터/플레이어 등) 타일 점유 여부
             if (TileSystem.Instance != null && TileSystem.Instance.IsTileOccupied(cell))
             {
                 GameObject occupant = TileSystem.Instance.GetEntityAtTile(cell);

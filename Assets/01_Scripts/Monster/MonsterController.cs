@@ -53,6 +53,10 @@ namespace BagBack100.Monster
         private Coroutine _interruptCoroutine;
         private Coroutine _hitReactionCoroutine;
 
+        // 타일 이동 중 인터럽트 위치 정합성 플래그
+        private bool _isMovingToTile;
+        private Vector3 _currentDestinationWorldPos;
+
         // 비주얼 & 경고 UI 풀링 관리
         private SpriteRenderer[] _renderers;
         private EntityCombat _playerCombat;
@@ -380,29 +384,50 @@ namespace BagBack100.Monster
             {
                 Vector3Int currentCell = GetCurrentCell();
                 Vector3 awayDir = (transform.position - Player.transform.position).normalized;
-                Vector3Int stepDir = MonsterLocomotion.SnapTo8WayCell(awayDir);
+                Vector3Int stepDir = MonsterLocomotion.SnapTo4WayCell(awayDir);
 
-                // 최대 3칸까지 뒤쪽 빈 타일 탐색 (막혀 있으면 2칸, 1칸 순으로 확인)
+                // 1칸부터 순차적으로 탐색 (중간에 벽이나 장애물이 있으면 통과하지 못하고 즉시 중단)
                 Vector3Int chosenCell = currentCell;
-                for (int dist = 3; dist >= 1; dist--)
+                int maxEscapeDist = 2; // 최대 1~2칸 후퇴
+                for (int dist = 1; dist <= maxEscapeDist; dist++)
                 {
-                    Vector3Int candidate = currentCell + new Vector3Int(stepDir.x * dist, stepDir.y * dist, 0);
-                    if (MonsterLocomotion.CanStepToCell(this, candidate))
+                    Vector3Int candidate = currentCell + stepDir * dist;
+                    if (!MonsterLocomotion.CanStepToCell(this, candidate))
                     {
-                        chosenCell = candidate;
-                        break;
+                        break; // 1칸이 막히면 2칸으로 건너뛸 수 없음!
+                    }
+                    chosenCell = candidate;
+                }
+
+                // 만약 정후방이 바로 벽으로 막혀 있다면, 좌/우 측면 타일 회피 시도
+                if (chosenCell == currentCell)
+                {
+                    Vector3 perpA = new Vector3(-stepDir.y, stepDir.x, 0f);
+                    Vector3 perpB = new Vector3(stepDir.y, -stepDir.x, 0f);
+                    Vector3Int sideCellA = currentCell + MonsterLocomotion.SnapTo4WayCell(perpA);
+                    Vector3Int sideCellB = currentCell + MonsterLocomotion.SnapTo4WayCell(perpB);
+
+                    if (MonsterLocomotion.CanStepToCell(this, sideCellA))
+                    {
+                        chosenCell = sideCellA;
+                    }
+                    else if (MonsterLocomotion.CanStepToCell(this, sideCellB))
+                    {
+                        chosenCell = sideCellB;
                     }
                 }
 
                 if (chosenCell != currentCell && TileSystem.Instance.TryOccupyTile(chosenCell, gameObject, currentCell))
                 {
                     Vector3 endPos = Grid.GetCellCenterWorld(chosenCell);
-                    yield return StartCoroutine(MoveToTileRoutine(endPos, 0.15f, 0.6f));
+                    int actualDist = MonsterLocomotion.GetManhattanDistance(currentCell, chosenCell);
+                    float moveDuration = actualDist > 1 ? 0.22f : 0.16f;
+                    yield return StartCoroutine(MoveToTileRoutine(endPos, moveDuration, 0.4f));
                 }
             }
 
-            // 탈출 직후 자세 복구 딜레이 (공정한 파훼 빈틈 0.45초)
-            yield return new WaitForSeconds(0.45f);
+            // 탈출 직후 자세 복구 딜레이 (공정한 파훼 빈틈 0.35초)
+            yield return new WaitForSeconds(0.35f);
             _isEvading = false;
         }
 
@@ -445,11 +470,21 @@ namespace BagBack100.Monster
             if (_behaviorCoroutine != null)
             {
                 StopCoroutine(_behaviorCoroutine);
+                _behaviorCoroutine = null;
             }
             if (_interruptCoroutine != null)
             {
                 StopCoroutine(_interruptCoroutine);
+                _interruptCoroutine = null;
             }
+
+            // 이동 도중 피격/기절 등으로 인터럽트가 발생했다면, 공중에 뜨거나 중간 타일에 걸치지 않도록 목적지 좌표로 즉시 정렬
+            if (_isMovingToTile)
+            {
+                transform.position = _currentDestinationWorldPos;
+                _isMovingToTile = false;
+            }
+
             _isExecutingPattern = false;
             ClearActiveWarnings();
             HideAimLines();
@@ -499,6 +534,9 @@ namespace BagBack100.Monster
                 }
             }
 
+            _isMovingToTile = true;
+            _currentDestinationWorldPos = endPos;
+
             float duration = customDuration > 0f
                 ? customDuration
                 : (_monsterData != null ? _monsterData.GetEffectiveMoveDuration() : 0.3f);
@@ -516,6 +554,7 @@ namespace BagBack100.Monster
                 yield return null;
             }
             transform.position = endPos;
+            _isMovingToTile = false;
 
             if (FogOfWarSystem.Instance != null)
             {
