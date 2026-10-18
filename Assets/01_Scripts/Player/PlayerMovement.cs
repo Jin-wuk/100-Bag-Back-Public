@@ -28,6 +28,9 @@ namespace BagBack100.Player
         private PlayerStatManager _stats;
         private Animator _animator;
 
+        public bool IsMoving => _isMoving;
+        public Vector3 CurrentTargetTileWorldPos => (_isMoving && _currentPath.Count > 0) ? _currentPath[0] : transform.position;
+
         private void Awake()
         {
             _stats = GetComponent<PlayerStatManager>();

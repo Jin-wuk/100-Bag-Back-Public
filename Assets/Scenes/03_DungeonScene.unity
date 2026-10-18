@@ -394,7 +394,9 @@ MonoBehaviour:
   _corridorMonsterCount: 4
   _corridorTrapCount: 2
   _playerPrefab: {fileID: 8512937500303504559, guid: d7ab76544ca784842ad6cf9233b76fd7, type: 3}
-  _monsterPrefabPool: []
+  _monsterPrefabPool:
+  - {fileID: 4769375905301041180, guid: 8df9a16836a132d4796e502b6c008942, type: 3}
+  - {fileID: 5063341003800382751, guid: 7423487f6c961634da54a17013396bd0, type: 3}
   _chestPrefabPool: []
   _trapPrefabPool: []
   _fixedExitPrefab: {fileID: 2438186420317738188, guid: 00acfe0bdf3b7a84db10595098f61626, type: 3}
@@ -743,6 +745,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3228184720497624879, guid: 569f1a5e0c220dd4ea0e34257d73a77a, type: 3}
+      propertyPath: _monsterCount
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 5347670547493676332, guid: 569f1a5e0c220dd4ea0e34257d73a77a, type: 3}
+      propertyPath: _monsterCount
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 6648011428303291432, guid: 569f1a5e0c220dd4ea0e34257d73a77a, type: 3}
+      propertyPath: _monsterCount
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 7157962007390842834, guid: 569f1a5e0c220dd4ea0e34257d73a77a, type: 3}
+      propertyPath: _monsterCount
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 7373799786730420094, guid: 569f1a5e0c220dd4ea0e34257d73a77a, type: 3}
       propertyPath: m_Name
       value: FixedMap

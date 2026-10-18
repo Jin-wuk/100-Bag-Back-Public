@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 using BagBack100.Core;
 using BagBack100.Combat;
+using BagBack100.Monster;
 
 namespace BagBack100.Dungeon
 {

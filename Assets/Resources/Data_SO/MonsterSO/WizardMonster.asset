@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d0d86b18684e3841ba46b0404489e53, type: 3}
+  m_Name: WizardMonster
+  m_EditorClassIdentifier: 
+  monsterID: 0
+  monsterName: 
+  type: 0
+  hp: 50
+  atk: 10
+  def: 5
+  speed: 5
+  range: 1
+  zocRadius: 7
+  movementStyle: 2
+  moveDuration: 0.3
+  moveInterval: 0.25
+  globalPatternCooldown: 2
+  telegraphTime: 0.8
+  evasiveStepCooldown: 4
+  escapeOnHitCooldown: 6
+  patterns:
+  - {fileID: 11400000, guid: 383059750893ca5448f47af073a15ada, type: 2}
+  - {fileID: 11400000, guid: ae0b1cbccf780c248b84d377bdbe87bc, type: 2}
+  - {fileID: 11400000, guid: 5ad4d5d017cbf2845a57487eb7651c4b, type: 2}
+  traits: []
+  dropPoolID: 0
+  goldDropBase: 0

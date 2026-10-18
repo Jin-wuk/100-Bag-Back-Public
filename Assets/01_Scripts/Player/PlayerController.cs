@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using BagBack100.Combat;
+using BagBack100.Monster;
 
 namespace BagBack100.Player
 {

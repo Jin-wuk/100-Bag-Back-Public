@@ -9,20 +9,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0d0d86b18684e3841ba46b0404489e53, type: 3}
-  m_Name: NewMonsterData
+  m_Script: {fileID: 11500000, guid: 235abe4765b5f3741bc87eff9b53197b, type: 3}
+  m_Name: Pattern_AoESlam
   m_EditorClassIdentifier: 
-  monsterID: 0
-  monsterName: 
-  type: 0
-  hp: 50
-  atk: 5
-  def: 5
-  speed: 5
-  range: 1
-  zocRadius: 5
-  traits: []
-  dropPoolID: 0
-  goldDropBase: 0
-  attackPattern: 0
-  telegraphTime: 1
+  patternName: SlamSquareAround
+  weight: 10
+  minRange: 1
+  maxRange: 1
+  patternCooldown: 3
+  telegraphDuration: 0.7
+  recoveryDuration: 0.5
+  damageMultiplier: 1
+  shape: 0
+  radius: 1

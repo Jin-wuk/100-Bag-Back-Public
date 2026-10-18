@@ -1,55 +1,35 @@
-# 🧠 고급 몬스터 AI 아키텍처 및 설계 철학 (Advanced Monster AI System)
+# 🧠 고급 몬스터 AI 아키텍처 및 설계 철학 (Portfolio & Retrospective)
 
-> **문서 목적**: 포트폴리오 및 아키텍처 회고용
-> **프로젝트**: Void Pouch (타일 기반 익스트랙션 RPG)
-
----
-
-## 1. 개요 (Introduction)
-타일 기반(Grid-based) 게임에서 몬스터 AI가 단순히 플레이어의 최단 거리로 돌진하는 '좀비 AI'에 머물 경우, 게임은 단순한 피지컬 게임(APM)으로 전락합니다. 
-본 프로젝트는 **'유저처럼 교활하게 공간을 통제하며 싸우는 AI (Player-like Hard AI)'**를 목표로 하였으며, 1인 개발 환경의 유지보수성을 극대화하기 위해 **데이터 기반의 모듈형 아키텍처**를 채택했습니다.
+> **문서 목적**: 포트폴리오 기술 서술 및 아키텍처 의사결정 회고록  
+> **상세 구현 명세**: [Docs/GDD/Monster_AI.md](file:///c:/Users/jdk95/Desktop/100BagBack/Docs/GDD/Monster_AI.md)
 
 ---
 
-## 2. 핵심 아키텍처 1: 타일 위험도 맵 (Danger Map & A* Integration)
-몬스터가 유저의 공격을 피하기 위해 복잡한 상태 머신(FSM) 분기를 타는 대신, 환경(Environment) 데이터를 조작하여 자연스러운 회피 기동(Dodging)을 유도합니다.
+## 1. 아키텍처 전환 배경: 왜 개별 FSM에서 '조립식 SO 패턴'으로 바꾸었는가?
 
-*   **설계 방식**:
-    *   유저가 공격을 시전하면, 타격 반경 내의 타일들에 일시적으로 `Danger Score(위험도)`가 부여됩니다.
-    *   몬스터의 A* 길찾기(`Pathfinder`) 알고리즘은 노드의 최종 비용 계산식에 이 위험도를 포함합니다. (`FCost = GCost + HCost + DangerCost`)
-*   **결과 및 기대 효과**:
-    *   몬스터는 공격이 깔린 타일을 마치 '늪지대'나 '벽'처럼 인식하여 스스로 **안전한 타일로 우회(Strafing)**하며 다가옵니다.
-    *   유저가 몬스터의 진입 경로에 헛스윙을 하여 접근을 차단하는 **공간 통제(Area Denial/Zoning)** 플레이가 가능해집니다.
+### 🔴 기존 방식의 한계 (Problem)
+1. **비주얼 리소스 제약 대비 비효율적인 코드 파편화**:
+   * 1인 개발 환경에서 몬스터 아트가 프레임 애니메이션이 없는 **단일 스프라이트(Single Sprite)**로 구성됨.
+   * 외형은 단일 스프라이트인데 몬스터마다 개별 FSM 상태 클래스(`MeleeState`, `RangedBrain` 등)를 하드코딩할 경우, 시각적 산출물 대비 스크립트 유지보수 비용(Class Explosion)이 기하급수적으로 폭증함.
+2. **이동과 공격의 강결합**:
+   * 공격 쿨타임 동안 몬스터가 이동하지 못하고 제자리에 멈춰 서 있거나, 신규 몬스터 바리에이션을 만들 때마다 C# 스크립트를 재작성해야 하는 병목 발생.
 
----
-
-## 3. 핵심 아키텍처 2: 하이브리드 FSM (모듈형/병렬 AI)
-일반적인 순차적 FSM(이동 ➡️ 정지 ➡️ 공격)의 한계를 극복하고, 몬스터 타입에 맞춰 뇌(Brain) 구조를 다르게 설계했습니다.
-
-*   **근접 몬스터 (종속형 FSM)**
-    *   묵직한 타격감을 위해 고전적인 순차적 상태 머신(`IMonsterState`)을 사용합니다.
-    *   배회(Patrol) ➡️ 추적(Chase) ➡️ 정지 후 장판 공격(Telegraph)의 정석적인 흐름을 가집니다.
-    *   기계적인 회피로 인한 불합리함(억까)을 방지하기 위해 **0.2초의 인간적인 반응 딜레이(Reaction Time)**를 코루틴에 부여했습니다.
-*   **원거리/보스 몬스터 (병렬형 AI - Twin Stick)**
-    *   하체(Locomotion)와 상체(Combat) 로직을 독립적인 코루틴으로 완벽히 분리했습니다.
-    *   하체는 유저와의 사거리(3칸)를 유지하기 위해 끊임없이 뒤로 도망(Kiting)치고, 상체는 쿨타임마다 독립적으로 예측 샷을 발사합니다.
-    *   결과적으로 몬스터가 **무빙샷(이동하며 공격)**을 구사하는 고도의 전투 능력을 갖춥니다.
+### 🟢 해결 아키텍처 (Solution)
+1. **액션 주체의 공간화 (Spatial Telegraphing)**:
+   * 스프라이트 모션 대신 **'타일 장판(`AttackWarningUI`), 회전형 레이저 조준선(`LineRenderer`), 돌진 물리 궤적'**으로 액션의 중심축을 그리드 공간으로 이전.
+2. **ScriptableObject 기반 조립식 레고 블록 (`MonsterPatternSO`)**:
+   * 공격 패턴을 몬스터 본체([MonsterController.cs](file:///c:/Users/jdk95/Desktop/100BagBack/Assets/01_Scripts/Monster/MonsterController.cs))에서 완전히 분리하여 원자적 SO 에셋으로 캡슐화.
+   * 기획자는 [MonsterDataSO.cs](file:///c:/Users/jdk95/Desktop/100BagBack/Assets/01_Scripts/Data/Models/MonsterDataSO.cs)의 `patterns` 리스트에 원하는 패턴 블록을 드래그 & 드롭하고 가중치(`weight`)만 설정하면 **가중치 랜덤(Weighted Random) 추첨기**가 사거리 조건에 맞는 패턴을 자동 실행.
+3. **이동 템포와 행동 쿨타임의 분리**:
+   * `globalPatternCooldown`이 도는 동안에도 [MonsterLocomotion.cs](file:///c:/Users/jdk95/Desktop/100BagBack/Assets/01_Scripts/Monster/MonsterLocomotion.cs)가 `HeavyChase`(직진), `AgileFlank`(측면 우회), `RangedKiting`(거리 유지) 이동을 끊임없이 수행.
 
 ---
 
-## 4. 핵심 아키텍처 3: 이벤트 기반 반응형 제어 (Reactive Interrupts)
-체력 상태나 특정 피격 조건에 따라 AI의 흐름을 즉각적으로 비틀어버리는 '패턴 변화' 로직입니다.
+## 2. 핵심 엔지니어링 성과 (Key Engineering Highlights)
 
-*   **설계 방식**:
-    *   `MonsterController`에 옵저버 패턴(`event Action OnDamaged`)을 부착하고, AI 브레인이 이를 구독(Subscribe)합니다.
-    *   유저에게 피격당하는 순간, 실행 중이던 상/하체 이동 로직을 강제 정지(Interrupt)시킵니다.
-*   **포트폴리오 적용 사례 (구현 기믹)**:
-    *   **회피 및 반격 (Ranged Monster)**: 피격 즉시 유저 반대편으로 3칸 텔레포트(공간 이동)하여 거리를 벌린 후, 기습적인 카운터 투사체를 날리고 일상 패턴으로 복귀합니다.
-    *   **은신 암살자 (Assassin)**: 체력이 30% 이하로 떨어지면, 즉시 투명도(Alpha)를 0으로 만들고 타일 위험도를 무시한 채 유저의 등 뒤(사각지대)로 잠입하는 페이즈 전환(Phase Change)이 가능합니다.
-
----
-
-## 5. 결론: 1인 개발을 위한 최적화 (Optimization for Solo Dev)
-*   무거운 `MonoBehaviour`를 몬스터마다 덕지덕지 붙이거나 복잡한 Behavior Tree 에셋을 사용하는 대신, **순수 C# 객체(`IMonsterState`)**를 Strategy Pattern으로 갈아 끼우는 방식을 택했습니다.
-*   기획자는 유니티 인스펙터의 `MonsterDataSO(스크립터블 오브젝트)`에서 `AIType (Melee, Ranged, Assassin)` 열거형만 딸깍 선택하면, 팩토리 패턴을 통해 알맞은 AI 뇌가 자동으로 몬스터에 주입됩니다.
-*   **새로운 몬스터 로직을 추가할 때 기존 코드를 단 한 줄도 건드리지 않고 브레인 클래스만 추가하면 되는 완벽한 OCP(개방-폐쇄 원칙)를 달성**했습니다.
+* **완벽한 OCP(개방-폐쇄 원칙) 달성**:
+  * 6종의 코어 패턴 블록([SingleMeleePatternSO.cs](file:///c:/Users/jdk95/Desktop/100BagBack/Assets/01_Scripts/Monster/Patterns/SingleMeleePatternSO.cs), [AoESlamPatternSO.cs](file:///c:/Users/jdk95/Desktop/100BagBack/Assets/01_Scripts/Monster/Patterns/AoESlamPatternSO.cs), [ChargePatternSO.cs](file:///c:/Users/jdk95/Desktop/100BagBack/Assets/01_Scripts/Monster/Patterns/ChargePatternSO.cs), [HitAndRunPatternSO.cs](file:///c:/Users/jdk95/Desktop/100BagBack/Assets/01_Scripts/Monster/Patterns/HitAndRunPatternSO.cs), [RangedProjectilePatternSO.cs](file:///c:/Users/jdk95/Desktop/100BagBack/Assets/01_Scripts/Monster/Patterns/RangedProjectilePatternSO.cs), [MortarAoEPatternSO.cs](file:///c:/Users/jdk95/Desktop/100BagBack/Assets/01_Scripts/Monster/Patterns/MortarAoEPatternSO.cs))의 파라미터 조합만으로 코드 재컴파일 없이 수십 종의 몬스터 즉각 생성.
+* **타일 제약과 자유 각도의 조화**:
+  * 근거리/착탄형 공격은 격자 타일 장판(`AttackWarningUI` + Danger Map A* 비용 연동)으로 명확한 대피 공간을 제시하고, 원거리 직사 투사체는 임의 각도 회전이 가능한 레이저 조준선(`LineRenderer`)으로 시각적 오염 없이 궤적을 예고.
+* **억까 없는 공정한 수 싸움 (Exploitable Hard AI)**:
+  * 돌진 패턴 유도 후 벽 충돌 시 1.5초 기절(Stun) 프리딜, 벽 몰이 시 측면 회피 차단, 모든 패턴 종료 후 명확한 후딜레이(`recoveryDuration`) 보장으로 타일 이동 제약 속에서도 납득 가능한 전투 쾌감 완성.

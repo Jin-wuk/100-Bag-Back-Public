@@ -1,5 +1,57 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1283263846546904694
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1284411749158081464}
+  - component: {fileID: 3228184720497624879}
+  m_Layer: 0
+  m_Name: Zone_Combat (2)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1284411749158081464
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1283263846546904694}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 65, y: -5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4004142713420081904}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3228184720497624879
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1283263846546904694}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7f91e34b82c4d6590e1f23456789abc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _zoneType: 1
+  _size: {x: 16, y: 18}
+  _monsterCount: 2
+  _trapCount: 0
+  _chestCount: 0
+  _overrideMonsterPool:
+  - {fileID: 4769375905301041180, guid: 8df9a16836a132d4796e502b6c008942, type: 3}
+  _overrideChestPool: []
 --- !u!1 &2307691781336884470
 GameObject:
   m_ObjectHideFlags: 0
@@ -27964,6 +28016,110 @@ MonoBehaviour:
   _chestCount: 0
   _overrideMonsterPool: []
   _overrideChestPool: []
+--- !u!1 &4431942441392198958
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3944924390115029606}
+  - component: {fileID: 6648011428303291432}
+  m_Layer: 0
+  m_Name: Zone_Combat (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3944924390115029606
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4431942441392198958}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 41, y: 15.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4004142713420081904}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6648011428303291432
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4431942441392198958}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7f91e34b82c4d6590e1f23456789abc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _zoneType: 1
+  _size: {x: 32, y: 7}
+  _monsterCount: 2
+  _trapCount: 0
+  _chestCount: 0
+  _overrideMonsterPool:
+  - {fileID: 4769375905301041180, guid: 8df9a16836a132d4796e502b6c008942, type: 3}
+  _overrideChestPool: []
+--- !u!1 &5074541961909437537
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8605438577550539447}
+  - component: {fileID: 5347670547493676332}
+  m_Layer: 0
+  m_Name: Zone_Combat (3)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8605438577550539447
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5074541961909437537}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 44.42, y: 1, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4004142713420081904}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5347670547493676332
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5074541961909437537}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7f91e34b82c4d6590e1f23456789abc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _zoneType: 1
+  _size: {x: 21, y: 6}
+  _monsterCount: 2
+  _trapCount: 0
+  _chestCount: 0
+  _overrideMonsterPool:
+  - {fileID: 4769375905301041180, guid: 8df9a16836a132d4796e502b6c008942, type: 3}
+  _overrideChestPool: []
 --- !u!1 &5366260795649514336
 GameObject:
   m_ObjectHideFlags: 0
@@ -45574,6 +45730,9 @@ Transform:
   - {fileID: 5506683881524772935}
   - {fileID: 6266084871427821487}
   - {fileID: 8504984708431187679}
+  - {fileID: 3944924390115029606}
+  - {fileID: 1284411749158081464}
+  - {fileID: 8605438577550539447}
   m_Father: {fileID: 9142873201543882290}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &8966160861679930864
@@ -45625,6 +45784,5 @@ MonoBehaviour:
   _monsterCount: 2
   _trapCount: 0
   _chestCount: 0
-  _overrideMonsterPool:
-  - {fileID: 4769375905301041180, guid: 8df9a16836a132d4796e502b6c008942, type: 3}
+  _overrideMonsterPool: []
   _overrideChestPool: []
