@@ -146,7 +146,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &104117333
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -362,6 +362,7 @@ GameObject:
   m_Component:
   - component: {fileID: 525934923}
   - component: {fileID: 525934922}
+  - component: {fileID: 525934924}
   m_Layer: 0
   m_Name: DungeonManager
   m_TagString: Untagged
@@ -414,6 +415,32 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &525934924
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 525934921}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eea4751c04d7f9245b76e6a4190dfd06, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _sightRadius: 4
+  _softEdgeWidth: 1.5
+  _useLineOfSight: 1
+  _topWallExtraHeight: 1
+  _obstacleLayerMask:
+    serializedVersion: 2
+    m_Bits: 0
+  _fogTilemap: {fileID: 0}
+  _fogMaterial: {fileID: 2100000, guid: 93552b966a2cf6b408712d4ee121c54a, type: 2}
+  _fadeSpeed: 6
+  _unexploredColor: {r: 0.03, g: 0.03, b: 0.05, a: 1}
+  _exploredColor: {r: 0.12, g: 0.14, b: 0.2, a: 0.72}
+  _visibleColor: {r: 0.12, g: 0.14, b: 0.2, a: 0}
+  _fogSortingOrder: 50
 --- !u!1 &711365905
 GameObject:
   m_ObjectHideFlags: 0
@@ -466,7 +493,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1111384398
 RectTransform:
   m_ObjectHideFlags: 0
@@ -646,6 +673,7 @@ MonoBehaviour:
   _obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 192
+  _droppedItemFogMode: 0
 --- !u!1001 &1811054646
 PrefabInstance:
   m_ObjectHideFlags: 0
