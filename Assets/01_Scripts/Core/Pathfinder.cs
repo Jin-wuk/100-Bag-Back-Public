@@ -126,17 +126,23 @@ namespace BagBack100.Core
 
         public static bool IsObstacle(Grid grid, Vector2Int position, LayerMask layerMask)
         {
+            if (grid == null) return true;
             Vector3Int cellPos = new Vector3Int(position.x, position.y, 0);
 
-            // 1. 던전 시스템이 활성화되어 있을 경우 던전 유효 타일(바닥 존재 여부 및 벽 타일 여부) 우선 판정
+            // 1. 던전 생성기 타일맵 참조를 통한 바닥/벽 타일 유효성 검사 (순환 호출 방지)
             if (DungeonGenerator.Instance != null)
             {
-                if (!DungeonGenerator.Instance.IsCellWalkable(cellPos))
+                var gen = DungeonGenerator.Instance;
+                if (gen.FloorTilemap != null && !gen.FloorTilemap.HasTile(cellPos))
+                {
+                    return true;
+                }
+                if (gen.WallTilemap != null && gen.WallTilemap.HasTile(cellPos))
                 {
                     return true;
                 }
             }
-            else if (grid != null)
+            else
             {
                 // 던전 제너레이터가 없는 씬을 위한 바닥 타일맵 캐시 및 유효성 검사 (공허 영역 무한 탐색 방지)
                 if (_cachedFloorTilemap == null)

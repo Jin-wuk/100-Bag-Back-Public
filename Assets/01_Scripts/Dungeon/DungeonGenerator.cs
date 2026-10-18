@@ -343,7 +343,8 @@ namespace BagBack100.Dungeon
             // 3. 물리 장애물(기둥, 벽 콜라이더 등)이 없어야 함
             if (_grid != null && _obstacleLayerMask.value != 0)
             {
-                if (Pathfinder.IsObstacle(_grid, new Vector2Int(cell.x, cell.y), _obstacleLayerMask))
+                Vector3 worldPos = _grid.GetCellCenterWorld(cell);
+                if (Physics2D.OverlapPoint(worldPos, _obstacleLayerMask) != null)
                 {
                     return false;
                 }
