@@ -23,14 +23,14 @@ MonoBehaviour:
   equipType: 3
   hpBonus: 0
   mpBonus: 0
-  attackBonus: 5
+  attackBonus: 10
   defenseBonus: 0
   speedBonus: 0
   rangeBonus: 0
   baseAttackSpeed: 1
   weaponPrefab: {fileID: 5652963309051762746, guid: bafb2bceacc5e0c40930aa2c1279a60f, type: 3}
   comboEffectPrefabs:
-  - {fileID: 1722152014586669308, guid: 9755639ac5cc2594483fe3b96673a18d, type: 3}
-  - {fileID: 8971279854123532412, guid: f727da53fe75909438c4b8ef78703ca7, type: 3}
-  - {fileID: 5499414533194603393, guid: 95ffedff569491d40b0060199f7975f1, type: 3}
+  - {fileID: 5150531852397687639, guid: 38513ab97355b1a4c8161834110c077f, type: 3}
+  - {fileID: 4709745210147160306, guid: bf7c83f9b69541a4cbf7ef1a19053a34, type: 3}
+  - {fileID: 768599453594338528, guid: 397de633440663f49943a0c2800aa7a6, type: 3}
   chargedEffectPrefab: {fileID: 0}
