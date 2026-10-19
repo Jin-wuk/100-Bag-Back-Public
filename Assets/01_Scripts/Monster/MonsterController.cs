@@ -51,10 +51,14 @@ namespace BagBack100.Monster
         public event Action OnDamaged;
 
         // 런타임 상태 플래그
+        public bool IsExecutingPattern => _isExecutingPattern;
+        public bool IsInRecoveryWindow => _isInRecoveryWindow;
+
         private bool _isAggroed;
         private float _aggroExpireTime;
         private const float AggroHoldDuration = 6.0f;
         private bool _isExecutingPattern;
+        private bool _isInRecoveryWindow;
         private bool _isStunned;
         private bool _isEvading;
         private bool _isDead;
@@ -222,10 +226,12 @@ namespace BagBack100.Monster
                             _patternCooldownExpirations[selectedPattern] = Time.time + selectedPattern.patternCooldown;
                             _nextGlobalPatternTime = Time.time + _monsterData.globalPatternCooldown;
 
-                            // 공정성 보장: 패턴 시전 직후 후딜레이(빈틈/딜타임) 동안 정지
+                            // 공정성 보장: 패턴 시전 직후 후딜레이(빈틈/딜타임, Recovery Window) 동안 이동 및 회피 불가 고정
                             if (selectedPattern.recoveryDuration > 0f && !_isStunned && !_isEvading)
                             {
+                                _isInRecoveryWindow = true;
                                 yield return new WaitForSeconds(selectedPattern.recoveryDuration);
+                                _isInRecoveryWindow = false;
                             }
                         }
                         else if ((_monsterData.patterns == null || _monsterData.patterns.Count == 0) && gridDist <= 1)
@@ -236,7 +242,9 @@ namespace BagBack100.Monster
                             yield return StartCoroutine(ExecuteFallbackMeleeRoutine());
                             _isExecutingPattern = false;
                             _nextGlobalPatternTime = Time.time + _monsterData.globalPatternCooldown;
+                            _isInRecoveryWindow = true;
                             yield return new WaitForSeconds(0.5f);
+                            _isInRecoveryWindow = false;
                         }
                     }
                 }
@@ -400,11 +408,12 @@ namespace BagBack100.Monster
 
         /// <summary>
         /// 날렵한 근거리(AgileFlank) 전용: 플레이어가 공격을 휘두를 때 쿨타임이 돌지 않았다면
-        /// 0.15초 인간적 반응 딜레이 후 90도 측면 빈 타일로 회피합니다. (벽에 몰리면 회피 불가!)
+        /// 0.15초 인간적 반응 딜레이 후 90도 측면 빈 타일로 회피합니다.
+        /// 단, 패턴 시전 중(Motion Lock)이거나 후딜레이(Recovery Window) 중에는 절대 회피할 수 없습니다!
         /// </summary>
         private void HandlePlayerAttackDetected(Vector3 playerAttackDir)
         {
-            if (_isDead || _isStunned || _isEvading || _isExecutingPattern || _monsterData == null || Player == null || Grid == null)
+            if (_isDead || _isStunned || _isEvading || _isExecutingPattern || _isInRecoveryWindow || _monsterData == null || Player == null || Grid == null)
             {
                 return;
             }
@@ -903,10 +912,12 @@ namespace BagBack100.Monster
             // 피격 시 비인식 상태였다면 즉시 어그로 활성화
             ForceAggro();
 
-            // 원거리 몬스터(RangedKiting): 보호막이 없을 때 피격당하면 쿨타임 기반으로 후방 탈출 인터럽트 발동
+            // 원거리 몬스터(RangedKiting): 보호막이 없고, 패턴 시전(Motion Lock) 또는 후딜레이(Recovery Window) 중이 아닐 때만 후방 탈출 발동 (공정한 딜타임 보장)
             if (!hadShield &&
                 !_isStunned &&
                 !_isEvading &&
+                !_isExecutingPattern &&
+                !_isInRecoveryWindow &&
                 _monsterData != null &&
                 _monsterData.movementStyle == MonsterMovementStyle.RangedKiting &&
                 _monsterData.escapeOnHitCooldown > 0f &&

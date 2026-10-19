@@ -70,10 +70,10 @@ MonoBehaviour:
   _obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 64
-  _wobbleAngle: 3
+  _wobbleAngle: 4
   _enableSquashAndStretch: 1
-  _stretchAmount: 0.06
-  _squashAmount: 0.05
+  _stretchAmount: 0.09
+  _squashAmount: 0.06
 --- !u!114 &1500047925039595427
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -88,6 +88,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _meleeOffset: 0.7
   _meleeScale: {x: 2, y: 2, z: 1}
+  _defaultMeleeEffectPrefab: {fileID: 0}
+  _comboResetTime: 1.5
+  _inputBufferWindow: 0.22
+  _chargeDuration: 0.6
+  _chargeLineLength: 2
+  _chargeDamageMultiplier: 2
   _projectilePrefab: {fileID: 3354168463907677501, guid: 4971ea61c23900745a3fb642126e6a1a, type: 3}
   _projectileSpawnPoint: {fileID: 0}
 --- !u!212 &5263338046754277592
@@ -256,9 +262,10 @@ MonoBehaviour:
   _baseMp: 50
   _baseAttack: 10
   _baseDefense: 5
-  _baseSpeed: 10
+  _baseSpeed: 8
   _baseAttackSpeed: 1
   _baseRange: 1
+  _hubSceneName: 02_HubScene
 --- !u!114 &4486916414795881682
 MonoBehaviour:
   m_ObjectHideFlags: 0

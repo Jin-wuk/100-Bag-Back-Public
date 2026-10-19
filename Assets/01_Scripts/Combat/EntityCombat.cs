@@ -25,7 +25,9 @@ namespace BagBack100.Combat
             Transform spawnPoint = null,
             float offset = 0.5f,
             Vector3? scale = null,
-            bool isHeavyHit = false)
+            bool isHeavyHit = false,
+            float shakeMultiplier = 1.0f,
+            float hitStopMultiplier = 1.0f)
         {
             if (IsAttackOnCooldown) return;
             
@@ -53,14 +55,14 @@ namespace BagBack100.Combat
             bool hitSuccess = ApplyDamageToTarget(target, damage, normDir, isHeavyHit);
             if (hitSuccess)
             {
-                TriggerImpactFeedback(isHeavyHit);
+                TriggerImpactFeedback(isHeavyHit, shakeMultiplier, hitStopMultiplier);
             }
             
             StartCoroutine(CooldownRoutine(1f / safeAtkSpeed));
         }
 
         /// <summary>
-        /// 우클릭 차징 강공격 등 다중 타일(예: 2칸 직선)에 있는 대상들을 동시에 타격합니다.
+        /// 우클릭 차징 강공격 또는 다중 타일 히트박스 무기(ForwardLine2, WideSweep3)로 대상들을 동시에 타격합니다.
         /// </summary>
         public void PerformMultiTargetMeleeAttack(
             List<GameObject> targets,
@@ -71,7 +73,9 @@ namespace BagBack100.Combat
             Transform spawnPoint,
             float offset,
             Vector3 scale,
-            bool isHeavyHit = true)
+            bool isHeavyHit = true,
+            float shakeMultiplier = 1.0f,
+            float hitStopMultiplier = 1.0f)
         {
             if (IsAttackOnCooldown) return;
 
@@ -108,12 +112,12 @@ namespace BagBack100.Combat
 
             if (anyHit)
             {
-                TriggerImpactFeedback(isHeavyHit);
+                TriggerImpactFeedback(isHeavyHit, shakeMultiplier, hitStopMultiplier);
             }
             else if (isHeavyHit)
             {
                 // 강공격은 허공에 휘둘러도 묵직한 미세 카메라 흔들림 부여
-                GlobalEvents.OnCombatImpact?.Invoke(0.08f, 0.1f, 0f);
+                GlobalEvents.OnCombatImpact?.Invoke(0.08f * shakeMultiplier, 0.1f, 0f);
             }
 
             StartCoroutine(CooldownRoutine(1f / safeAtkSpeed));
@@ -140,15 +144,15 @@ namespace BagBack100.Combat
             return false;
         }
 
-        private void TriggerImpactFeedback(bool isHeavyHit)
+        private void TriggerImpactFeedback(bool isHeavyHit, float shakeMult = 1.0f, float hitStopMult = 1.0f)
         {
             if (isHeavyHit)
             {
-                GlobalEvents.OnCombatImpact?.Invoke(0.22f, 0.18f, 0.045f);
+                GlobalEvents.OnCombatImpact?.Invoke(0.22f * shakeMult, 0.18f, 0.045f * hitStopMult);
             }
             else
             {
-                GlobalEvents.OnCombatImpact?.Invoke(0.1f, 0.1f, 0.015f);
+                GlobalEvents.OnCombatImpact?.Invoke(0.1f * shakeMult, 0.1f, 0.015f * hitStopMult);
             }
         }
 
@@ -172,7 +176,13 @@ namespace BagBack100.Combat
         private IEnumerator CooldownRoutine(float duration)
         {
             IsAttackOnCooldown = true;
-            yield return new WaitForSeconds(duration);
+            float elapsed = 0f;
+            // Frame-Independent Combat: 히트스톱(Time.timeScale 변동)이나 프레임 드랍에 의해 모션 락 시간이 왜곡되지 않도록 unscaledDeltaTime 누적 및 Yield객체 GC Zero 달성
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
             IsAttackOnCooldown = false;
             OnAttackFinished?.Invoke();
         }

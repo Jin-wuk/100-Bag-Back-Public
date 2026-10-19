@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using BagBack100.Combat;
+using BagBack100.Data.Core;
+using BagBack100.Data.Models;
 using BagBack100.Monster;
 
 namespace BagBack100.Player
@@ -12,6 +14,59 @@ namespace BagBack100.Player
         Moving,
         Attacking,
         Charging
+    }
+
+    public enum BufferedCommandType
+    {
+        None = 0,
+        Move,
+        Attack,
+        Charge
+    }
+
+    /// <summary>
+    /// 람다 클로저(Action) 할당으로 인한 GC Spike를 원천 차단하는 값 타입(Value Type) 단일 슬롯 선입력 구조체입니다.
+    /// </summary>
+    public struct BufferedCommand
+    {
+        public BufferedCommandType Type;
+        public Vector3Int TargetCell;
+        public Vector2Int MoveDir;
+        public float Timestamp;
+
+        public void SetMove(Vector2Int moveDir, float now)
+        {
+            Type = BufferedCommandType.Move;
+            MoveDir = moveDir;
+            TargetCell = Vector3Int.zero;
+            Timestamp = now;
+        }
+
+        public void SetAttack(Vector3Int targetCell, float now)
+        {
+            Type = BufferedCommandType.Attack;
+            TargetCell = targetCell;
+            MoveDir = Vector2Int.zero;
+            Timestamp = now;
+        }
+
+        public void SetCharge(float now)
+        {
+            Type = BufferedCommandType.Charge;
+            TargetCell = Vector3Int.zero;
+            MoveDir = Vector2Int.zero;
+            Timestamp = now;
+        }
+
+        public void Clear()
+        {
+            Type = BufferedCommandType.None;
+        }
+
+        public bool IsValid(float now, float window)
+        {
+            return Type != BufferedCommandType.None && (now - Timestamp) <= window;
+        }
     }
 
     [RequireComponent(typeof(PlayerInput))]
@@ -29,6 +84,10 @@ namespace BagBack100.Player
         [SerializeField] private GameObject _defaultMeleeEffectPrefab;
         [Tooltip("이동 중에도 콤보(1~3타)가 유지되는 최대 시간(초)")]
         [SerializeField] private float _comboResetTime = 1.5f;
+
+        [Header("Micro-Mechanics: Input Buffer Settings")]
+        [Tooltip("선입력(Input Buffering)이 유효하게 유지되는 최대 시간(초). 모션 종료/타일 안착 직전 입력만 수용하여 광클 폭주를 방지합니다.")]
+        [SerializeField] private float _inputBufferWindow = 0.22f;
 
         [Header("Right-Click Charge Attack Settings")]
         [Tooltip("우클릭 차징 완충까지 걸리는 시간(초) - 완충 전 손을 떼면 무효")]
@@ -52,16 +111,19 @@ namespace BagBack100.Player
         private Vector3 _facingDirection = Vector3.down;
         private Grid _grid;
 
-        private System.Action _bufferedCommand;
+        // Zero-GC 단일 슬롯 덮어쓰기 선입력 버퍼
+        private BufferedCommand _inputBuffer;
 
         // 3타 콤보 상태
         private int _comboStep = 0; // 0: 1타, 1: 2타, 2: 3타
         private float _lastComboAttackTime = -99f;
 
-        // 우클릭 홀드 차징 상태
+        // 우클릭 홀드 차징 및 무기 히트박스 버퍼 (GC Zero를 위해 사전 할당)
         private Coroutine _chargeCoroutine;
         private bool _isChargeReady = false;
-        private readonly List<GameObject> _chargedTargetBuffer = new List<GameObject>();
+        private readonly List<GameObject> _chargedTargetBuffer = new List<GameObject>(8);
+        private readonly List<Vector3Int> _weaponHitboxCellBuffer = new List<Vector3Int>(8);
+        private readonly List<GameObject> _meleeTargetBuffer = new List<GameObject>(8);
 
         public float ChargeProgress { get; private set; } = 0f;
         public int ChargeLineLength => _chargeLineLength;
@@ -145,6 +207,9 @@ namespace BagBack100.Player
             {
                 CurrentState = PlayerState.Idle;
             }
+
+            // 모션 락(Attack Recovery) 해제 프레임에 유효한 선입력(이동 또는 다음 콤보/차징)이 있다면 즉시 소비
+            TryConsumeBufferedCommand();
         }
 
         private void HandleAimInput(Vector3 aimDir)
@@ -160,46 +225,69 @@ namespace BagBack100.Player
 
         private void HandleMoveInput(Vector2Int moveDir)
         {
-            // 공격 모션 중이거나 우클릭 홀드 차징 중에는 이동 불가
-            if (CurrentState == PlayerState.Attacking || CurrentState == PlayerState.Charging || _combat.IsAttackOnCooldown) return;
+            // 우클릭 홀드 차징 중에는 이동 불가
+            if (CurrentState == PlayerState.Charging) return;
+
+            // 공격 모션 락(Motion Lock) 중에는 현재 공격이 절대 취소되지 않으며, 모션 종료 직후 실행될 단일 선입력 슬롯을 '이동'으로 덮어씀
+            if (CurrentState == PlayerState.Attacking || _combat.IsAttackOnCooldown)
+            {
+                _inputBuffer.SetMove(moveDir, Time.unscaledTime);
+                return;
+            }
             
+            // 타일 이동 중 입력 시: 현재 타일까지는 안전하게 이동하되 도착 즉시 실행할 다음 행동을 '이동'으로 예약
             if (CurrentState == PlayerState.Moving)
             {
-                _movement.CancelPath();
+                _inputBuffer.SetMove(moveDir, Time.unscaledTime);
                 return;
             }
 
-            if (_grid == null) return;
+            ExecuteStepMove(moveDir);
+        }
+
+        private void ExecuteStepMove(Vector2Int moveDir)
+        {
+            if (_grid == null || CurrentState == PlayerState.Attacking || CurrentState == PlayerState.Charging || _combat.IsAttackOnCooldown) return;
 
             Vector3Int currentCellPos = _grid.WorldToCell(transform.position);
             Vector3Int targetCellPos = currentCellPos + new Vector3Int(moveDir.x, moveDir.y, 0);
             Vector3 targetPos = _grid.GetCellCenterWorld(targetCellPos);
 
-            // 이동 (몬스터 유무 관계없이 이동 시도, 콤보 카운트는 리셋하지 않고 시간 기준으로만 유지)
             CurrentState = PlayerState.Moving;
             _movement.MoveTo(targetPos);
         }
 
-        #region Left-Click: 3-Hit Combo Attack
+        #region Left-Click: 3-Hit Combo Attack & Weapon Grid Hitbox
 
         private void HandleAttackInput(Vector3Int targetCell)
         {
-            if (CurrentState == PlayerState.Charging || _combat.IsAttackOnCooldown) return;
+            if (CurrentState == PlayerState.Charging) return;
 
-            if (CurrentState == PlayerState.Moving)
+            // 이동 중이거나 공격 모션 락 중일 때: 단일 슬롯 선입력 버퍼에 최신 공격 좌표를 덮어쓰기 (광클 누적 방지)
+            if (CurrentState == PlayerState.Moving || CurrentState == PlayerState.Attacking || _combat.IsAttackOnCooldown)
             {
-                // 선입력 (Input Buffering)
-                _bufferedCommand = () => ExecuteMeleeComboAttack(targetCell);
+                _inputBuffer.SetAttack(targetCell, Time.unscaledTime);
+                return;
             }
-            else
-            {
-                ExecuteMeleeComboAttack(targetCell);
-            }
+
+            ExecuteMeleeComboAttack(targetCell);
         }
 
         private void ExecuteMeleeComboAttack(Vector3Int targetCellPos)
         {
             if (_grid == null || _combat.IsAttackOnCooldown) return;
+
+            // 타일 이동 후 선입력으로 발동된 경우, 도착한 현재 타일 기준으로 사거리 재검증 및 보정
+            Vector3Int playerCell = _grid.WorldToCell(transform.position);
+            playerCell.z = 0;
+            int chebyshevDist = Mathf.Max(Mathf.Abs(playerCell.x - targetCellPos.x), Mathf.Abs(playerCell.y - targetCellPos.y));
+            if (chebyshevDist == 0 || chebyshevDist > _stats.CurrentRange)
+            {
+                int stepX = Mathf.RoundToInt(_facingDirection.x);
+                int stepY = Mathf.RoundToInt(_facingDirection.y);
+                if (stepX == 0 && stepY == 0) stepY = -1;
+                targetCellPos = new Vector3Int(playerCell.x + stepX, playerCell.y + stepY, 0);
+            }
 
             // 콤보 유지 시간 체크 (이동했더라도 _comboResetTime 이내면 다음 타수로 진행)
             if (Time.time - _lastComboAttackTime > _comboResetTime)
@@ -213,25 +301,48 @@ namespace BagBack100.Player
 
             CurrentState = PlayerState.Attacking;
 
-            // 1. 타일에서 몬스터 찾기 및 위험도 맵(Danger Map) 갱신
-            GameObject occupant = null;
-            if (BagBack100.Core.TileSystem.Instance != null)
-            {
-                occupant = BagBack100.Core.TileSystem.Instance.GetEntityAtTile(targetCellPos);
-                BagBack100.Core.TileSystem.Instance.SetDanger(targetCellPos, 1f);
-            }
-
-            MonsterController monster = occupant != null ? occupant.GetComponent<MonsterController>() : null;
-
-            // 2. 장착 무기 및 타수별 이펙트/배율 결정
+            // 1. 장착 무기 데이터(SO) 조회 및 히트박스/피드백 배율 추출
             GameObject effectPrefab = _defaultMeleeEffectPrefab;
+            WeaponDataSO equippedWeapon = null;
+            float shakeMult = 1.0f;
+            float hitStopMult = 1.0f;
+
             if (_equipment != null)
             {
-                var weaponItem = _equipment.GetEquippedItem(BagBack100.Data.Core.EquipType.Weapon);
-                if (weaponItem != null && weaponItem.ItemData is BagBack100.Data.Models.WeaponDataSO weaponData)
+                var weaponItem = _equipment.GetEquippedItem(EquipType.Weapon);
+                if (weaponItem != null && weaponItem.ItemData is WeaponDataSO weaponData)
                 {
+                    equippedWeapon = weaponData;
+                    shakeMult = weaponData.shakeMultiplier;
+                    hitStopMult = weaponData.hitStopMultiplier;
                     GameObject weaponEffect = weaponData.GetComboEffectPrefab(currentCombo);
                     if (weaponEffect != null) effectPrefab = weaponEffect;
+                }
+            }
+
+            // 2. 무기별 그리드 히트박스(SingleTile / ForwardLine2 / WideSweep3) 산출 및 타겟 수집
+            _weaponHitboxCellBuffer.Clear();
+            if (equippedWeapon != null)
+            {
+                equippedWeapon.PopulateHitboxCells(playerCell, targetCellPos, _facingDirection, _weaponHitboxCellBuffer);
+            }
+            else
+            {
+                _weaponHitboxCellBuffer.Add(targetCellPos);
+            }
+
+            _meleeTargetBuffer.Clear();
+            if (BagBack100.Core.TileSystem.Instance != null)
+            {
+                for (int i = 0; i < _weaponHitboxCellBuffer.Count; i++)
+                {
+                    Vector3Int cell = _weaponHitboxCellBuffer[i];
+                    BagBack100.Core.TileSystem.Instance.SetDanger(cell, 1f);
+                    GameObject occupant = BagBack100.Core.TileSystem.Instance.GetEntityAtTile(cell);
+                    if (occupant != null && occupant != gameObject && !_meleeTargetBuffer.Contains(occupant))
+                    {
+                        _meleeTargetBuffer.Add(occupant);
+                    }
                 }
             }
 
@@ -253,17 +364,39 @@ namespace BagBack100.Player
 
             int finalDamage = Mathf.Max(1, Mathf.RoundToInt(_stats.CurrentAttack * dmgMultiplier));
 
-            _combat.PerformMeleeAttack(
-                monster != null ? monster.gameObject : null,
-                _stats.CurrentAttackSpeed,
-                finalDamage,
-                _facingDirection,
-                effectPrefab,
-                transform,
-                _meleeOffset,
-                comboScale,
-                isFinisher
-            );
+            if (_weaponHitboxCellBuffer.Count > 1)
+            {
+                _combat.PerformMultiTargetMeleeAttack(
+                    _meleeTargetBuffer,
+                    _stats.CurrentAttackSpeed,
+                    finalDamage,
+                    _facingDirection,
+                    effectPrefab,
+                    transform,
+                    _meleeOffset,
+                    comboScale,
+                    isFinisher,
+                    shakeMult,
+                    hitStopMult
+                );
+            }
+            else
+            {
+                GameObject singleTarget = _meleeTargetBuffer.Count > 0 ? _meleeTargetBuffer[0] : null;
+                _combat.PerformMeleeAttack(
+                    singleTarget,
+                    _stats.CurrentAttackSpeed,
+                    finalDamage,
+                    _facingDirection,
+                    effectPrefab,
+                    transform,
+                    _meleeOffset,
+                    comboScale,
+                    isFinisher,
+                    shakeMult,
+                    hitStopMult
+                );
+            }
         }
 
         #endregion
@@ -272,12 +405,11 @@ namespace BagBack100.Player
 
         private void HandleChargeStartInput()
         {
-            if (_combat.IsAttackOnCooldown || CurrentState == PlayerState.Attacking || CurrentState == PlayerState.Charging) return;
+            if (CurrentState == PlayerState.Charging) return;
 
-            if (CurrentState == PlayerState.Moving)
+            if (CurrentState == PlayerState.Moving || CurrentState == PlayerState.Attacking || _combat.IsAttackOnCooldown)
             {
-                _bufferedCommand = StartCharging;
-                _movement.CancelPath();
+                _inputBuffer.SetCharge(Time.unscaledTime);
                 return;
             }
 
@@ -434,11 +566,16 @@ namespace BagBack100.Player
             }
 
             GameObject effectPrefab = _defaultMeleeEffectPrefab;
+            float shakeMult = 1.0f;
+            float hitStopMult = 1.0f;
+
             if (_equipment != null)
             {
-                var weaponItem = _equipment.GetEquippedItem(BagBack100.Data.Core.EquipType.Weapon);
-                if (weaponItem != null && weaponItem.ItemData is BagBack100.Data.Models.WeaponDataSO weaponData)
+                var weaponItem = _equipment.GetEquippedItem(EquipType.Weapon);
+                if (weaponItem != null && weaponItem.ItemData is WeaponDataSO weaponData)
                 {
+                    shakeMult = weaponData.shakeMultiplier;
+                    hitStopMult = weaponData.hitStopMultiplier;
                     GameObject chargedFx = weaponData.GetChargedEffectPrefab();
                     if (chargedFx != null) effectPrefab = chargedFx;
                 }
@@ -459,7 +596,9 @@ namespace BagBack100.Player
                 transform,
                 lineOffset,
                 lineScale,
-                true
+                true,
+                shakeMult,
+                hitStopMult
             );
         }
 
@@ -491,13 +630,8 @@ namespace BagBack100.Player
                 }
             }
             
-            // 타일 안착 시 선입력 커맨드 실행
-            if (_bufferedCommand != null)
-            {
-                var cmd = _bufferedCommand;
-                _bufferedCommand = null;
-                cmd.Invoke();
-            }
+            // 타일 안착 시 유효 시간(Window) 내의 선입력 커맨드가 있다면 즉시 소비
+            TryConsumeBufferedCommand();
         }
 
         private void HandleMovementFinished()
@@ -505,6 +639,44 @@ namespace BagBack100.Player
             if (CurrentState == PlayerState.Moving)
             {
                 CurrentState = PlayerState.Idle;
+            }
+
+            TryConsumeBufferedCommand();
+        }
+
+        /// <summary>
+        /// 타일 안착 프레임 또는 공격 모션 락 해제 프레임에 호출되어,
+        /// 유효 시간(_inputBufferWindow) 내에 입력된 마지막 1개의 커맨드를 GC 할당 없이 즉시 발동합니다.
+        /// </summary>
+        private void TryConsumeBufferedCommand()
+        {
+            if (!_inputBuffer.IsValid(Time.unscaledTime, _inputBufferWindow))
+            {
+                _inputBuffer.Clear();
+                return;
+            }
+
+            BufferedCommand cmd = _inputBuffer;
+            _inputBuffer.Clear();
+
+            switch (cmd.Type)
+            {
+                case BufferedCommandType.Attack:
+                    if (_movement.IsMoving) _movement.CancelPath();
+                    ExecuteMeleeComboAttack(cmd.TargetCell);
+                    break;
+
+                case BufferedCommandType.Move:
+                    ExecuteStepMove(cmd.MoveDir);
+                    break;
+
+                case BufferedCommandType.Charge:
+                    if (Input.GetMouseButton(1))
+                    {
+                        if (_movement.IsMoving) _movement.CancelPath();
+                        StartCharging();
+                    }
+                    break;
             }
         }
     }
