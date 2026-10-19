@@ -8,8 +8,10 @@ using BagBack100.Dungeon;
 namespace BagBack100.Monster
 {
     /// <summary>
-    /// 몬스터의 평상시 이동(배회, 직진 추적, 측면 우회, 원거리 카이팅) 및 회피 기동을 전담하는 정적 헬퍼 클래스.
+    /// Role: 몬스터의 평상시 이동(배회, 직진 추적, 측면 우회, 원거리 카이팅) 및 회피 기동을 전담하는 정적 헬퍼 클래스.
     /// 행동 패턴 쿨타임이 도는 동안에도 독립적으로 타일 포지셔닝을 수행합니다.
+    /// Dependencies: MonsterController, TileSystem, Pathfinder
+    /// Events: 없음
     /// </summary>
     public static class MonsterLocomotion
     {

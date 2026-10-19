@@ -20,6 +20,11 @@ namespace BagBack100.Monster
         Dead        // 사망 상태
     }
 
+    /// <summary>
+    /// Role: 몬스터 1마리의 생명주기, 행동 루프(어그로 판정 → 가중치 랜덤 패턴 시전 → 이동), 반응형 회피/기절 인터럽트, 피격·사망 처리.
+    /// Dependencies: MonsterDataSO, MonsterPatternSO, MonsterLocomotion, EntityCombat, TileSystem, FogOfWarSystem, CombatFeedbackSystem, PlayerController
+    /// Events: GlobalEvents.OnEntityDamaged, GlobalEvents.OnMonsterDied (지역 이벤트: OnDamaged)
+    /// </summary>
     [RequireComponent(typeof(EntityCombat))]
     public class MonsterController : MonoBehaviour
     {
