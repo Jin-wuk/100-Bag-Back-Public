@@ -1,65 +1,65 @@
-using UnityEngine;
-
-/// <summary>
-/// È¶ºÒ, ºû³ª´Â ¼º¼Ò µî ÀÚÃ¼ÀûÀ¸·Î ÁÖº¯ ¾È°³¸¦ °È¾î³»´Â ±¤¿ø ¿ÀºêÁ§Æ®¿¡ ºÎÂøÇÏ´Â ÄÄÆ÷³ÍÆ®ÀÔ´Ï´Ù.
-/// </summary>
-
-namespace BagBack100.Dungeon
-{
-    public class FogVisionSource : MonoBehaviour
-    {
-        [Header("Vision Settings")]
-        [Tooltip("ÀÌ ±¤¿øÀÌ ¹àÈ÷´Â ½Ã¾ß ¹İ°æ (Å¸ÀÏ ¼ö)")]
-        [SerializeField] private int _visionRadius = 3;
-        [Tooltip("±¤¿ø ½Ã¾ß °¡ÀåÀÚ¸®ÀÇ ºÎµå·¯¿î °¨¼è Æø (Å¸ÀÏ ´ÜÀ§)")]
-        [SerializeField] private float _softEdgeWidth = 1.2f;
-        [Tooltip("º® ³Ê¸Ó ½Ã¾ß Â÷´Ü Àû¿ë ¿©ºÎ")]
-        [SerializeField] private bool _useLineOfSight = true;
-        [Tooltip("Ã¼Å©ÇÏ¸é ÇÃ·¹ÀÌ¾î°¡ ÀÌ ±¤¿ø À§Ä¡¸¦ ÇÑ ¹øÀÌ¶óµµ ¹ß°ßÇÑ µÚºÎÅÍ ÁÖº¯À» ¹àÈû")]
-        [SerializeField] private bool _requireDiscoveredToEmit = false;
-
-        public int VisionRadius => _visionRadius;
-        public float SoftEdgeWidth => _softEdgeWidth;
-        public bool UseLineOfSight => _useLineOfSight;
-        public bool RequireDiscoveredToEmit => _requireDiscoveredToEmit;
-
-        private void Start()
-        {
-            Register();
-        }
-
-        private void OnEnable()
-        {
-            Register();
-        }
-
-        private void OnDisable()
-        {
-            Unregister();
-        }
-
-        private void Register()
-        {
-            if (FogOfWarSystem.Instance != null)
-            {
-                FogOfWarSystem.Instance.RegisterVisionSource(this);
-            }
-        }
-
-        private void Unregister()
-        {
-            if (FogOfWarSystem.Instance != null)
-            {
-                FogOfWarSystem.Instance.UnregisterVisionSource(this);
-            }
-        }
-
-        public void NotifyVisionChanged()
-        {
-            if (FogOfWarSystem.Instance != null)
-            {
-                FogOfWarSystem.Instance.RequestVisionUpdate();
-            }
-        }
-    }
+using UnityEngine;
+
+/// <summary>
+/// íšƒë¶ˆ, ë¹›ë‚˜ëŠ” ì„±ì†Œ ë“± ìì²´ì ìœ¼ë¡œ ì£¼ë³€ ì•ˆê°œë¥¼ ê±·ì–´ë‚´ëŠ” ê´‘ì› ì˜¤ë¸Œì íŠ¸ì— ë¶€ì°©í•˜ëŠ” ì»´í¬ë„ŒíŠ¸ì…ë‹ˆë‹¤.
+/// </summary>
+
+namespace BagBack100.Dungeon
+{
+    public class FogVisionSource : MonoBehaviour
+    {
+        [Header("Vision Settings")]
+        [Tooltip("ì´ ê´‘ì›ì´ ë°íˆëŠ” ì‹œì•¼ ë°˜ê²½ (íƒ€ì¼ ìˆ˜)")]
+        [SerializeField] private int _visionRadius = 3;
+        [Tooltip("ê´‘ì› ì‹œì•¼ ê°€ì¥ìë¦¬ì˜ ë¶€ë“œëŸ¬ìš´ ê°ì‡  í­ (íƒ€ì¼ ë‹¨ìœ„)")]
+        [SerializeField] private float _softEdgeWidth = 1.2f;
+        [Tooltip("ë²½ ë„ˆë¨¸ ì‹œì•¼ ì°¨ë‹¨ ì ìš© ì—¬ë¶€")]
+        [SerializeField] private bool _useLineOfSight = true;
+        [Tooltip("ì²´í¬í•˜ë©´ í”Œë ˆì´ì–´ê°€ ì´ ê´‘ì› ìœ„ì¹˜ë¥¼ í•œ ë²ˆì´ë¼ë„ ë°œê²¬í•œ ë’¤ë¶€í„° ì£¼ë³€ì„ ë°í˜")]
+        [SerializeField] private bool _requireDiscoveredToEmit = false;
+
+        public int VisionRadius => _visionRadius;
+        public float SoftEdgeWidth => _softEdgeWidth;
+        public bool UseLineOfSight => _useLineOfSight;
+        public bool RequireDiscoveredToEmit => _requireDiscoveredToEmit;
+
+        private void Start()
+        {
+            Register();
+        }
+
+        private void OnEnable()
+        {
+            Register();
+        }
+
+        private void OnDisable()
+        {
+            Unregister();
+        }
+
+        private void Register()
+        {
+            if (FogOfWarSystem.Instance != null)
+            {
+                FogOfWarSystem.Instance.RegisterVisionSource(this);
+            }
+        }
+
+        private void Unregister()
+        {
+            if (FogOfWarSystem.Instance != null)
+            {
+                FogOfWarSystem.Instance.UnregisterVisionSource(this);
+            }
+        }
+
+        public void NotifyVisionChanged()
+        {
+            if (FogOfWarSystem.Instance != null)
+            {
+                FogOfWarSystem.Instance.RequestVisionUpdate();
+            }
+        }
+    }
 }

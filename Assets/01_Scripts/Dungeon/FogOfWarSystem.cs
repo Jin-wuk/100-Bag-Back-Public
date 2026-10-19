@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.Tilemaps;
 using BagBack100.Core;
 using BagBack100.Combat;
@@ -25,8 +26,9 @@ namespace BagBack100.Dungeon
         [SerializeField] private float _softEdgeWidth = 1.5f;
         [Tooltip("벽 너머 시야 차단(Raycast/Bresenham) 적용 여부")]
         [SerializeField] private bool _useLineOfSight = true;
+        [FormerlySerializedAs("_topWallExtraHeight")]
         [Tooltip("상단(북쪽) 벽면이 2칸 이상 높이일 때, 밝혀진 벽/바닥 위로 추가 개방할 수직 벽 타일 칸수")]
-        [SerializeField] private int _topWallExtraHeight = 1;
+        [SerializeField] private int _wallVerticalElevation = 1;
         [Tooltip("시야를 차단할 장애물 레이어")]
         [SerializeField] private LayerMask _obstacleLayerMask;
 
@@ -49,9 +51,12 @@ namespace BagBack100.Dungeon
 
         private Grid _grid;
         private Tilemap _wallTilemap;
+        private TilemapRenderer _fogTilemapRenderer;
         private Tile _runtimeFogTile;
+        private Texture2D _runtimeFogTileTexture;
         private Vector3Int _currentPlayerCell;
         private bool _isInitialized;
+        private bool _useCustomShader;
 
         private readonly Dictionary<Vector3Int, FogState> _fogStates = new Dictionary<Vector3Int, FogState>();
         private readonly Dictionary<Vector3Int, float> _targetAlphas = new Dictionary<Vector3Int, float>();
@@ -114,6 +119,15 @@ namespace BagBack100.Dungeon
             if (_fogMaskTexture != null)
             {
                 Destroy(_fogMaskTexture);
+            }
+            if (_runtimeFogTile != null)
+            {
+                if (_runtimeFogTile.sprite != null) Destroy(_runtimeFogTile.sprite);
+                Destroy(_runtimeFogTile);
+            }
+            if (_runtimeFogTileTexture != null)
+            {
+                Destroy(_runtimeFogTileTexture);
             }
             if (Instance == this) Instance = null;
         }
@@ -198,12 +212,17 @@ namespace BagBack100.Dungeon
                 }
             }
 
-            if (_fogTilemap.TryGetComponent<TilemapRenderer>(out var renderer))
+            if (_fogTilemap.TryGetComponent<TilemapRenderer>(out _fogTilemapRenderer))
             {
-                renderer.sortingOrder = _fogSortingOrder;
+                _fogTilemapRenderer.sortingOrder = _fogSortingOrder;
                 if (_fogMaterial != null)
                 {
-                    renderer.material = _fogMaterial;
+                    _fogTilemapRenderer.material = _fogMaterial;
+                    _useCustomShader = true;
+                }
+                else
+                {
+                    _useCustomShader = false;
                 }
             }
         }
@@ -217,9 +236,9 @@ namespace BagBack100.Dungeon
             float overlapScale = _fogMaterial != null ? 1.0f : 1.25f;
             float ppu = res / (Mathf.Max(0.01f, cellSizeX) * overlapScale);
 
-            Texture2D tex = new Texture2D(res, res, TextureFormat.RGBA32, false);
-            tex.filterMode = FilterMode.Bilinear;
-            tex.wrapMode = TextureWrapMode.Clamp;
+            _runtimeFogTileTexture = new Texture2D(res, res, TextureFormat.RGBA32, false);
+            _runtimeFogTileTexture.filterMode = FilterMode.Bilinear;
+            _runtimeFogTileTexture.wrapMode = TextureWrapMode.Clamp;
 
             Color[] pixels = new Color[res * res];
             for (int y = 0; y < res; y++)
@@ -242,10 +261,10 @@ namespace BagBack100.Dungeon
                 }
             }
 
-            tex.SetPixels(pixels);
-            tex.Apply();
+            _runtimeFogTileTexture.SetPixels(pixels);
+            _runtimeFogTileTexture.Apply();
 
-            Sprite sprite = Sprite.Create(tex, new Rect(0, 0, res, res), new Vector2(0.5f, 0.5f), ppu);
+            Sprite sprite = Sprite.Create(_runtimeFogTileTexture, new Rect(0, 0, res, res), new Vector2(0.5f, 0.5f), ppu);
             _runtimeFogTile = ScriptableObject.CreateInstance<Tile>();
             _runtimeFogTile.sprite = sprite;
             _runtimeFogTile.color = Color.white;
@@ -290,7 +309,10 @@ namespace BagBack100.Dungeon
                     _currentAlphas[cell] = 1f;
 
                     _fogTilemap.SetTile(cell, _runtimeFogTile);
-                    _fogTilemap.SetTileFlags(cell, TileFlags.None);
+                    if (!_useCustomShader)
+                    {
+                        _fogTilemap.SetTileFlags(cell, TileFlags.None);
+                    }
                     ApplyCellVisualAlpha(cell, 1f);
                 }
             }
@@ -304,8 +326,8 @@ namespace BagBack100.Dungeon
 
         private void UpdateShaderProperties()
         {
-            if (_fogTilemap == null || !_fogTilemap.TryGetComponent<TilemapRenderer>(out var renderer)) return;
-            Material mat = renderer.material;
+            if (_fogTilemapRenderer == null) return;
+            Material mat = _fogTilemapRenderer.material;
             if (mat == null) return;
 
             Vector3 worldOrigin = _grid.CellToWorld(new Vector3Int(_maskOriginCell.x, _maskOriginCell.y, 0));
@@ -399,8 +421,8 @@ namespace BagBack100.Dungeon
                 ComputeVisionFromSource(srcCell, src.VisionRadius, src.SoftEdgeWidth, src.UseLineOfSight);
             }
 
-            // 2.5. 상단(북쪽) 2칸 높이 외곽 벽 처리
-            if (_topWallExtraHeight > 0)
+            // 2.5. 상단(북쪽) 2칸 높이 외곽 벽 처리 (2.5D 수직 오프셋 보정)
+            if (_wallVerticalElevation > 0)
             {
                 _wallExtensionBuffer.Clear();
                 foreach (var visibleCell in _currentlyVisibleCells)
@@ -416,7 +438,7 @@ namespace BagBack100.Dungeon
                     Vector3Int baseWallCell = _wallExtensionBuffer[i];
                     float baseAlpha = _visibleCellBestAlphas.TryGetValue(baseWallCell, out float a) ? a : 0f;
 
-                    for (int h = 1; h <= _topWallExtraHeight; h++)
+                    for (int h = 1; h <= _wallVerticalElevation; h++)
                     {
                         Vector3Int upperCell = new Vector3Int(baseWallCell.x, baseWallCell.y + h, 0);
                         if (IsSightBlockedAtCell(upperCell))
@@ -496,7 +518,10 @@ namespace BagBack100.Dungeon
             if (!_fogTilemap.HasTile(cell))
             {
                 _fogTilemap.SetTile(cell, _runtimeFogTile);
-                _fogTilemap.SetTileFlags(cell, TileFlags.None);
+                if (!_useCustomShader)
+                {
+                    _fogTilemap.SetTileFlags(cell, TileFlags.None);
+                }
                 _currentAlphas[cell] = 1f;
             }
 
@@ -514,9 +539,13 @@ namespace BagBack100.Dungeon
         private void ApplyCellVisualAlpha(Vector3Int cell, float alpha)
         {
             float exploredRatio = Mathf.InverseLerp(_exploredColor.a, 1f, alpha);
-            Color baseColor = Color.Lerp(_exploredColor, _unexploredColor, exploredRatio);
-            baseColor.a = alpha;
-            _fogTilemap.SetColor(cell, baseColor);
+
+            if (!_useCustomShader)
+            {
+                Color baseColor = Color.Lerp(_exploredColor, _unexploredColor, exploredRatio);
+                baseColor.a = alpha;
+                _fogTilemap.SetColor(cell, baseColor);
+            }
 
             int ix = cell.x - _maskOriginCell.x;
             int iy = cell.y - _maskOriginCell.y;
@@ -582,8 +611,11 @@ namespace BagBack100.Dungeon
         // --- 몬스터 가시성 관리 ---
         public void RegisterMonster(MonsterController monster)
         {
-            if (monster == null || _trackedMonsters.Contains(monster)) return;
-            _trackedMonsters.Add(monster);
+            if (monster == null) return;
+            if (!_trackedMonsters.Contains(monster))
+            {
+                _trackedMonsters.Add(monster);
+            }
             UpdateSingleMonsterVisibility(monster);
         }
 

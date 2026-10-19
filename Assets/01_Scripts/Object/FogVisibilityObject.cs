@@ -4,9 +4,9 @@ namespace BagBack100.Dungeon
 {
     public enum FogVisibilityMode
     {
-        [Tooltip("ÇöÀç ½Ã¾ß(Visible) ¾È¿¡ ÀÖÀ» ¶§¸¸ º¸ÀÓ (µå¶ø ¾ÆÀÌÅÛ, Àº½Å ÇÔÁ¤ µî)")]
+        [Tooltip("í˜„ì¬ ì‹œì•¼(Visible) ì•ˆì— ìˆì„ ë•Œë§Œ ë³´ì„ (ë“œë ì•„ì´í…œ, ì€ì‹  í•¨ì • ë“±)")]
         VisibleOnly,
-        [Tooltip("ÇÑ ¹ø ¹ß°ßÇÏ¸é ½Ã¾ß ¹Û(Explored)À¸·Î ³ª°¡µµ ¾È°³ ¾Æ·¡¿¡ °è¼Ó º¸ÀÓ (º¸¹°»óÀÚ, °è´Ü, ¼º¼Ò µî)")]
+        [Tooltip("í•œ ë²ˆ ë°œê²¬í•˜ë©´ ì‹œì•¼ ë°–(Explored)ìœ¼ë¡œ ë‚˜ê°€ë„ ì•ˆê°œ ì•„ë˜ì— ê³„ì† ë³´ì„ (ë³´ë¬¼ìƒì, ê³„ë‹¨, ì„±ì†Œ ë“±)")]
         RememberWhenExplored
     }
 
@@ -15,12 +15,15 @@ namespace BagBack100.Dungeon
         [Header("Visibility Rules")]
         [SerializeField] private FogVisibilityMode _visibilityMode = FogVisibilityMode.RememberWhenExplored;
 
-        [Header("Target Renderers (ºñ¿öµÎ¸é ÇÏÀ§¿¡¼­ ÀÚµ¿ Å½»ö)")]
+        [Header("Target Renderers (ë¹„ì›Œë‘ë©´ í•˜ìœ„ì—ì„œ ìë™ íƒìƒ‰)")]
         [SerializeField] private SpriteRenderer[] _renderers;
 
-        [Header("Visible-Only Extras (¼±ÅÃ »çÇ×)")]
-        [Tooltip("ÇöÀç ½Ã¾ß(Visible) ¾È¿¡ ÀÖÀ» ¶§¸¸ ÄÓ ¿ÀºêÁ§Æ® (¹İÂ¦ÀÌ´Â ÀÌÆåÆ®, »óÈ£ÀÛ¿ë UI µî)")]
+        [Header("Visible-Only Extras (ì„ íƒ ì‚¬í•­)")]
+        [Tooltip("í˜„ì¬ ì‹œì•¼(Visible) ì•ˆì— ìˆì„ ë•Œë§Œ ì¼¤ ì˜¤ë¸Œì íŠ¸ (ë°˜ì§ì´ëŠ” ì´í™íŠ¸, ìƒí˜¸ì‘ìš© UI ë“±)")]
         [SerializeField] private GameObject[] _activeOnlyWhenVisible;
+
+        private FogState _lastAppliedState;
+        private bool _hasAppliedState;
 
         private void Awake()
         {
@@ -37,6 +40,7 @@ namespace BagBack100.Dungeon
 
         private void OnEnable()
         {
+            _hasAppliedState = false;
             if (FogOfWarSystem.Instance != null)
             {
                 FogOfWarSystem.Instance.RegisterObject(this);
@@ -52,11 +56,12 @@ namespace BagBack100.Dungeon
         }
 
         /// <summary>
-        /// ÇÁ¸®ÆÕ ¾øÀÌ ·±Å¸ÀÓ(ÄÚµå)¿¡¼­ AddComponent·Î ºÎÂøÇÒ ¶§ È£ÃâÇÏ¿© ¸ğµå ¼³Á¤ ¹× Áï½Ã µ¿±âÈ­
+        /// í”„ë¦¬íŒ¹ ì—†ì´ ëŸ°íƒ€ì„(ì½”ë“œ)ì—ì„œ AddComponentë¡œ ë¶€ì°©í•  ë•Œ í˜¸ì¶œí•˜ì—¬ ëª¨ë“œ ì„¤ì • ë° ì¦‰ì‹œ ë™ê¸°í™”
         /// </summary>
         public void InitializeRuntime(FogVisibilityMode mode)
         {
             _visibilityMode = mode;
+            _hasAppliedState = false;
             RefreshRendererCache();
             RequestVisibilityUpdate();
         }
@@ -79,6 +84,10 @@ namespace BagBack100.Dungeon
 
         public void ApplyFogState(FogState state)
         {
+            if (_hasAppliedState && _lastAppliedState == state) return;
+            _lastAppliedState = state;
+            _hasAppliedState = true;
+
             bool showSprite = state == FogState.Visible ||
                               (_visibilityMode == FogVisibilityMode.RememberWhenExplored && state == FogState.Explored);
 
@@ -86,7 +95,7 @@ namespace BagBack100.Dungeon
             {
                 for (int i = 0; i < _renderers.Length; i++)
                 {
-                    if (_renderers[i] != null)
+                    if (_renderers[i] != null && _renderers[i].enabled != showSprite)
                     {
                         _renderers[i].enabled = showSprite;
                     }
