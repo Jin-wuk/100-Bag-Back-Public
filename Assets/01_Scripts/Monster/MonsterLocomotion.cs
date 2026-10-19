@@ -8,8 +8,10 @@ using BagBack100.Dungeon;
 namespace BagBack100.Monster
 {
     /// <summary>
-    /// 몬스터의 평상시 이동(배회, 직진 추적, 측면 우회, 원거리 카이팅) 및 회피 기동을 전담하는 정적 헬퍼 클래스.
+    /// Role: 몬스터의 평상시 이동(배회, 직진 추적, 측면 우회, 원거리 카이팅) 및 회피 기동을 전담하는 정적 헬퍼 클래스.
     /// 행동 패턴 쿨타임이 도는 동안에도 독립적으로 타일 포지셔닝을 수행합니다.
+    /// Dependencies: MonsterController, TileSystem, Pathfinder
+    /// Events: 없음
     /// </summary>
     public static class MonsterLocomotion
     {
@@ -68,7 +70,7 @@ namespace BagBack100.Monster
                     TileSystem.Instance.TryOccupyTile(targetCell, monster.gameObject, currentCell))
                 {
                     Vector3 endPos = monster.Grid.GetCellCenterWorld(targetCell);
-                    yield return monster.StartCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
+                    yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
                 }
             }
         }
@@ -179,7 +181,7 @@ namespace BagBack100.Monster
                     TileSystem.Instance.TryOccupyTile(bestRetreatCell, monster.gameObject, monsterCell))
                 {
                     Vector3 endPos = monster.Grid.GetCellCenterWorld(bestRetreatCell);
-                    yield return monster.StartCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
+                    yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
                 }
                 yield break;
             }
@@ -204,7 +206,7 @@ namespace BagBack100.Monster
                     TileSystem.Instance.TryOccupyTile(strafeCell, monster.gameObject, monsterCell))
                 {
                     Vector3 endPos = monster.Grid.GetCellCenterWorld(strafeCell);
-                    yield return monster.StartCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
+                    yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
                 }
             }
         }
@@ -232,7 +234,7 @@ namespace BagBack100.Monster
 
             if (TileSystem.Instance != null && TileSystem.Instance.TryOccupyTile(nextCell, monster.gameObject, startCell))
             {
-                yield return monster.StartCoroutine(monster.MoveToTileRoutine(nextStepWorld, monster.Data.GetEffectiveMoveDuration()));
+                yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(nextStepWorld, monster.Data.GetEffectiveMoveDuration()));
             }
         }
 
