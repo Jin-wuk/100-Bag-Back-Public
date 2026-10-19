@@ -68,7 +68,7 @@ namespace BagBack100.Monster
                     TileSystem.Instance.TryOccupyTile(targetCell, monster.gameObject, currentCell))
                 {
                     Vector3 endPos = monster.Grid.GetCellCenterWorld(targetCell);
-                    yield return monster.StartCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
+                    yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
                 }
             }
         }
@@ -179,7 +179,7 @@ namespace BagBack100.Monster
                     TileSystem.Instance.TryOccupyTile(bestRetreatCell, monster.gameObject, monsterCell))
                 {
                     Vector3 endPos = monster.Grid.GetCellCenterWorld(bestRetreatCell);
-                    yield return monster.StartCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
+                    yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
                 }
                 yield break;
             }
@@ -204,7 +204,7 @@ namespace BagBack100.Monster
                     TileSystem.Instance.TryOccupyTile(strafeCell, monster.gameObject, monsterCell))
                 {
                     Vector3 endPos = monster.Grid.GetCellCenterWorld(strafeCell);
-                    yield return monster.StartCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
+                    yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
                 }
             }
         }
@@ -232,7 +232,7 @@ namespace BagBack100.Monster
 
             if (TileSystem.Instance != null && TileSystem.Instance.TryOccupyTile(nextCell, monster.gameObject, startCell))
             {
-                yield return monster.StartCoroutine(monster.MoveToTileRoutine(nextStepWorld, monster.Data.GetEffectiveMoveDuration()));
+                yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(nextStepWorld, monster.Data.GetEffectiveMoveDuration()));
             }
         }
 

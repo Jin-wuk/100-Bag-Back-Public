@@ -74,7 +74,7 @@ namespace BagBack100.Monster
                 if (TileSystem.Instance.TryOccupyTile(stepCell, monster.gameObject, currentCell))
                 {
                     Vector3 worldTarget = monster.Grid.GetCellCenterWorld(stepCell);
-                    yield return monster.StartCoroutine(monster.MoveToTileRoutine(worldTarget, stepMoveDuration, 0.1f));
+                    yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(worldTarget, stepMoveDuration, 0.1f));
                 }
                 else
                 {
