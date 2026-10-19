@@ -10,7 +10,7 @@
   - **좌클릭 3타 콤보 공격**: 이동(WASD) 후에도 `_comboResetTime`(1.5초) 이내 입력 시 `1타(1.0x) ➡️ 2타(Y축 반전 1.15x) ➡️ 3타(확대 강타 1.5x)` 콤보가 유지됩니다.
   - **우클릭 홀드 차징 강공격**: 우클릭을 `_chargeDuration`(0.6초) 동안 홀드하여 완충 후 떼면 전방 2칸 직선 타일(`_chargeLineLength = 2`)의 모든 적에게 강공격(`2.0x`)을 가합니다. 완충 전 마우스를 떼면 무효(캔슬) 처리됩니다.
 - **`PlayerInput.cs`**: WASD 4방향 이동, 마우스 8방향 조준, 좌클릭 일반 공격(`OnAttackInput`), 우클릭 차징 홀드/릴리즈(`OnChargeStartInput`/`OnChargeReleaseInput`), 인벤토리(`Tab`) 입력을 처리합니다.
-- **`PlayerMovement.cs`**: 그리드 타일 기반 이동을 수행합니다.
+- **`PlayerMovement.cs`**: 그리드 타일 기반 이동을 수행합니다. 고속 선형 이동 시 미세 Y축 바운스(`_hopHeight`), 발걸음 좌우 틸트 워블(`_wobbleAngle`), 도약/착지 스쿼시&스트레치(`_enableSquashAndStretch`)를 결합하여 GC Zero 기반의 유기적인 보행감(Locomotion Feel)을 제공합니다.
 - **`PlayerStatManager.cs`**: `MaxHp`/`MaxMp`와 `CurrentHp`/`CurrentMp`를 분리 관리하며, 피격 시 `GlobalEvents.OnEntityDamaged`를 발행합니다. `CurrentHp <= 0` 도달 시 `HandleDeath()`를 호출하여 가방과 장착 장비를 모두 증발시키고 `02_HubScene`으로 복귀시킵니다.
 - **`EntityCombat.cs` & `CombatFeedbackSystem.cs`**: 무기 이펙트 프리팹, 투사체(`Projectile.cs`), 절차적 타격 스파크, 데미지 플로팅 텍스트를 `Instantiate/Destroy` 없이 100% 오브젝트 풀링으로 처리하며, 타격 시 `CameraFollow.cs`의 카메라 쉐이크 및 마이크로 히트스톱(`GlobalEvents.OnCombatImpact`)을 구동합니다.
 - **`InventoryManager.cs`**: 플레이어 가방 슬롯 및 무게를 관리하며, `Awake` 시 `PlayerSessionData`에서 아이템과 가방 용량 보너스를 복원하고 변경 시 자동 동기화합니다.
