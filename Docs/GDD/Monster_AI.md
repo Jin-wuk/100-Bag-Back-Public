@@ -34,6 +34,16 @@
   * `globalPatternCooldown`: 패턴 시전 후 다음 패턴 추첨까지의 대기 시간. **이 쿨타임이 도는 동안에도 몬스터는 멈추지 않고 `movementStyle`에 따라 이동을 수행한다.**
   * **가중치 랜덤 채택 (Weighted Random Selection)**:
     * 우선순위 고정 방식이 아니라, 현재 거리 조건(`minRange` ~ `maxRange`)과 개별 쿨타임(`patternCooldown`)을 만족하는 후보 패턴들의 `weight` 합계를 구해 **확률 비례 주사위 추첨**으로 다음 패턴을 결정한다.
+  * **쿨타임 등록 시점**: 패턴 쿨타임(`patternCooldown`)과 글로벌 쿨타임은 **시전 시작 시점에 먼저 등록**하고, 정상 종료 시 다시 갱신한다. 돌진이 벽 충돌 기절로 끊겨도 쿨타임이 적용되어, 기절이 풀리자마자 같은 패턴을 다시 쓰지 않는다.
+
+### 2.1 인터럽트(회피/후방 탈출/기절)와 행동 코루틴 중단 규칙
+
+Unity의 `StopCoroutine`은 부모 코루틴만 멈추고, 부모 안에서 `StartCoroutine`으로 시작한 자식 코루틴(패턴, 이동 스텝, 타일 이동)은 계속 실행된다. 이를 방치하면 인터럽트 후에도 이전 이동이 위치를 계속 갱신하거나, 중단된 패턴이 전조 후 데미지를 준다.
+
+* **하위 코루틴 시작**: 행동 루프에서 파생되는 모든 코루틴은 `MonsterController.StartActionCoroutine()`으로 시작한다. 패턴 SO와 `MonsterLocomotion`도 `monster.StartCoroutine()` 대신 이 메서드를 사용해야 한다.
+* **일괄 중단**: 인터럽트(`TriggerInterruptRoutine`)와 사망(`Die`) 시 `StopActionCoroutines()`가 행동 루프, 인터럽트 루틴, 추적 중인 하위 코루틴을 모두 멈춘다.
+* **위치 정렬**: 타일 이동 도중 중단되면 이미 점유한 목적지 타일 좌표로 즉시 정렬해, 몬스터가 타일 사이에 걸치지 않게 한다.
+* **예외**: 피격 연출(`HitReactionRoutine`)은 행동 체인이 아니므로 인터럽트와 무관하게 유지된다.
 
 ---
 

@@ -6,8 +6,10 @@ using BagBack100.Core;
 namespace BagBack100.Monster
 {
     /// <summary>
-    /// 일직선 경로에 경고 장판을 깔고 돌진하는 패턴 레고 블록.
+    /// Role: 일직선 경로에 경고 장판을 깔고 돌진하는 패턴 레고 블록.
     /// 플레이어가 옆으로 피해서 몬스터가 벽(Obstacle)에 충돌하면 기절(Stun)하여 플레이어에게 프리딜 타임을 제공합니다.
+    /// Dependencies: MonsterController, MonsterLocomotion, TileSystem, Pathfinder
+    /// Events: GlobalEvents.OnCombatImpact (벽 충돌 시)
     /// </summary>
     [CreateAssetMenu(fileName = "Pattern_LinearCharge", menuName = "BagBack100/Monster/Patterns/Linear Charge")]
     public class ChargePatternSO : MonsterPatternSO

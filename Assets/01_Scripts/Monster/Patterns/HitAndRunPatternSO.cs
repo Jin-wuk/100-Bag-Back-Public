@@ -5,7 +5,9 @@ using BagBack100.Core;
 namespace BagBack100.Monster
 {
     /// <summary>
-    /// 날렵한 근거리 몬스터 전용: 짧은 전조 후 1칸 찌르기를 가한 뒤, 즉시 후방(또는 측면)으로 백스텝하여 빠지는 히트앤런 패턴 레고 블록.
+    /// Role: 날렵한 근거리 몬스터 전용: 짧은 전조 후 1칸 찌르기를 가한 뒤, 즉시 후방(또는 측면)으로 백스텝하여 빠지는 히트앤런 패턴 레고 블록.
+    /// Dependencies: MonsterController, MonsterLocomotion, TileSystem
+    /// Events: 없음
     /// </summary>
     [CreateAssetMenu(fileName = "Pattern_HitAndRun", menuName = "BagBack100/Monster/Patterns/Hit And Run")]
     public class HitAndRunPatternSO : MonsterPatternSO
