@@ -75,6 +75,10 @@ namespace BagBack100.Monster
         private Coroutine _interruptCoroutine;
         private Coroutine _hitReactionCoroutine;
 
+        // 행동 체인(패턴/이동/회피)에서 파생된 하위 코루틴 핸들.
+        // 부모 코루틴을 StopCoroutine 해도 StartCoroutine으로 시작한 자식은 멈추지 않으므로, 인터럽트·사망 시 여기서 일괄 중단한다.
+        private readonly List<Coroutine> _actionChildCoroutines = new List<Coroutine>(4);
+
         // 타일 이동 중 인터럽트 위치 정합성 플래그
         private bool _isMovingToTile;
         private Vector3 _currentDestinationWorldPos;
@@ -176,6 +180,9 @@ namespace BagBack100.Monster
 
             while (!_isDead)
             {
+                // 이전 반복의 하위 코루틴은 모두 yield로 완료를 기다렸으므로 종료된 핸들만 남아 있음
+                _actionChildCoroutines.Clear();
+
                 if (_isStunned || _isEvading)
                 {
                     yield return null;
@@ -217,7 +224,11 @@ namespace BagBack100.Monster
                             patternTriggered = true;
                             _isExecutingPattern = true;
 
-                            yield return StartCoroutine(selectedPattern.ExecuteRoutine(this));
+                            // 패턴이 인터럽트(돌진 벽 충돌 기절 등)로 끊겨 아래 등록 코드가 실행되지 않아도 쿨타임이 적용되도록 시전 시점에 먼저 등록
+                            _patternCooldownExpirations[selectedPattern] = Time.time + selectedPattern.patternCooldown;
+                            _nextGlobalPatternTime = Time.time + _monsterData.globalPatternCooldown;
+
+                            yield return StartActionCoroutine(selectedPattern.ExecuteRoutine(this));
 
                             _isExecutingPattern = false;
                             HideAimLines();
@@ -239,7 +250,7 @@ namespace BagBack100.Monster
                             // 패턴 SO가 하나도 등록되지 않은 에셋을 위한 안전 폴백 기본 근접 공격
                             patternTriggered = true;
                             _isExecutingPattern = true;
-                            yield return StartCoroutine(ExecuteFallbackMeleeRoutine());
+                            yield return StartActionCoroutine(ExecuteFallbackMeleeRoutine());
                             _isExecutingPattern = false;
                             _nextGlobalPatternTime = Time.time + _monsterData.globalPatternCooldown;
                             _isInRecoveryWindow = true;
@@ -255,7 +266,7 @@ namespace BagBack100.Monster
                 }
 
                 // 2. 다음 행동 패턴 쿨타임이 돌고 있거나 사거리 조건이 맞지 않으면 멈추지 않고 이동(배회 또는 전투 포지셔닝) 수행!
-                yield return StartCoroutine(MonsterLocomotion.ExecuteMoveStepRoutine(this));
+                yield return StartActionCoroutine(MonsterLocomotion.ExecuteMoveStepRoutine(this));
 
                 // 3. 1칸 이동 후 다음 걸음까지의 이동 인터벌 대기 (비인식 배회 중에는 1.4배 여유롭게 이동)
                 float waitInterval = isCurrentlyAggroed
@@ -483,7 +494,7 @@ namespace BagBack100.Monster
                 CombatFeedbackSystem.EnsureInstance().SpawnFloatingStatusText(
                     transform.position, "EVADE", new Color(0.25f, 0.95f, 1f, 1f), 4.2f);
                 Vector3 endPos = Grid.GetCellCenterWorld(targetCell);
-                yield return StartCoroutine(MoveToTileRoutine(endPos, 0.14f, 0.35f));
+                yield return StartActionCoroutine(MoveToTileRoutine(endPos, 0.14f, 0.35f));
                 // 회피 직후 짧은 숨고르기 (0.35초 딜타임)
                 yield return new WaitForSeconds(0.35f);
             }
@@ -543,7 +554,7 @@ namespace BagBack100.Monster
                     Vector3 endPos = Grid.GetCellCenterWorld(chosenCell);
                     int actualDist = MonsterLocomotion.GetManhattanDistance(currentCell, chosenCell);
                     float moveDuration = actualDist > 1 ? 0.22f : 0.16f;
-                    yield return StartCoroutine(MoveToTileRoutine(endPos, moveDuration, 0.4f));
+                    yield return StartActionCoroutine(MoveToTileRoutine(endPos, moveDuration, 0.4f));
                 }
             }
 
@@ -594,23 +605,7 @@ namespace BagBack100.Monster
 
         private void TriggerInterruptRoutine(IEnumerator routine)
         {
-            if (_behaviorCoroutine != null)
-            {
-                StopCoroutine(_behaviorCoroutine);
-                _behaviorCoroutine = null;
-            }
-            if (_interruptCoroutine != null)
-            {
-                StopCoroutine(_interruptCoroutine);
-                _interruptCoroutine = null;
-            }
-
-            // 이동 도중 피격/기절 등으로 인터럽트가 발생했다면, 공중에 뜨거나 중간 타일에 걸치지 않도록 목적지 좌표로 즉시 정렬
-            if (_isMovingToTile)
-            {
-                transform.position = _currentDestinationWorldPos;
-                _isMovingToTile = false;
-            }
+            StopActionCoroutines();
 
             _isExecutingPattern = false;
             ClearActiveWarnings();
@@ -621,11 +616,56 @@ namespace BagBack100.Monster
 
         private IEnumerator RunInterruptAndResumeBehavior(IEnumerator interruptRoutine)
         {
-            yield return StartCoroutine(interruptRoutine);
+            yield return StartActionCoroutine(interruptRoutine);
             _interruptCoroutine = null;
+            _actionChildCoroutines.Clear();
             if (!_isDead)
             {
                 _behaviorCoroutine = StartCoroutine(BehaviorRoutine());
+            }
+        }
+
+        /// <summary>
+        /// 행동 체인에 속하는 하위 코루틴(패턴, 이동 스텝, 타일 이동)을 시작하고 핸들을 추적합니다.
+        /// 패턴 SO와 MonsterLocomotion도 monster.StartCoroutine 대신 이 메서드를 사용해야 인터럽트 시 함께 중단됩니다.
+        /// </summary>
+        public Coroutine StartActionCoroutine(IEnumerator routine)
+        {
+            Coroutine handle = StartCoroutine(routine);
+            _actionChildCoroutines.Add(handle);
+            return handle;
+        }
+
+        /// <summary>
+        /// 행동 루프, 인터럽트 루틴과 그 하위 코루틴을 모두 중단합니다.
+        /// (부모만 멈추면 자식 패턴이 계속 실행되어 기절/사망 후에도 데미지를 주거나, 두 이동 코루틴이 동시에 위치를 갱신하는 문제가 생김)
+        /// </summary>
+        private void StopActionCoroutines()
+        {
+            if (_behaviorCoroutine != null)
+            {
+                StopCoroutine(_behaviorCoroutine);
+                _behaviorCoroutine = null;
+            }
+            if (_interruptCoroutine != null)
+            {
+                StopCoroutine(_interruptCoroutine);
+                _interruptCoroutine = null;
+            }
+            for (int i = 0; i < _actionChildCoroutines.Count; i++)
+            {
+                if (_actionChildCoroutines[i] != null)
+                {
+                    StopCoroutine(_actionChildCoroutines[i]);
+                }
+            }
+            _actionChildCoroutines.Clear();
+
+            // 타일 이동 도중 중단됐다면, 공중에 뜨거나 중간 타일에 걸치지 않도록 이미 점유한 목적지 좌표로 즉시 정렬
+            if (_isMovingToTile)
+            {
+                transform.position = _currentDestinationWorldPos;
+                _isMovingToTile = false;
             }
         }
 
@@ -974,10 +1014,9 @@ namespace BagBack100.Monster
             _isDead = true;
             CurrentState = MonsterAIState.Dead;
 
+            StopActionCoroutines();
             ClearActiveWarnings();
             HideAimLines();
-            if (_behaviorCoroutine != null) StopCoroutine(_behaviorCoroutine);
-            if (_interruptCoroutine != null) StopCoroutine(_interruptCoroutine);
 
             if (_monsterData != null && _monsterData.HasTrait("EXPLOSIVE") && Grid != null)
             {
