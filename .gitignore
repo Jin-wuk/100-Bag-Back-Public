@@ -36,3 +36,6 @@ sysinfo.txt
 *.app
 crashlytics-build.properties
 *.app.zip
+
+# Claude Code personal settings
+.claude/settings.local.json
