@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b69bd8aa2f820ac449998d5bc742466b, type: 3}
   m_Name: Pattern_RangedProjectile
   m_EditorClassIdentifier: 
-  patternName: New Pattern
-  weight: 10
+  patternName: Magic Bolt
+  weight: 65
   minRange: 1
-  maxRange: 1
-  patternCooldown: 3
-  telegraphDuration: 0.7
-  recoveryDuration: 0.5
+  maxRange: 6
+  patternCooldown: 1.5
+  telegraphDuration: 0.55
+  recoveryDuration: 0.4
   damageMultiplier: 1
   projectilePrefab: {fileID: 0}
   projectileCount: 1

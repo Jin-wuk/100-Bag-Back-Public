@@ -31,8 +31,6 @@ namespace BagBack100.Monster
         [Tooltip("발사 전 telegraphDuration 동안 얇은 레이저 조준선을 표시할지 여부")]
         public bool showLaserAimLine = true;
 
-        private readonly List<Vector3> _aimDirectionsBuffer = new List<Vector3>(8);
-
         public override IEnumerator ExecuteRoutine(MonsterController monster)
         {
             if (monster == null || monster.Player == null)
@@ -60,12 +58,13 @@ namespace BagBack100.Monster
             baseAimDir = baseAimDir.sqrMagnitude > 0.001f ? baseAimDir.normalized : Vector3.down;
 
             // 2. 탄환 개수 및 확산 각도에 따른 발사 방향 벡터 산출 (45도가 아닌 임의 각도도 완벽 지원)
-            _aimDirectionsBuffer.Clear();
+            List<Vector3> aimDirectionsBuffer = monster.PatternDirectionsBuffer;
+            aimDirectionsBuffer.Clear();
             float baseAngle = Mathf.Atan2(baseAimDir.y, baseAimDir.x) * Mathf.Rad2Deg;
 
             if (projectileCount <= 1)
             {
-                _aimDirectionsBuffer.Add(baseAimDir);
+                aimDirectionsBuffer.Add(baseAimDir);
             }
             else
             {
@@ -75,7 +74,7 @@ namespace BagBack100.Monster
                 {
                     float angleDeg = (baseAngle - halfSpread) + (stepAngle * i);
                     float angleRad = angleDeg * Mathf.Deg2Rad;
-                    _aimDirectionsBuffer.Add(new Vector3(Mathf.Cos(angleRad), Mathf.Sin(angleRad), 0f).normalized);
+                    aimDirectionsBuffer.Add(new Vector3(Mathf.Cos(angleRad), Mathf.Sin(angleRad), 0f).normalized);
                 }
             }
 
@@ -84,7 +83,7 @@ namespace BagBack100.Monster
             if (showLaserAimLine)
             {
                 float lineLength = Mathf.Max(4f, maxRange + 1f);
-                monster.ShowAimLines(monster.transform.position, _aimDirectionsBuffer, lineLength);
+                monster.ShowAimLines(monster.transform.position, aimDirectionsBuffer, lineLength);
             }
 
             yield return new WaitForSeconds(telegraph);
@@ -93,9 +92,9 @@ namespace BagBack100.Monster
 
             // 4. 투사체 일제 발사
             int damage = CalculateDamage(monster);
-            for (int i = 0; i < _aimDirectionsBuffer.Count; i++)
+            for (int i = 0; i < aimDirectionsBuffer.Count; i++)
             {
-                monster.SpawnMonsterProjectile(projectilePrefab, _aimDirectionsBuffer[i], damage);
+                monster.SpawnMonsterProjectile(projectilePrefab, aimDirectionsBuffer[i], damage);
             }
         }
     }

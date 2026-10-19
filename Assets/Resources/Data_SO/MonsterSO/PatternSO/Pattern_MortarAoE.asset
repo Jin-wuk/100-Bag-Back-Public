@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f2d3cbc2e51a2245828e97925d47361, type: 3}
   m_Name: Pattern_MortarAoE
   m_EditorClassIdentifier: 
-  patternName: New Pattern
-  weight: 10
-  minRange: 1
-  maxRange: 5
-  patternCooldown: 3
-  telegraphDuration: 0.7
+  patternName: Arcane Mortar
+  weight: 35
+  minRange: 2
+  maxRange: 6
+  patternCooldown: 4
+  telegraphDuration: 0.9
   recoveryDuration: 0.5
-  damageMultiplier: 1
-  blastRadius: 0
+  damageMultiplier: 1.2
+  blastRadius: 1
   leadTargetTile: 1

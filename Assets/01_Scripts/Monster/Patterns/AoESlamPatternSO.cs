@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using BagBack100.Core;
 
 namespace BagBack100.Monster
 {
@@ -12,7 +13,7 @@ namespace BagBack100.Monster
     }
 
     /// <summary>
-    /// 바닥에 다중 타일 경고 장판(Telegraph)을 깔고 일정 시간 뒤 광역 즉발 피해를 주는 내려치기 패턴 레고 블록.
+    /// 바닥에 다중 타일 경고 장판(Telegraph)을 깔고 일정 시간 뒤 광역 즉발 피해를 주는 내려치기 패턴 레고 블록 (Stateless Flyweight).
     /// </summary>
     [CreateAssetMenu(fileName = "Pattern_AoESlam", menuName = "BagBack100/Monster/Patterns/AoE Slam")]
     public class AoESlamPatternSO : MonsterPatternSO
@@ -23,8 +24,6 @@ namespace BagBack100.Monster
         [Range(1, 4)]
         public int radius = 1;
 
-        private readonly List<Vector3Int> _targetCellsBuffer = new List<Vector3Int>(25);
-
         public override IEnumerator ExecuteRoutine(MonsterController monster)
         {
             if (monster == null || monster.Grid == null || monster.Player == null)
@@ -34,7 +33,8 @@ namespace BagBack100.Monster
 
             Vector3Int centerCell = monster.GetCurrentCell();
             float totalTelegraph = GetEffectiveTelegraphDuration(monster);
-            _targetCellsBuffer.Clear();
+            List<Vector3Int> targetCellsBuffer = monster.PatternCellsBuffer;
+            targetCellsBuffer.Clear();
 
             if (shape == AoESlamShape.ExpandingDiamond)
             {
@@ -48,7 +48,11 @@ namespace BagBack100.Monster
                             if (Mathf.Abs(x) + Mathf.Abs(y) == r)
                             {
                                 Vector3Int cell = centerCell + new Vector3Int(x, y, 0);
-                                _targetCellsBuffer.Add(cell);
+                                if (Pathfinder.IsObstacle(monster.Grid, new Vector2Int(cell.x, cell.y), monster.ObstacleLayerMask))
+                                {
+                                    continue;
+                                }
+                                targetCellsBuffer.Add(cell);
                                 float remainingTime = totalTelegraph - (stepTime * r) + 0.15f;
                                 monster.SpawnWarning(monster.Grid.GetCellCenterWorld(cell), remainingTime);
                             }
@@ -69,7 +73,11 @@ namespace BagBack100.Monster
                     for (int width = -1; width <= 1; width++)
                     {
                         Vector3Int cell = centerCell + (forward * depth) + (perp * width);
-                        _targetCellsBuffer.Add(cell);
+                        if (Pathfinder.IsObstacle(monster.Grid, new Vector2Int(cell.x, cell.y), monster.ObstacleLayerMask))
+                        {
+                            continue;
+                        }
+                        targetCellsBuffer.Add(cell);
                         monster.SpawnWarning(monster.Grid.GetCellCenterWorld(cell), totalTelegraph);
                     }
                 }
@@ -83,7 +91,11 @@ namespace BagBack100.Monster
                     for (int y = -radius; y <= radius; y++)
                     {
                         Vector3Int cell = centerCell + new Vector3Int(x, y, 0);
-                        _targetCellsBuffer.Add(cell);
+                        if (Pathfinder.IsObstacle(monster.Grid, new Vector2Int(cell.x, cell.y), monster.ObstacleLayerMask))
+                        {
+                            continue;
+                        }
+                        targetCellsBuffer.Add(cell);
                         monster.SpawnWarning(monster.Grid.GetCellCenterWorld(cell), totalTelegraph);
                     }
                 }
@@ -92,7 +104,7 @@ namespace BagBack100.Monster
 
             Vector3 hitDir = (monster.Player.transform.position - monster.transform.position).normalized;
             int damage = CalculateDamage(monster);
-            monster.DealDamageToPlayerIfInCells(_targetCellsBuffer, damage, hitDir, true);
+            monster.DealDamageToPlayerIfInCells(targetCellsBuffer, damage, hitDir, true);
         }
     }
 }

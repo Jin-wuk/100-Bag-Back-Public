@@ -31,7 +31,7 @@ namespace BagBack100.Monster
                 yield break;
             }
 
-            if (monster.Player == null)
+            if (monster.Player == null || !monster.IsAggroed)
             {
                 yield return PatrolStepRoutine(monster);
                 yield break;
@@ -40,13 +40,6 @@ namespace BagBack100.Monster
             Vector3Int monsterCell = monster.GetCurrentCell();
             Vector3Int playerCell = monster.GetPlayerCell();
             int gridDist = GetChebyshevDistance(monsterCell, playerCell);
-
-            // ZOC(인식 반경) 밖이면 평화롭게 배회
-            if (gridDist > monster.Data.zocRadius)
-            {
-                yield return PatrolStepRoutine(monster);
-                yield break;
-            }
 
             switch (monster.Data.movementStyle)
             {

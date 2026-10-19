@@ -11,6 +11,15 @@ using BagBack100.Player;
 
 namespace BagBack100.Monster
 {
+    public enum MonsterAIState
+    {
+        Patrol,     // 비인식 상태: 주변 4방향 타일 랜덤 배회 및 대기
+        Aggro,      // 전투/추적 상태: 이동 스타일 포지셔닝 + 가중치 랜덤 패턴 시전
+        Evading,    // 회피 인터럽트 상태: 능동 스텝 회피 또는 피격 후방 이탈 중
+        Stunned,    // 기절 인터럽트 상태: 돌진 중 벽 충돌 등으로 행동 불능
+        Dead        // 사망 상태
+    }
+
     [RequireComponent(typeof(EntityCombat))]
     public class MonsterController : MonoBehaviour
     {
@@ -25,6 +34,8 @@ namespace BagBack100.Monster
         public int CurrentHp { get; private set; }
         public int CurrentShield { get; private set; }
         public int InstanceID => gameObject.GetInstanceID();
+        public MonsterAIState CurrentState { get; private set; } = MonsterAIState.Patrol;
+        public bool IsAggroed => _isAggroed;
 
         public EntityCombat Combat { get; private set; }
         public Grid Grid { get; private set; }
@@ -33,9 +44,16 @@ namespace BagBack100.Monster
         public AttackWarningUI WarningPrefab => _warningPrefab;
         public GameObject DefaultProjectilePrefab => _defaultProjectilePrefab;
 
+        // Stateless PatternSO(플라이웨이트 패턴)의 동시성 오염 및 GC 할당을 완벽 방지하기 위한 인스턴스별 전용 버퍼
+        public List<Vector3Int> PatternCellsBuffer { get; } = new List<Vector3Int>(25);
+        public List<Vector3> PatternDirectionsBuffer { get; } = new List<Vector3>(8);
+
         public event Action OnDamaged;
 
         // 런타임 상태 플래그
+        private bool _isAggroed;
+        private float _aggroExpireTime;
+        private const float AggroHoldDuration = 6.0f;
         private bool _isExecutingPattern;
         private bool _isStunned;
         private bool _isEvading;
@@ -145,7 +163,7 @@ namespace BagBack100.Monster
         }
 
         // =====================================================================
-        // 메인 AI 루프: [이동 템포]와 [가중치 랜덤 패턴 시전]의 독립적 분리
+        // 메인 AI 루프: [FSM 어그로 전이] + [이동 템포] + [가중치 랜덤 패턴 시전]의 독립적 분리
         // =====================================================================
         private IEnumerator BehaviorRoutine()
         {
@@ -166,13 +184,29 @@ namespace BagBack100.Monster
                     continue;
                 }
 
+                int gridDist = Player != null
+                    ? MonsterLocomotion.GetChebyshevDistance(GetCurrentCell(), GetPlayerCell())
+                    : 999;
+
+                bool wasAggroed = _isAggroed;
+                bool isCurrentlyAggroed = EvaluateAggroState(gridDist);
+
+                // 비인식(Patrol) -> 어그로(Aggro) 최초 진입 시 '!' 팝업과 함께 0.25초 인지 반응 딜레이 부여
+                if (!wasAggroed && isCurrentlyAggroed)
+                {
+                    yield return new WaitForSeconds(0.25f);
+                    if (_isDead || _isStunned || _isEvading) continue;
+                    gridDist = Player != null
+                        ? MonsterLocomotion.GetChebyshevDistance(GetCurrentCell(), GetPlayerCell())
+                        : 999;
+                }
+
                 bool patternTriggered = false;
 
-                // 1. 글로벌 패턴 쿨타임이 준비되었고 플레이어가 인식 범위(ZOC) 안에 있다면 가중치 랜덤 패턴 추첨 시도
-                if (Player != null && Time.time >= _nextGlobalPatternTime)
+                // 1. 어그로 상태이며 글로벌 패턴 쿨타임이 준비되었을 때 가중치 랜덤 패턴 추첨 시도
+                if (isCurrentlyAggroed && Player != null && Time.time >= _nextGlobalPatternTime)
                 {
-                    int gridDist = MonsterLocomotion.GetChebyshevDistance(GetCurrentCell(), GetPlayerCell());
-                    if (gridDist <= _monsterData.zocRadius)
+                    if (gridDist <= _monsterData.zocRadius + 1)
                     {
                         if (TrySelectWeightedPattern(gridDist, out MonsterPatternSO selectedPattern))
                         {
@@ -212,12 +246,82 @@ namespace BagBack100.Monster
                     continue;
                 }
 
-                // 2. 다음 행동 패턴 쿨타임이 돌고 있거나 사거리 조건이 맞지 않으면 멈추지 않고 이동(포지셔닝) 수행!
+                // 2. 다음 행동 패턴 쿨타임이 돌고 있거나 사거리 조건이 맞지 않으면 멈추지 않고 이동(배회 또는 전투 포지셔닝) 수행!
                 yield return StartCoroutine(MonsterLocomotion.ExecuteMoveStepRoutine(this));
 
-                // 3. 1칸 이동 후 다음 걸음까지의 이동 인터벌 대기
-                yield return new WaitForSeconds(_monsterData.GetEffectiveMoveInterval());
+                // 3. 1칸 이동 후 다음 걸음까지의 이동 인터벌 대기 (비인식 배회 중에는 1.4배 여유롭게 이동)
+                float waitInterval = isCurrentlyAggroed
+                    ? _monsterData.GetEffectiveMoveInterval()
+                    : _monsterData.GetEffectiveMoveInterval() * 1.4f;
+                yield return new WaitForSeconds(waitInterval);
             }
+        }
+
+        /// <summary>
+        /// 플레이어와의 거리 및 시야(LOS)를 바탕으로 Patrol <-> Aggro 상태 전이를 판정하고 시각 피드백(!, ?)을 표시합니다.
+        /// </summary>
+        private bool EvaluateAggroState(int gridDistToPlayer)
+        {
+            if (Player == null || _monsterData == null)
+            {
+                _isAggroed = false;
+                CurrentState = MonsterAIState.Patrol;
+                return false;
+            }
+
+            bool inZoc = gridDistToPlayer <= _monsterData.zocRadius;
+            bool canSensePlayer = inZoc && (gridDistToPlayer <= 2 || HasLineOfSightToPlayer());
+
+            if (canSensePlayer)
+            {
+                _aggroExpireTime = Time.time + AggroHoldDuration;
+                if (!_isAggroed)
+                {
+                    _isAggroed = true;
+                    CurrentState = MonsterAIState.Aggro;
+                    CombatFeedbackSystem.EnsureInstance().SpawnFloatingStatusText(
+                        transform.position, "!", new Color(1f, 0.22f, 0.2f, 1f), 5.6f);
+                }
+            }
+            else if (_isAggroed)
+            {
+                int leashDist = _monsterData.zocRadius + 4;
+                if (Time.time >= _aggroExpireTime || gridDistToPlayer > leashDist)
+                {
+                    _isAggroed = false;
+                    CurrentState = MonsterAIState.Patrol;
+                    CombatFeedbackSystem.EnsureInstance().SpawnFloatingStatusText(
+                        transform.position, "?", new Color(1f, 0.9f, 0.25f, 1f), 5.0f);
+                }
+            }
+
+            if (!_isStunned && !_isEvading && !_isDead)
+            {
+                CurrentState = _isAggroed ? MonsterAIState.Aggro : MonsterAIState.Patrol;
+            }
+
+            return _isAggroed;
+        }
+
+        public void ForceAggro()
+        {
+            if (_isDead) return;
+            _aggroExpireTime = Time.time + AggroHoldDuration;
+            if (!_isAggroed)
+            {
+                _isAggroed = true;
+                if (!_isStunned && !_isEvading) CurrentState = MonsterAIState.Aggro;
+                CombatFeedbackSystem.EnsureInstance().SpawnFloatingStatusText(
+                    transform.position, "!", new Color(1f, 0.22f, 0.2f, 1f), 5.6f);
+            }
+        }
+
+        public bool HasLineOfSightToPlayer()
+        {
+            if (Player == null) return false;
+            if (_obstacleLayerMask.value == 0) return true;
+            RaycastHit2D hit = Physics2D.Linecast(transform.position, Player.transform.position, _obstacleLayerMask);
+            return hit.collider == null;
         }
 
         /// <summary>
@@ -335,6 +439,7 @@ namespace BagBack100.Monster
         private IEnumerator AgileEvasiveStepRoutine(Vector3 attackDir)
         {
             _isEvading = true;
+            CurrentState = MonsterAIState.Evading;
 
             // 억까 방지: 0.15초 인간적인 반응 지연
             yield return new WaitForSeconds(0.15f);
@@ -342,6 +447,7 @@ namespace BagBack100.Monster
             if (_isDead || _isStunned || Grid == null || TileSystem.Instance == null)
             {
                 _isEvading = false;
+                if (!_isDead && !_isStunned) CurrentState = _isAggroed ? MonsterAIState.Aggro : MonsterAIState.Patrol;
                 yield break;
             }
 
@@ -365,6 +471,8 @@ namespace BagBack100.Monster
             // 코너나 벽에 몰려 양쪽 측면이 모두 막혀 있으면 회피 실패! (플레이어의 포지셔닝 보상)
             if (targetCell != currentCell && TileSystem.Instance.TryOccupyTile(targetCell, gameObject, currentCell))
             {
+                CombatFeedbackSystem.EnsureInstance().SpawnFloatingStatusText(
+                    transform.position, "EVADE", new Color(0.25f, 0.95f, 1f, 1f), 4.2f);
                 Vector3 endPos = Grid.GetCellCenterWorld(targetCell);
                 yield return StartCoroutine(MoveToTileRoutine(endPos, 0.14f, 0.35f));
                 // 회피 직후 짧은 숨고르기 (0.35초 딜타임)
@@ -372,11 +480,13 @@ namespace BagBack100.Monster
             }
 
             _isEvading = false;
+            if (!_isDead && !_isStunned) CurrentState = _isAggroed ? MonsterAIState.Aggro : MonsterAIState.Patrol;
         }
 
         private IEnumerator RangedEscapeOnHitRoutine()
         {
             _isEvading = true;
+            CurrentState = MonsterAIState.Evading;
             ClearActiveWarnings();
             HideAimLines();
 
@@ -419,6 +529,8 @@ namespace BagBack100.Monster
 
                 if (chosenCell != currentCell && TileSystem.Instance.TryOccupyTile(chosenCell, gameObject, currentCell))
                 {
+                    CombatFeedbackSystem.EnsureInstance().SpawnFloatingStatusText(
+                        transform.position, "ESCAPE", new Color(0.8f, 0.5f, 1f, 1f), 4.2f);
                     Vector3 endPos = Grid.GetCellCenterWorld(chosenCell);
                     int actualDist = MonsterLocomotion.GetManhattanDistance(currentCell, chosenCell);
                     float moveDuration = actualDist > 1 ? 0.22f : 0.16f;
@@ -429,6 +541,7 @@ namespace BagBack100.Monster
             // 탈출 직후 자세 복구 딜레이 (공정한 파훼 빈틈 0.35초)
             yield return new WaitForSeconds(0.35f);
             _isEvading = false;
+            if (!_isDead && !_isStunned) CurrentState = _isAggroed ? MonsterAIState.Aggro : MonsterAIState.Patrol;
         }
 
         /// <summary>
@@ -443,10 +556,14 @@ namespace BagBack100.Monster
         private IEnumerator StunRoutine(float duration)
         {
             _isStunned = true;
+            CurrentState = MonsterAIState.Stunned;
             _isExecutingPattern = false;
             _isEvading = false;
             ClearActiveWarnings();
             HideAimLines();
+
+            CombatFeedbackSystem.EnsureInstance().SpawnFloatingStatusText(
+                transform.position, "STUN!", new Color(1f, 0.88f, 0.15f, 1f), 4.8f);
 
             // 기절 시각 피드백 (노란색 점멸)
             SpriteRenderer primary = (_renderers != null && _renderers.Length > 0) ? _renderers[0] : null;
@@ -463,6 +580,7 @@ namespace BagBack100.Monster
                 primary.color = origColor;
             }
             _isStunned = false;
+            if (!_isDead) CurrentState = _isAggroed ? MonsterAIState.Aggro : MonsterAIState.Patrol;
         }
 
         private void TriggerInterruptRoutine(IEnumerator routine)
@@ -782,6 +900,9 @@ namespace BagBack100.Monster
             if (_hitReactionCoroutine != null) StopCoroutine(_hitReactionCoroutine);
             _hitReactionCoroutine = StartCoroutine(HitReactionRoutine(hitDirection, isHeavyHit));
 
+            // 피격 시 비인식 상태였다면 즉시 어그로 활성화
+            ForceAggro();
+
             // 원거리 몬스터(RangedKiting): 보호막이 없을 때 피격당하면 쿨타임 기반으로 후방 탈출 인터럽트 발동
             if (!hadShield &&
                 !_isStunned &&
@@ -840,6 +961,7 @@ namespace BagBack100.Monster
         {
             if (_isDead) return;
             _isDead = true;
+            CurrentState = MonsterAIState.Dead;
 
             ClearActiveWarnings();
             HideAimLines();

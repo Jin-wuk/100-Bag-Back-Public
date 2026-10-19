@@ -284,6 +284,38 @@ namespace BagBack100.Combat
             StartCoroutine(AnimateDamageTextRoutine(tmp, startPos, baseColor, isHeavyHit));
         }
 
+        /// <summary>
+        /// 몬스터 AI 상태 전이(!, ?), 능동 회피(EVADE), 후방 이탈(ESCAPE), 벽 충돌 기절(STUN!) 등 전술 텍스트를 풀링하여 팝업합니다.
+        /// </summary>
+        public void SpawnFloatingStatusText(Vector3 worldPos, string statusText, Color color, float fontSize = 4.6f)
+        {
+            TextMeshPro tmp = null;
+            while (DamageTextPool.Count > 0 && tmp == null)
+            {
+                tmp = DamageTextPool.Dequeue();
+            }
+
+            if (tmp == null)
+            {
+                GameObject go = new GameObject("PooledDamageText");
+                go.transform.SetParent(transform, false);
+                tmp = go.AddComponent<TextMeshPro>();
+                tmp.alignment = TextAlignmentOptions.Center;
+                tmp.enableWordWrapping = false;
+                tmp.sortingOrder = 60;
+            }
+
+            Vector3 startPos = worldPos + new Vector3(0f, 0.55f, 0f);
+            tmp.transform.position = startPos;
+            tmp.text = statusText;
+            tmp.fontSize = fontSize;
+            tmp.color = color;
+            tmp.transform.localScale = Vector3.one;
+            tmp.gameObject.SetActive(true);
+
+            StartCoroutine(AnimateDamageTextRoutine(tmp, startPos, color, true));
+        }
+
         private IEnumerator AnimateDamageTextRoutine(TextMeshPro tmp, Vector3 startPos, Color baseColor, bool isHeavyHit)
         {
             float duration = isHeavyHit ? 0.65f : 0.5f;

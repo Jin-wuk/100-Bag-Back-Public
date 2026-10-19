@@ -396,6 +396,7 @@ MonoBehaviour:
   _playerPrefab: {fileID: 8512937500303504559, guid: d7ab76544ca784842ad6cf9233b76fd7, type: 3}
   _monsterPrefabPool:
   - {fileID: 4769375905301041180, guid: 8df9a16836a132d4796e502b6c008942, type: 3}
+  - {fileID: 4769375905301041180, guid: a8e9c16836a132d4796e502b6c008999, type: 3}
   - {fileID: 5063341003800382751, guid: 7423487f6c961634da54a17013396bd0, type: 3}
   _chestPrefabPool: []
   _trapPrefabPool: []
@@ -738,7 +739,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8481942133169383068, guid: 26e5ddcf777669241a2be382fd37d064, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

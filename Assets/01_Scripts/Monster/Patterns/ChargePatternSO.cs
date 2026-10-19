@@ -23,8 +23,6 @@ namespace BagBack100.Monster
         [Min(0f)]
         public float wallStunDuration = 1.5f;
 
-        private readonly List<Vector3Int> _chargePathCells = new List<Vector3Int>(8);
-
         public override IEnumerator ExecuteRoutine(MonsterController monster)
         {
             if (monster == null || monster.Grid == null || monster.Player == null || TileSystem.Instance == null)
@@ -36,7 +34,8 @@ namespace BagBack100.Monster
             Vector3 toPlayer = (monster.Player.transform.position - monster.transform.position).normalized;
             Vector3Int chargeDir = MonsterLocomotion.SnapTo4WayCell(toPlayer);
 
-            _chargePathCells.Clear();
+            List<Vector3Int> chargePathCells = monster.PatternCellsBuffer;
+            chargePathCells.Clear();
             float telegraph = GetEffectiveTelegraphDuration(monster);
             bool willHitWall = false;
 
@@ -49,7 +48,7 @@ namespace BagBack100.Monster
                     willHitWall = true;
                     break;
                 }
-                _chargePathCells.Add(nextCell);
+                chargePathCells.Add(nextCell);
                 monster.SpawnWarning(monster.Grid.GetCellCenterWorld(nextCell), telegraph);
             }
 
@@ -60,10 +59,10 @@ namespace BagBack100.Monster
             int damage = CalculateDamage(monster);
             Vector3 hitDirWorld = new Vector3(chargeDir.x, chargeDir.y, 0f).normalized;
 
-            for (int i = 0; i < _chargePathCells.Count; i++)
+            for (int i = 0; i < chargePathCells.Count; i++)
             {
                 Vector3Int currentCell = monster.GetCurrentCell();
-                Vector3Int stepCell = _chargePathCells[i];
+                Vector3Int stepCell = chargePathCells[i];
 
                 // 경로상의 플레이어 충돌 판정
                 if (!hasHitPlayer && monster.GetPlayerCell() == stepCell)

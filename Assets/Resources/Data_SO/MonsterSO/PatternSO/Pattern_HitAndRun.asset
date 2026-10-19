@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c631b05c13404a74c9662387a889a38c, type: 3}
   m_Name: Pattern_HitAndRun
   m_EditorClassIdentifier: 
-  patternName: New Pattern
-  weight: 10
+  patternName: Hit And Run
+  weight: 65
   minRange: 1
   maxRange: 1
-  patternCooldown: 3
-  telegraphDuration: 0.7
-  recoveryDuration: 0.5
+  patternCooldown: 2.8
+  telegraphDuration: 0.45
+  recoveryDuration: 0.4
   damageMultiplier: 1
   retreatSteps: 2
-  backstepDuration: 0.12
+  backstepDuration: 0.14

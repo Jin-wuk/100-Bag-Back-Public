@@ -12,26 +12,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d0d86b18684e3841ba46b0404489e53, type: 3}
   m_Name: WizardMonster
   m_EditorClassIdentifier: 
-  monsterID: 0
-  monsterName: 
+  monsterID: 103
+  monsterName: Arcane Wizard
   type: 0
-  hp: 50
+  hp: 45
   atk: 10
-  def: 5
+  def: 3
   speed: 5
-  range: 1
+  range: 4
   zocRadius: 7
   movementStyle: 2
-  moveDuration: 0.3
+  moveDuration: 0.28
   moveInterval: 0.25
   globalPatternCooldown: 2
-  telegraphTime: 0.8
-  evasiveStepCooldown: 4
-  escapeOnHitCooldown: 6
+  telegraphTime: 0.7
+  evasiveStepCooldown: 0
+  escapeOnHitCooldown: 5
   patterns:
   - {fileID: 11400000, guid: 383059750893ca5448f47af073a15ada, type: 2}
   - {fileID: 11400000, guid: ae0b1cbccf780c248b84d377bdbe87bc, type: 2}
-  - {fileID: 11400000, guid: 5ad4d5d017cbf2845a57487eb7651c4b, type: 2}
   traits: []
   dropPoolID: 0
-  goldDropBase: 0
+  goldDropBase: 18

@@ -1,12 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using BagBack100.Core;
 using BagBack100.Player;
 
 namespace BagBack100.Monster
 {
     /// <summary>
-    /// 원거리 곡사/낙하 포격 패턴 레고 블록.
+    /// 원거리 곡사/낙하 포격 패턴 레고 블록 (Stateless Flyweight).
     /// 비행 궤적에는 장판을 깔지 않고, 탄환이 떨어질 '최종 착탄 타일(Landing Cell)'에만 경고 장판을 표시하여 이동 경로 제한(Area Denial)을 유도합니다.
     /// </summary>
     [CreateAssetMenu(fileName = "Pattern_MortarAoE", menuName = "BagBack100/Monster/Patterns/Mortar AoE")]
@@ -18,8 +19,6 @@ namespace BagBack100.Monster
         public int blastRadius = 0;
         [Tooltip("체크 시 플레이어가 이동 중인 방향 1칸 앞에 장판을 깔아 진행 경로를 차단합니다.")]
         public bool leadTargetTile = true;
-
-        private readonly List<Vector3Int> _impactCellsBuffer = new List<Vector3Int>(13);
 
         public override IEnumerator ExecuteRoutine(MonsterController monster)
         {
@@ -40,7 +39,8 @@ namespace BagBack100.Monster
                 }
             }
 
-            _impactCellsBuffer.Clear();
+            List<Vector3Int> impactCellsBuffer = monster.PatternCellsBuffer;
+            impactCellsBuffer.Clear();
             float telegraph = GetEffectiveTelegraphDuration(monster);
 
             for (int x = -blastRadius; x <= blastRadius; x++)
@@ -50,7 +50,11 @@ namespace BagBack100.Monster
                     if (Mathf.Abs(x) + Mathf.Abs(y) <= blastRadius)
                     {
                         Vector3Int cell = targetCenterCell + new Vector3Int(x, y, 0);
-                        _impactCellsBuffer.Add(cell);
+                        if (Pathfinder.IsObstacle(monster.Grid, new Vector2Int(cell.x, cell.y), monster.ObstacleLayerMask))
+                        {
+                            continue;
+                        }
+                        impactCellsBuffer.Add(cell);
                         monster.SpawnWarning(monster.Grid.GetCellCenterWorld(cell), telegraph);
                     }
                 }
@@ -60,7 +64,7 @@ namespace BagBack100.Monster
 
             Vector3 hitDir = (monster.Grid.GetCellCenterWorld(targetCenterCell) - monster.transform.position).normalized;
             int damage = CalculateDamage(monster);
-            monster.DealDamageToPlayerIfInCells(_impactCellsBuffer, damage, hitDir, true);
+            monster.DealDamageToPlayerIfInCells(impactCellsBuffer, damage, hitDir, true);
         }
     }
 }
