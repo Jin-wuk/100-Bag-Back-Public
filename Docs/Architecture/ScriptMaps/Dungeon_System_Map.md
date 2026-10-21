@@ -7,26 +7,26 @@
 ```mermaid
 graph TD
     %% Scriptable Objects
-    subgraph Data Layer
-        DD[DungeonData.cs\n- Chunk Layout\n- Monster/Trap/Exit Prefabs]
+    subgraph DataLayer["Data Layer"]
+        DD["DungeonData.cs<br>- Chunk Layout<br>- Monster/Trap/Exit Prefabs"]
     end
 
     %% Managers & Core Logic
-    subgraph Logic Layer
-        DG[DungeonGenerator.cs\n- Mode: FixedMap / ProceduralChunks\n- Flood Fill (BFS) & Zone Spawning]
-        FOW[FogOfWarSystem.cs\n- 3-State Fog: Unexplored / Explored / Visible\n- Bresenham LOS & Dynamic Mask Texture\n- North 2-Tile Elevation Offset]
-        LS[LootSystem.cs\n- Field Loot Spawner\n- Auto FogVisibilityObject Attach]
+    subgraph LogicLayer["Logic Layer"]
+        DG["DungeonGenerator.cs<br>- Mode: FixedMap / ProceduralChunks<br>- Flood Fill (BFS) & Zone Spawning"]
+        FOW["FogOfWarSystem.cs<br>- 3-State Fog: Unexplored / Explored / Visible<br>- Bresenham LOS & Dynamic Mask Texture<br>- North 2-Tile Elevation Offset"]
+        LS["LootSystem.cs<br>- Field Loot Spawner<br>- Auto FogVisibilityObject Attach"]
     end
 
     %% Views & Objects
-    subgraph View/Object Layer
-        DZ[DungeonZone.cs\n- Start / Combat / Chest / Corridor / Exit\n- Box Bounds & Gizmos]
-        DC[DungeonChunk.cs\n- Post-MVP 개별 청크]
-        DE[DungeonExit.cs\n- Trigger Detection\n- Scene Transition]
-        UI[DungeonEntranceUI.cs\n- Enter Dungeon]
-        FVO[FogVisibilityObject.cs\n- VisibleOnly / RememberWhenExplored\n- Renderer Culling Sync]
-        FVS[FogVisionSource.cs\n- Torch / Shrine Light Source\n- RequireDiscovered Option]
-        SHADER[FogOfDungeonMist.shader\n- Bilinear Mask Sampling\n- Smooth Edge Gradient]
+    subgraph ViewLayer["View / Object Layer"]
+        DZ["DungeonZone.cs<br>- Start / Combat / Chest / Corridor / Exit<br>- Box Bounds & Gizmos"]
+        DC["DungeonChunk.cs<br>- Post-MVP 개별 청크"]
+        DE["DungeonExit.cs<br>- Trigger Detection<br>- Scene Transition"]
+        UI["DungeonEntranceUI.cs<br>- Enter Dungeon"]
+        FVO["FogVisibilityObject.cs<br>- VisibleOnly / RememberWhenExplored<br>- Renderer Culling Sync"]
+        FVS["FogVisionSource.cs<br>- Torch / Shrine Light Source<br>- RequireDiscovered Option"]
+        SHADER["FogOfDungeonMist.shader<br>- Bilinear Mask Sampling<br>- Smooth Edge Gradient"]
     end
 
     %% Dependencies
