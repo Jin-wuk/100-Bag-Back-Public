@@ -24,7 +24,6 @@
 | 에셋 | 출처 | 넣을 위치 |
 | --- | --- | --- |
 | GUI Parts (PONETI) | [Unity Asset Store](https://assetstore.unity.com/packages/2d/gui/icons/gui-parts-159068) | `Assets/Resources/Sprites/GUI_Parts/` |
-| Free UI build package | (링크 입력) | `Assets/Resources/Sprites/Free UI build package/` |
 | Effect and FX Pixel (Free) (bdragon1727) | [itch.io](https://bdragon1727.itch.io/750-effect-and-fx-pixel-all) | `Assets/Resources/Effect/Effect and FX Pixel All Free/` |
 | 48x48 Shader Slash (Free) (bdragon1727) | [itch.io](https://bdragon1727.itch.io/250-pixel-shader-slash) | `Assets/Resources/Effect/48x48 Shader Slash Free/` |
 
