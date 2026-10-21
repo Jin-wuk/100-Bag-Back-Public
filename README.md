@@ -50,9 +50,9 @@
 
 | 시스템 | 한 줄 설명 | 주요 코드 |
 | --- | --- | --- |
-| 몬스터 AI 패턴 | 공격 패턴을 ScriptableObject로 분리해 조합하고, 가중치 랜덤으로 패턴을 고릅니다. 모든 공격은 바닥 장판으로 먼저 예고합니다. | `Assets/01_Scripts/Monster/` |
-| 격자 전투·선입력 | 이동과 공격 중 하나를 고르게 하고, 행동 사이에 누른 입력을 한 칸짜리 슬롯에 저장했다가 바로 이어서 실행합니다. | `Assets/01_Scripts/Player/PlayerController.cs`, `Assets/01_Scripts/Combat/` |
-| 전장의 안개 | 가 본 곳과 지금 보이는 곳만 드러나고, 벽 너머는 가려집니다. 안개 경계는 마스크 텍스처와 셰이더로 부드럽게 그립니다. | `Assets/01_Scripts/Dungeon/FogOfWarSystem.cs` |
+| 몬스터 AI 패턴 | 공격 패턴을 ScriptableObject로 분리해 조합하고, 가중치 랜덤으로 패턴을 고릅니다. 모든 공격은 바닥 장판으로 먼저 예고합니다. | [MonsterController.cs](Assets/01_Scripts/Monster/MonsterController.cs)<br>[MonsterPatternSO.cs](Assets/01_Scripts/Monster/Patterns/MonsterPatternSO.cs)<br>[Patterns/](Assets/01_Scripts/Monster/Patterns/) |
+| 격자 전투·선입력 | 이동과 공격 중 하나를 고르게 하고, 행동 사이에 누른 입력을 한 칸짜리 슬롯에 저장했다가 바로 이어서 실행합니다. | [PlayerController.cs](Assets/01_Scripts/Player/PlayerController.cs)<br>[PlayerInput.cs](Assets/01_Scripts/Player/PlayerInput.cs)<br>[Combat/](Assets/01_Scripts/Combat/) |
+| 전장의 안개 | 가 본 곳과 지금 보이는 곳만 드러나고, 벽 너머는 가려집니다. 안개 경계는 마스크 텍스처와 셰이더로 부드럽게 그립니다. | [FogOfWarSystem.cs](Assets/01_Scripts/Dungeon/FogOfWarSystem.cs)<br>[FogOfDungeonMist.shader](Assets/Resources/Shader/FogOfDungeonMist.shader) |
 
 설계 이유와 문제 해결 과정은 포트폴리오에 정리했습니다.
 
