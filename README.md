@@ -15,6 +15,23 @@
 2. `Assets/Scenes/02_HubScene.unity`를 열고 Play를 누릅니다.
 3. 기지에서 던전 입구를 클릭하면 `03_DungeonScene`으로 이동합니다. 탈출 포탈에 도착하거나 사망하면 기지로 돌아옵니다.
 
+> 재배포가 금지된 외부 에셋은 레포에 포함하지 않았습니다. 아래 [외부 에셋](#외부-에셋)을 받아 지정된 폴더에 넣어야 UI와 이펙트가 정상적으로 보입니다.
+
+## 외부 에셋
+
+**레포에 포함하지 않은 에셋** (라이선스상 재배포 금지, 직접 받아서 넣어야 함)
+
+| 에셋 | 출처 | 넣을 위치 |
+| --- | --- | --- |
+| GUI Parts (PONETI) | [Unity Asset Store](https://assetstore.unity.com/packages/2d/gui/icons/gui-parts-159068) | `Assets/Resources/Sprites/GUI_Parts/` |
+| Free UI build package | (링크 입력) | `Assets/Resources/Sprites/Free UI build package/` |
+| Effect and FX Pixel (Free) (bdragon1727) | [itch.io](https://bdragon1727.itch.io/750-effect-and-fx-pixel-all) | `Assets/Resources/Effect/Effect and FX Pixel All Free/` |
+| 48x48 Shader Slash (Free) (bdragon1727) | [itch.io](https://bdragon1727.itch.io/250-pixel-shader-slash) | `Assets/Resources/Effect/48x48 Shader Slash Free/` |
+
+**레포에 포함된 에셋** (CC0)
+
+- [Kenney](https://www.kenney.nl) — Tiny Dungeon, Isometric Miniature Dungeon / Farm / Library
+
 ## 조작법
 
 | 입력 | 동작 |
