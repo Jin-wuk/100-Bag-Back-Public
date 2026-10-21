@@ -39,3 +39,13 @@ crashlytics-build.properties
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# 재배포 금지 외부 에셋 (README의 "외부 에셋" 참고)
+/Assets/Resources/Sprites/GUI_Parts/
+/Assets/Resources/Sprites/GUI_Parts.meta
+/Assets/Resources/Sprites/Free UI build package/
+/Assets/Resources/Sprites/Free UI build package.meta
+/Assets/Resources/Effect/Effect and FX Pixel All Free/
+/Assets/Resources/Effect/Effect and FX Pixel All Free.meta
+/Assets/Resources/Effect/48x48 Shader Slash Free/
+/Assets/Resources/Effect/48x48 Shader Slash Free.meta
