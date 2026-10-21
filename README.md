@@ -5,7 +5,6 @@
 
 ![플레이 화면 (GIF 교체 예정)](https://placehold.co/960x540.png?text=100+Bags+Back+Gameplay)
 
-- **포트폴리오**: (노션 링크 입력)
 - **개발 형태**: 1인 개인 프로젝트 (기획·개발)
 - **엔진**: Unity 2022.3.62f3 (2D), C#
 
@@ -53,7 +52,7 @@
 | 격자 전투·선입력 | 이동과 공격 중 하나를 고르게 하고, 행동 사이에 누른 입력을 한 칸짜리 슬롯에 저장했다가 바로 이어서 실행합니다. | [PlayerController.cs](Assets/01_Scripts/Player/PlayerController.cs)<br>[PlayerInput.cs](Assets/01_Scripts/Player/PlayerInput.cs)<br>[Combat/](Assets/01_Scripts/Combat/) |
 | 전장의 안개 | 가 본 곳과 지금 보이는 곳만 드러나고, 벽 너머는 가려집니다. 안개 경계는 마스크 텍스처와 셰이더로 부드럽게 그립니다. | [FogOfWarSystem.cs](Assets/01_Scripts/Dungeon/FogOfWarSystem.cs)<br>[FogOfDungeonMist.shader](Assets/Resources/Shader/FogOfDungeonMist.shader) |
 
-설계 이유와 문제 해결 과정은 포트폴리오에 정리했습니다.
+전체 구조도, 씬 간 데이터 흐름, 시스템별 클래스 구성은 [Docs/ARCHITECTURE.md](Docs/ARCHITECTURE.md)에 정리했습니다.
 
 ## 폴더 구조
 
@@ -63,7 +62,7 @@ Assets/01_Scripts/
 ├─ Core/      타일 점유, 길찾기, 카메라, 전역 이벤트(GlobalEvents)
 ├─ Data/      ScriptableObject 데이터(몬스터, 무기, 아이템)와 저장 데이터
 ├─ Dungeon/   던전 구성, 전장의 안개, 탈출 포탈
-├─ Editor/    CSV 데이터 임포터
+├─ Editor/    CSV 데이터 임포터 (현재 비활성)
 ├─ Hub/       기지 상호작용, 창고
 ├─ Monster/   몬스터 행동 루프, 이동 성향, 공격 패턴(Patterns/)
 ├─ Object/    안개 가시성, 바닥 아이템
@@ -71,8 +70,8 @@ Assets/01_Scripts/
 └─ UI/        인벤토리·장비·창고 UI
 
 Docs/
-├─ GDD/           기획 문서
-└─ Architecture/  구조 문서, 개발 지침
+├─ ARCHITECTURE.md  전체 구조 문서
+└─ Architecture/    시스템별 상세 명세(ScriptMaps), 기술 부채 목록
 ```
 
 ## 개발 방식
