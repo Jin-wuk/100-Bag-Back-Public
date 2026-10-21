@@ -62,7 +62,7 @@ Assets/01_Scripts/
 ├─ Core/      타일 점유, 길찾기, 카메라, 전역 이벤트(GlobalEvents)
 ├─ Data/      ScriptableObject 데이터(몬스터, 무기, 아이템)와 저장 데이터
 ├─ Dungeon/   던전 구성, 전장의 안개, 탈출 포탈
-├─ Editor/    CSV 데이터 임포터
+├─ Editor/    CSV 데이터 임포터 (현재 비활성)
 ├─ Hub/       기지 상호작용, 창고
 ├─ Monster/   몬스터 행동 루프, 이동 성향, 공격 패턴(Patterns/)
 ├─ Object/    안개 가시성, 바닥 아이템
@@ -72,7 +72,7 @@ Assets/01_Scripts/
 Docs/
 ├─ ARCHITECTURE.md  전체 구조 문서
 ├─ Architecture/    시스템별 상세 명세(ScriptMaps), 기술 부채 목록
-├─ GDD/             기획 문서
+├─ GDD/             기획 문서 (현재 구현 기준) + 로드맵
 ├─ Agent/           AI 에이전트용 개발 지침
 └─ Archive/         초기 기획 단계 문서 (현재 구현과 다름)
 ```
