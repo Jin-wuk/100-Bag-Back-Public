@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e4aee141b478414e9f5569a7665126a, type: 3}
+  m_Name: NormalDungeonData
+  m_EditorClassIdentifier: 
+  gridWidth: 2
+  gridHeight: 2
+  chunkOffset: {x: 29, y: 29}
+  chunkSlots:
+  - possibleChunkPrefabs:
+    - {fileID: 1465753149088533172, guid: e8745576e619b7c408548be0b26a9fe0, type: 3}
+  - possibleChunkPrefabs:
+    - {fileID: 1465753149088533172, guid: e8745576e619b7c408548be0b26a9fe0, type: 3}
+  - possibleChunkPrefabs:
+    - {fileID: 1465753149088533172, guid: e8745576e619b7c408548be0b26a9fe0, type: 3}
+  - possibleChunkPrefabs:
+    - {fileID: 1465753149088533172, guid: e8745576e619b7c408548be0b26a9fe0, type: 3}
+  monsterCountPerChunk: 2
+  trapCountPerChunk: 1
+  monsterPrefab: {fileID: 4769375905301041180, guid: 8df9a16836a132d4796e502b6c008942, type: 3}
+  trapPrefab: {fileID: 709572298007640017, guid: 583d8656933d57c4fb2b969400b8c471, type: 3}
+  exitPrefab: {fileID: 2438186420317738188, guid: 00acfe0bdf3b7a84db10595098f61626, type: 3}

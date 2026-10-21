@@ -1,0 +1,153 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using BagBack100.Data.Core;
+
+namespace BagBack100.Player
+{
+    [RequireComponent(typeof(InventoryManager))]
+    public class EquipmentManager : MonoBehaviour
+    {
+        public static event Action<EquipmentManager> OnManagerCreated;
+
+        public event Action OnEquipmentChanged;
+        public event Action<string> OnEquipmentFailed;
+
+        private Dictionary<EquipType, RuntimeItem> _equippedItems = new Dictionary<EquipType, RuntimeItem>();
+        private InventoryManager _inventoryManager;
+
+        private void Awake()
+        {
+            _inventoryManager = GetComponent<InventoryManager>();
+            RestoreFromSession();
+            OnManagerCreated?.Invoke(this);
+        }
+
+        private void RestoreFromSession()
+        {
+            _equippedItems.Clear();
+            foreach (var kvp in PlayerSessionData.EquippedItems)
+            {
+                if (kvp.Value != null && kvp.Value.ItemData != null)
+                {
+                    _equippedItems[kvp.Key] = kvp.Value;
+                }
+            }
+        }
+
+        private void NotifyEquipmentChanged()
+        {
+            PlayerSessionData.SaveEquipment(_equippedItems);
+            OnEquipmentChanged?.Invoke();
+        }
+
+        private void Start()
+        {
+            // Removed direct UI finding, now relying on OnManagerCreated
+        }
+
+        public bool TryEquip(RuntimeItem item)
+        {
+            if (item == null || item.ItemData == null || item.ItemData.category != ItemCategory.Equipment)
+                return false;
+
+            if (!(item.ItemData is BagBack100.Data.Models.EquipmentDataSO eqData))
+                return false;
+
+            EquipType type = eqData.equipType;
+            int originalSlot = item.SlotIndex;
+
+            // 기존에 장착된 동일 부위 아이템이 있다면 먼저 해제 시도 (인벤토리 공간 확보를 위해 장착할 아이템을 먼저 치워둠)
+            if (_equippedItems.TryGetValue(type, out RuntimeItem oldItem) && oldItem != null)
+            {
+                _inventoryManager.RemoveItem(item);
+                
+                if (!Unequip(type))
+                {
+                    // 해제 실패 (예: 가방 공간 부족) 시 원래 상태로 복구
+                    _inventoryManager.AddItemAt(item, originalSlot);
+                    return false;
+                }
+            }
+            else
+            {
+                _inventoryManager.RemoveItem(item);
+            }
+
+            if (type == EquipType.Backpack && eqData is BagBack100.Data.Models.BackpackDataSO bagData)
+            {
+                _inventoryManager.UpdateBagCapacity(bagData.bagAddedSlots, bagData.bagMaxWeight);
+            }
+
+            _equippedItems[type] = item;
+            
+            NotifyEquipmentChanged();
+            return true;
+        }
+
+        public bool Unequip(EquipType type)
+        {
+            if (_equippedItems.TryGetValue(type, out RuntimeItem oldItem) && oldItem != null)
+            {
+                if (!_inventoryManager.TryAddNextAvailableSlot(oldItem))
+                {
+                    OnEquipmentFailed?.Invoke("가방에 빈 공간이 없습니다.");
+                    return false;
+                }
+
+                if (type == EquipType.Backpack)
+                {
+                    _inventoryManager.UpdateBagCapacity(0, 0);
+                }
+                _equippedItems.Remove(type);
+                NotifyEquipmentChanged();
+                return true;
+            }
+            return false;
+        }
+
+        public void ClearEquipment()
+        {
+            _equippedItems.Clear();
+            if (_inventoryManager != null)
+            {
+                _inventoryManager.UpdateBagCapacity(0, 0);
+            }
+            NotifyEquipmentChanged();
+        }
+
+        public RuntimeItem GetEquippedItem(EquipType type)
+        {
+            return _equippedItems.TryGetValue(type, out var item) ? item : null;
+        }
+
+        public (int hp, int mp, int atk, int def, float speed, int range, float atkSpeedBonus, float weaponBaseAtkSpeed) GetTotalStats()
+        {
+            int hp = 0, mp = 0, atk = 0, def = 0, range = 0;
+            float speed = 0f, atkSpeedBonus = 0f, weaponBaseAtkSpeed = 0f;
+            foreach (var item in _equippedItems.Values)
+            {
+                if (item != null && item.ItemData is BagBack100.Data.Models.EquipmentDataSO eqData)
+                {
+                    hp += eqData.hpBonus;
+                    mp += eqData.mpBonus;
+                    atk += eqData.attackBonus;
+                    def += eqData.defenseBonus;
+                    speed += eqData.speedBonus;
+                    range += eqData.rangeBonus;
+                    
+                    if (eqData is BagBack100.Data.Models.AccessoryDataSO accData)
+                    {
+                        atkSpeedBonus += accData.attackSpeedBonus;
+                    }
+                    
+                    if (eqData is BagBack100.Data.Models.WeaponDataSO weaponData && weaponData.baseAttackSpeed > 0f)
+                    {
+                        weaponBaseAtkSpeed = weaponData.baseAttackSpeed;
+                    }
+                }
+            }
+            return (hp, mp, atk, def, speed, range, atkSpeedBonus, weaponBaseAtkSpeed);
+        }
+    }
+}

@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d0d86b18684e3841ba46b0404489e53, type: 3}
+  m_Name: MelleMonster
+  m_EditorClassIdentifier: 
+  monsterID: 101
+  monsterName: Heavy Brute
+  type: 0
+  hp: 65
+  atk: 8
+  def: 6
+  speed: 4
+  range: 1
+  zocRadius: 5
+  movementStyle: 0
+  moveDuration: 0.38
+  moveInterval: 0.3
+  globalPatternCooldown: 2
+  telegraphTime: 0.8
+  evasiveStepCooldown: 0
+  escapeOnHitCooldown: 0
+  patterns:
+  - {fileID: 11400000, guid: f8de3dd39cca980459d370879cb8faf0, type: 2}
+  - {fileID: 11400000, guid: b028ec8f9fd34f149a014ce6e16aec6a, type: 2}
+  - {fileID: 11400000, guid: f0a4fc082c6c88c48a3267b6fe4dd7c9, type: 2}
+  traits: []
+  dropPoolID: 0
+  goldDropBase: 15

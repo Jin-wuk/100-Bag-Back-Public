@@ -1,0 +1,96 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39e76101ba7605c4a9f666fead92d810, type: 3}
+  m_Name: NewDropPool 1
+  m_EditorClassIdentifier: 
+  dropPoolID: 0
+  goldItemID: 1
+  minGold: 0
+  maxGold: 0
+  guaranteedDrops:
+  - itemID: 1
+    minAmount: 1
+    maxAmount: 2
+  - itemID: 2
+    minAmount: 1
+    maxAmount: 4
+  - itemID: 3
+    minAmount: 0
+    maxAmount: 3
+  - itemID: 12
+    minAmount: 1
+    maxAmount: 1
+  - itemID: 21
+    minAmount: 1
+    maxAmount: 1
+  randomDropGroups:
+  - groupName: Equip
+    minRolls: 1
+    maxRolls: 5
+    rollProbabilityCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 0.85707396
+        value: 0.34208295
+        inSlope: 1.1326973
+        outSlope: 1.1326973
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0.33333334
+        outWeight: 0.33333334
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    entries:
+    - itemID: 0
+      dropWeight: 20
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 11
+      dropWeight: 5
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 12
+      dropWeight: 5
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 13
+      dropWeight: 5
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 14
+      dropWeight: 5
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 15
+      dropWeight: 5
+      minAmount: 1
+      maxAmount: 1
