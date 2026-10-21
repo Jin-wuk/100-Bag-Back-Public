@@ -1,72 +1,81 @@
-# 🧠 몬스터 인공지능 통합 명세서 (Monster AI Architecture & Specs)
+# 몬스터 AI (Monster AI)
 
-> **문서 목적**: 게임 내 모든 몬스터 AI의 기획적 행동 원리와 SO 기반 조립식(Composable) 아키텍처를 정의하는 단일 공식 통합 명세서.  
-> **상태**: 구현 완료 (`Assets/01_Scripts/Monster/`)  
-> **관련 문서**: [Monsters.md](Monsters.md), [Advanced_Monster_AI_Architecture.md](Advanced_Monster_AI_Architecture.md)
+몬스터의 행동 루프, 이동 성향, 공격 패턴 명세입니다. 코드는 `Assets/01_Scripts/Monster/`에 있습니다.
 
----
+## 1. 구조
 
-## 1. 아키텍처 전환 배경 및 핵심 설계 철학
+- 몬스터 1마리는 `MonsterController`가 관리합니다.
+- 공격은 `MonsterPatternSO`를 상속한 패턴 에셋으로 분리되어 있고, `MonsterDataSO`의 `patterns` 목록에 조합해 넣습니다.
+- 이동은 `MonsterLocomotion`이 이동 성향(`movementStyle`)에 따라 처리합니다.
+- 몬스터는 프레임 애니메이션이 없는 단일 스프라이트이므로, 공격 예고는 몸동작 대신 **바닥 장판·조준선·돌진 경로** 같은 공간 표시로 합니다.
 
-### 1.1 왜 개별 FSM 코딩에서 'SO 기반 조립식 패턴(Composable Pattern)'으로 전환했는가?
-1. **비주얼 제약(단일 스프라이트)의 엔지니어링적 재해석**:
-   * 1인 개발 환경상 몬스터가 프레임 애니메이션이 없는 '단일 스프라이트'로 구성됨.
-   * 공격의 시각적 피드백을 몬스터 몸체 애니메이션이 아닌 **'그리드 타일 장판(Telegraph), 레이저 조준선, 돌진 궤적, 탄막'**이라는 공간 기믹으로 치환.
-   * 따라서 공격 로직은 몬스터 본체(`MonsterController`)에 종속될 필요가 없으며, 그리드 공간과 상호작용하는 **독립된 패턴 레고 블록(`MonsterPatternSO`)**으로 격리하는 것이 가장 합리적임.
-2. **클래스 폭발(Class Explosion) 방지 및 SRP/OCP 준수**:
-   * 몬스터마다 C# 클래스를 새로 코딩하는 자원 낭비를 배제.
-   * `MonsterController`는 오직 **이동 템포 실행**과 **가중치 랜덤 패턴 추첨기(Runner)** 역할만 수행하고, 구체적인 기술은 `MonsterPatternSO` 파생 에셋들을 인스펙터에서 드래그 & 드롭으로 조립하여 **코드 수정 0줄로 신규 몬스터를 무한 생성(OCP)**함.
+## 2. 행동 루프
 
----
+```mermaid
+flowchart TD
+    A[어그로 판정] -->|미인식| P[배회]
+    A -->|어그로| B{글로벌 쿨타임 끝?}
+    B -->|예| C["후보 패턴 수집<br>사거리 조건 + 개별 쿨타임"]
+    C -->|후보 있음| D[가중치 랜덤 선택]
+    D --> E["전조 (telegraphDuration)"]
+    E --> F[실행]
+    F --> G["후딜레이 (recoveryDuration)<br>이동 불가"]
+    G --> A
+    B -->|아니오| M[이동 성향대로 1칸 이동]
+    C -->|후보 없음| M
+    M --> A
+```
 
-## 2. 이동 템포(Locomotion)와 행동 쿨타임(Action Rhythm)의 분리
+| 값 | 위치 | 의미 |
+| --- | --- | --- |
+| `moveDuration` | `MonsterDataSO` | 타일 1칸 이동에 걸리는 시간 |
+| `moveInterval` | `MonsterDataSO` | 한 걸음 후 다음 걸음까지 대기 시간 |
+| `globalPatternCooldown` | `MonsterDataSO` | 패턴 사이 최소 간격. 이 시간 동안에도 이동은 계속함 |
+| `weight` | `MonsterPatternSO` | 가중치 랜덤 선택 비율 |
+| `minRange` / `maxRange` | `MonsterPatternSO` | 패턴을 쓸 수 있는 플레이어와의 타일 거리 |
+| `patternCooldown` | `MonsterPatternSO` | 패턴별 재사용 대기 |
+| `telegraphDuration` | `MonsterPatternSO` | 공격 전 예고 시간 |
+| `recoveryDuration` | `MonsterPatternSO` | 공격 후 멈춰 있는 시간 (플레이어의 반격 타이밍) |
+| `damageMultiplier` | `MonsterPatternSO` | 몬스터 공격력에 곱하는 배율 |
 
-몬스터가 공격 쿨타임 동안 제자리에 멍하니 멈춰 있는 현상을 방지하기 위해 이동과 패턴 쿨타임을 완전히 분리한다.
+- **패턴 선택**: 조건을 통과한 후보들의 `weight` 합 위에서 난수를 뽑는 룰렛 휠 방식입니다.
+- **쿨타임 등록 시점**: 패턴을 시작할 때 먼저 등록합니다. 패턴이 기절 등으로 중간에 끊겨도 쿨타임이 적용됩니다.
 
-* **이동 템포 (`MonsterLocomotion.cs`)**:
-  * `moveDuration`: 타일 1칸 이동에 걸리는 시간(초)
-  * `moveInterval`: 1칸 이동 후 다음 걸음까지의 대기 시간(초)
-  * `movementStyle`:
-    1. `HeavyChase` (묵직한 직진 추적: A* 최단+위험우회 경로로 우직하게 전진)
-    2. `AgileFlank` (날렵한 측면 우회: 플레이어의 정면 시선을 피하고 측면/후방 인접 타일 선점)
-    3. `RangedKiting` (원거리 거리 유지: 적정 사거리 유지, 접근 시 후퇴/코너 횡이동, 적정 거리 시 스트레이핑)
-* **행동 패턴 템포 (`MonsterController.cs`)**:
-  * `globalPatternCooldown`: 패턴 시전 후 다음 패턴 추첨까지의 대기 시간. **이 쿨타임이 도는 동안에도 몬스터는 멈추지 않고 `movementStyle`에 따라 이동을 수행한다.**
-  * **가중치 랜덤 채택 (Weighted Random Selection)**:
-    * 우선순위 고정 방식이 아니라, 현재 거리 조건(`minRange` ~ `maxRange`)과 개별 쿨타임(`patternCooldown`)을 만족하는 후보 패턴들의 `weight` 합계를 구해 **확률 비례 주사위 추첨**으로 다음 패턴을 결정한다.
-  * **쿨타임 등록 시점**: 패턴 쿨타임(`patternCooldown`)과 글로벌 쿨타임은 **시전 시작 시점에 먼저 등록**하고, 정상 종료 시 다시 갱신한다. 돌진이 벽 충돌 기절로 끊겨도 쿨타임이 적용되어, 기절이 풀리자마자 같은 패턴을 다시 쓰지 않는다.
+## 3. 이동 성향
 
-### 2.1 인터럽트(회피/후방 탈출/기절)와 행동 코루틴 중단 규칙
+| 성향 | 동작 |
+| --- | --- |
+| `HeavyChase` | A* 경로로 플레이어를 향해 1칸씩 직진. 위험 칸은 경로 비용을 높여 돌아감 |
+| `AgileFlank` | 플레이어의 정면을 피해 측면·후방 인접 칸을 노림. 플레이어 공격을 옆 칸으로 피하는 회피 스텝(쿨타임 `evasiveStepCooldown`) |
+| `RangedKiting` | 적정 사거리를 유지. 가까워지면 후퇴하거나 옆으로 이동. 피격 시 뒤로 물러나는 후방 탈출(쿨타임 `escapeOnHitCooldown`) |
 
-Unity의 `StopCoroutine`은 부모 코루틴만 멈추고, 부모 안에서 `StartCoroutine`으로 시작한 자식 코루틴(패턴, 이동 스텝, 타일 이동)은 계속 실행된다. 이를 방치하면 인터럽트 후에도 이전 이동이 위치를 계속 갱신하거나, 중단된 패턴이 전조 후 데미지를 준다.
+## 4. 상태와 인터럽트
 
-* **하위 코루틴 시작**: 행동 루프에서 파생되는 모든 코루틴은 `MonsterController.StartActionCoroutine()`으로 시작한다. 패턴 SO와 `MonsterLocomotion`도 `monster.StartCoroutine()` 대신 이 메서드를 사용해야 한다.
-* **일괄 중단**: 인터럽트(`TriggerInterruptRoutine`)와 사망(`Die`) 시 `StopActionCoroutines()`가 행동 루프, 인터럽트 루틴, 추적 중인 하위 코루틴을 모두 멈춘다.
-* **위치 정렬**: 타일 이동 도중 중단되면 이미 점유한 목적지 타일 좌표로 즉시 정렬해, 몬스터가 타일 사이에 걸치지 않게 한다.
-* **예외**: 피격 연출(`HitReactionRoutine`)은 행동 체인이 아니므로 인터럽트와 무관하게 유지된다.
+| 상태 | 의미 |
+| --- | --- |
+| `Patrol` | 미인식, 배회 |
+| `Aggro` | 추적·전투 |
+| `Evading` | 회피 스텝 또는 후방 탈출 중 |
+| `Stunned` | 돌진 중 벽 충돌 등으로 행동 불능 |
+| `Dead` | 사망 |
 
----
+- 회피·후방 탈출·기절은 진행 중인 행동을 끊는 인터럽트입니다.
+- 행동 루프에서 시작한 하위 코루틴(패턴, 이동)은 모두 `StartActionCoroutine()`으로 시작해 추적하고, 인터럽트·사망 시 `StopActionCoroutines()`로 한꺼번에 멈춥니다.
+- 타일 이동 도중 멈추면 이미 점유한 목적지 칸으로 위치를 정렬합니다.
+- 피격 연출은 행동 루프와 별개라 인터럽트로 끊기지 않습니다.
+- 후방 탈출은 패턴 시전 중이거나 후딜레이 중에는 발동하지 않습니다. 플레이어의 반격 타이밍을 지키기 위한 규칙입니다.
 
-## 3. 공격 유형별 전조(Telegraph) 및 공정성(억까 방지) 규칙
+## 5. 공격 패턴
 
-| 공격 분류 | 전조(Telegraph) 표시 방식 | 각도/판정 처리 | 유저 파훼법 (딜타임) |
-| :--- | :--- | :--- | :--- |
-| **근거리 타격 / 광역 슬램**<br>(`SingleMelee`, `AoESlam`) | 바닥 타일 빨간 장판 (`AttackWarningUI`) | 격자 타일 일치 | `telegraphDuration` 내 장판 밖으로 이동 후 `recoveryDuration` 동안 반격 |
-| **직선 돌진**<br>(`ChargePatternSO`) | 돌진 경로 직선 타일 장판 예고 | 4방향 직선 격자 돌파 | 옆 칸으로 회피하여 몬스터를 **벽에 충돌시키면 1.5초 기절(Stun) 프리딜** |
-| **원거리 직사 투사체**<br>(`RangedProjectilePatternSO`) | 바닥 장판 ❌<br>**자유 각도 회전 레이저 조준선 (`LineRenderer`)** | 45도가 아닌 임의 각도(단발/예측샷/부채꼴 확산탄) 완벽 대응 | 레이저 조준선 밖으로 1칸 비켜서거나 날아오는 탄환 보고 회피 |
-| **원거리 곡사 포격**<br>(`MortarAoEPatternSO`) | 비행 궤적 장판 ❌<br>**최종 착탄 타일(Landing Cell)에만 장판** | 플레이어 이동 방향 예측 착탄 | 착탄 예고 타일에서 이탈 (Area Denial 회피) |
+모든 공격은 예고 후 실행되고, 실행 후 후딜레이가 있습니다.
 
----
+| 패턴 | 예고 방식 | 피하는 법 |
+| --- | --- | --- |
+| `SingleMeleePatternSO` (단일 근접) | 대상 칸에 빨간 장판 | 예고 시간 안에 장판 밖으로 이동 |
+| `AoESlamPatternSO` (광역 내려치기) | 3x3 정사각형 / 마름모 / 전방 박스 장판 | 장판 밖으로 이동 |
+| `ChargePatternSO` (직선 돌진) | 돌진 경로 직선 장판 | 옆 칸으로 피함. 몬스터가 벽에 부딪히면 1.5초 기절 |
+| `HitAndRunPatternSO` (치고 빠지기) | 짧은 예고 후 1칸 찌르기 | 찌른 뒤 몬스터가 뒤·옆으로 빠짐 |
+| `RangedProjectilePatternSO` (원거리 투사체) | 바닥 장판 대신 조준선(`LineRenderer`). 단발 / 예측 사격 / 부채꼴 | 조준선 밖으로 비켜서거나 탄을 보고 피함 |
+| `MortarAoEPatternSO` (곡사 포격) | 착탄 칸에만 장판. 플레이어 이동 방향을 예측 | 착탄 칸에서 벗어남 |
 
-## 4. 스크립트 폴더 구조 (`Assets/01_Scripts/Monster/`)
-
-* [MonsterController.cs](../../Assets/01_Scripts/Monster/MonsterController.cs): 몬스터 본체 생명주기, 이동/패턴 루프 실행기, 가중치 랜덤 추첨, 레이저 조준선 풀링, 반응형 회피/기절 제어
-* [MonsterLocomotion.cs](../../Assets/01_Scripts/Monster/MonsterLocomotion.cs): 3대 이동 스타일(`HeavyChase`, `AgileFlank`, `RangedKiting`) 및 A* 타일 이동 헬퍼
-* `Patterns/` (조립식 레고 블록 SO):
-  * [MonsterPatternSO.cs](../../Assets/01_Scripts/Monster/Patterns/MonsterPatternSO.cs): 패턴 추상 베이스 클래스
-  * [SingleMeleePatternSO.cs](../../Assets/01_Scripts/Monster/Patterns/SingleMeleePatternSO.cs): 단일 근접 타격 (강타 / 찌르기)
-  * [AoESlamPatternSO.cs](../../Assets/01_Scripts/Monster/Patterns/AoESlamPatternSO.cs): 광역 장판 내려치기 (3x3 정사각형 / 확산 마름모 / 전방 박스)
-  * [ChargePatternSO.cs](../../Assets/01_Scripts/Monster/Patterns/ChargePatternSO.cs): 직선 돌진 및 벽 충돌 기절(Stun)
-  * [HitAndRunPatternSO.cs](../../Assets/01_Scripts/Monster/Patterns/HitAndRunPatternSO.cs): 기습 타격 후 즉각 후방 백스텝 이탈
-  * [RangedProjectilePatternSO.cs](../../Assets/01_Scripts/Monster/Patterns/RangedProjectilePatternSO.cs): 원거리 직사 투사체 (단발 / 예측 사격 / 부채꼴 확산탄 + 레이저 조준선)
-  * [MortarAoEPatternSO.cs](../../Assets/01_Scripts/Monster/Patterns/MortarAoEPatternSO.cs): 원거리 곡사 착탄 장판 포격
+새 패턴은 `MonsterPatternSO`를 상속한 클래스 하나로 추가하며, `MonsterController`는 수정하지 않습니다.
