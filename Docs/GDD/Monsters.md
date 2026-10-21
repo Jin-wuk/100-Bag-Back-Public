@@ -2,7 +2,7 @@
 
 > **문서 목적**: 던전 내 몬스터의 등급 분류, 오버월드 생태계, 어그로 시스템, 패시브 특성(Traits)을 정의하는 기획 명세서.  
 > **상태**: 확정  
-> **관련 문서**: [Monster_AI.md](file:///c:/Users/jdk95/Desktop/100BagBack/Docs/GDD/Monster_AI.md) (몬스터 AI 인공지능 통합 명세서)
+> **관련 문서**: [Monster_AI.md](Monster_AI.md) (몬스터 AI 인공지능 통합 명세서)
 
 ---
 
@@ -39,7 +39,7 @@
 
 정예 몬스터 및 일부 특수 몬스터에게 랜덤 또는 고정 부여되는 패시브 효과:
 
-| 특성명 | 효과 설명 | AI 연동 영향 ([Monster_AI.md](file:///c:/Users/jdk95/Desktop/100BagBack/Docs/GDD/Monster_AI.md)) |
+| 특성명 | 효과 설명 | AI 연동 영향 ([Monster_AI.md](Monster_AI.md)) |
 | :--- | :--- | :--- |
 | **LIFESTEAL (흡혈)** | 공격 적중 시 가한 피해의 30% 체력 즉시 회복 | 체력 30% 이하 시 위험 타일을 무시하고 공격 우선권 상승 |
 | **SHIELD (보호막)** | 최대 HP의 50%에 해당하는 추가 방어막 보유 | 쉴드 유지 중에는 피격 경직 및 회피 인터럽트 면제 (슈퍼아머) |
@@ -50,4 +50,4 @@
 
 ## 4. 인공지능(AI) 및 전투 패턴 연동
 
-몬스터의 구체적인 행동 양식(3대 타입: 묵직한 근거리, 날렵한 근거리, 원거리 투사체), 회피 로직(Danger Map, 스텝 회피), 하이브리드 FSM 아키텍처는 **[Monster_AI.md](file:///c:/Users/jdk95/Desktop/100BagBack/Docs/GDD/Monster_AI.md)** 문서를 참조한다.
+몬스터의 구체적인 행동 양식(3대 타입: 묵직한 근거리, 날렵한 근거리, 원거리 투사체), 회피 로직(Danger Map, 스텝 회피), 하이브리드 FSM 아키텍처는 **[Monster_AI.md](Monster_AI.md)** 문서를 참조한다.
