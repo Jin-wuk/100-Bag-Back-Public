@@ -37,8 +37,9 @@ sysinfo.txt
 crashlytics-build.properties
 *.app.zip
 
-# Claude Code personal settings
-.claude/settings.local.json
+# AI 도구 로컬 설정 (Claude Code, MCP)
+.claude/
+.mcp.json
 
 # 재배포 금지 외부 에셋 (README의 "외부 에셋" 참고)
 /Assets/Resources/Sprites/GUI_Parts/
