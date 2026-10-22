@@ -3,9 +3,11 @@
 기지에서 가방을 챙겨 던전에 들어가 전리품을 모으고, 탈출 포탈까지 살아서 돌아오면 전리품을 지키는 **익스트랙션 실시간 타일 액션 RPG**입니다.
 던전에서 죽으면 가져간 아이템을 잃기 때문에, 칸 수와 무게가 제한된 가방을 떠안고 언제 돌아갈지 판단하는 것이 핵심입니다.
 
-![플레이 화면 (GIF 교체 예정)](https://placehold.co/960x540.png?text=100+Bags+Back+Gameplay)
+![플레이 화면](Docs/Images/gameplay.gif)
 
-- **개발 형태**: 1인 개인 프로젝트 (기획·개발)
+▶ [전체 플레이 영상 보기 (Google Drive)](https://drive.google.com/file/d/1jH1GM-hGB8VthlJEk8iTCB-2Uvn_SG6Y/view)
+
+- **개발 형태**: 1인 개인 프로젝트 (기획·개발, 진행 중)
 - **엔진**: Unity 2022.3.62f3 (2D), C#
 
 ## 실행 방법
