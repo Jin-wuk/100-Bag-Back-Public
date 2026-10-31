@@ -2,9 +2,15 @@ using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using BagBack100.Data.Core;
+using BagBack100.Core;
 
 namespace BagBack100.Player
 {
+    /// <summary>
+    /// Role: 플레이어 기본 스탯 + 장비 보너스 합산, HP/MP 관리, 피격(방어력 경감) 및 사망 처리(가방·장비 증발 후 허브 복귀).
+    /// Dependencies: EquipmentManager, InventoryManager, CombatMath, PlayerSessionData
+    /// Events: OnManagerCreated(static), OnStatsChanged, GlobalEvents.OnEntityDamaged
+    /// </summary>
     [RequireComponent(typeof(EquipmentManager))]
     public class PlayerStatManager : MonoBehaviour
     {
@@ -109,14 +115,14 @@ namespace BagBack100.Player
             if (_isDead || damage <= 0) return 0;
 
             // 방어력 경감 후 값이 이후 HP 차감·데미지 텍스트·반환값의 기준이 된다
-            damage = BagBack100.Core.CombatMath.Mitigate(damage, CurrentDefense);
+            damage = CombatMath.Mitigate(damage, CurrentDefense);
 
             // 초과 피해(overkill)는 흡혈 등에 반영되지 않도록 실제 깎인 체력만 반환
             int dealt = Mathf.Min(damage, CurrentHp);
             CurrentHp -= damage;
             if (CurrentHp < 0) CurrentHp = 0;
             Debug.Log($"[Player] {damage} 피해를 입음! 남은 HP: {CurrentHp}/{MaxHp}");
-            BagBack100.Core.GlobalEvents.OnEntityDamaged?.Invoke(transform.position, damage, false, true);
+            GlobalEvents.OnEntityDamaged?.Invoke(transform.position, damage, false, true);
             OnStatsChanged?.Invoke(CurrentHp, CurrentMp, CurrentAttack, CurrentDefense, CurrentSpeed, CurrentRange);
             
             if (CurrentHp <= 0)

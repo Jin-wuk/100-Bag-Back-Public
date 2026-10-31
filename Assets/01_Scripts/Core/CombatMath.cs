@@ -3,7 +3,7 @@ using UnityEngine;
 namespace BagBack100.Core
 {
     /// <summary>
-    /// Role: 전투 수치 공식(방어력 경감) 모음. 상태 없는 순수 함수만 둔다 (Player_Stats_Formulas.md 2.1).
+    /// Role: 전투 수치 공식(방어력 경감) 모음. 상태 없는 순수 함수만 둔다 (Docs/GDD/Roadmap.md 1절 → 구현 후 Combat.md로 이관).
     /// Dependencies: 없음
     /// Events: 없음
     /// </summary>
