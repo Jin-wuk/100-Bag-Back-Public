@@ -87,6 +87,15 @@ namespace BagBack100.Player
             if (_container.Remove(item)) NotifyPouchChanged();
         }
 
+        public bool RemoveAmount(RuntimeItem item, int amount)
+        {
+            if (item == null || !_container.Contains(item) || amount <= 0) return false;
+            if (amount >= item.Count) _container.Remove(item);
+            else item.Count -= amount;
+            NotifyPouchChanged();
+            return true;
+        }
+
         public IReadOnlyList<RuntimeItem> GetAllItems() => _container.Items;
 
         public RuntimeItem GetItemAtSlot(int slotIndex) => _container?.GetAt(slotIndex);

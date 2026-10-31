@@ -22,5 +22,8 @@ namespace BagBack100.Data.Core
         bool AddItemAt(RuntimeItem item, int targetSlot);
         bool TryAddNextAvailableSlot(RuntimeItem item);
         void RemoveItem(RuntimeItem item);
+
+        /// <summary>스택에서 amount개를 덜어낸다. 전부면 슬롯에서 제거 (판매·삭제용)</summary>
+        bool RemoveAmount(RuntimeItem item, int amount);
     }
 }

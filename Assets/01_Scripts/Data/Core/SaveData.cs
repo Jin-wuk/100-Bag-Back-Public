@@ -36,6 +36,26 @@ namespace BagBack100.Data.Core
         public static List<RuntimeItem> InventoryItems { get; private set; } = new List<RuntimeItem>();
         public static Dictionary<EquipType, RuntimeItem> EquippedItems { get; private set; } = new Dictionary<EquipType, RuntimeItem>();
         public static List<RuntimeItem> StorageItems { get; private set; } = new List<RuntimeItem>();
+        // 보유 골드(지갑). 가방에 들어가지 않으므로 사망해도 잃지 않는다. 골드 가치가 있는 전리품은 허브에서 팔아야 지갑으로 들어온다
+        public const int StartingGold = 1000;
+        public static int Gold { get; private set; } = StartingGold;
+        public static event Action<int> OnGoldChanged;
+
+        public static void AddGold(int amount)
+        {
+            if (amount <= 0) return;
+            Gold += amount;
+            OnGoldChanged?.Invoke(Gold);
+        }
+
+        public static bool TrySpendGold(int amount)
+        {
+            if (amount < 0 || Gold < amount) return false;
+            Gold -= amount;
+            OnGoldChanged?.Invoke(Gold);
+            return true;
+        }
+
         // 보안 파우치: 사망해도 비우지 않는다
         public static List<RuntimeItem> PouchItems { get; private set; } = new List<RuntimeItem>();
 

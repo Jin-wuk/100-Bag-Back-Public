@@ -179,11 +179,13 @@ namespace BagBack100.Player
             return true;
         }
 
-        private void RemoveAmount(RuntimeItem item, int amount)
+        public bool RemoveAmount(RuntimeItem item, int amount)
         {
+            if (item == null || !_container.Contains(item) || amount <= 0) return false;
             if (amount >= item.Count) _container.Remove(item);
             else item.Count -= amount;
             NotifyInventoryChanged();
+            return true;
         }
 
         /// <summary>스택에서 1개를 소모한다. 마지막 1개면 슬롯에서 제거한다.</summary>

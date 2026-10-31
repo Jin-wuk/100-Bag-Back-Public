@@ -112,16 +112,6 @@ namespace BagBack100.Combat
                 return;
             }
 
-            // 1. 확정 재화 (골드)
-            if (pool.maxGold > 0)
-            {
-                int goldAmount = Random.Range(pool.minGold, pool.maxGold + 1);
-                if (goldAmount > 0)
-                {
-                    SpawnLootableItem(pool.goldItemID, goldAmount, position, true);
-                }
-            }
-
             // 2. 확정 아이템
             if (pool.guaranteedDrops != null)
             {
