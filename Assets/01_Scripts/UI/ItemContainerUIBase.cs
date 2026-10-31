@@ -128,6 +128,7 @@ namespace BagBack100.UI
             {
                 if (!ContainsItem(currentItems, kvp.Key))
                 {
+                    if (_heldItemUI != null && _heldItemUI.gameObject == kvp.Value) _heldItemUI = null;
                     if (kvp.Value != null) Destroy(kvp.Value);
                     _removeBuffer.Add(kvp.Key);
                 }
@@ -240,21 +241,22 @@ namespace BagBack100.UI
             _raycastBuffer.Clear();
             EventSystem.current.RaycastAll(pointerData, _raycastBuffer);
 
+            // 1차: 소비·참조형 드롭 대상(휴지통·판매·퀵슬롯)을 컨테이너보다 우선
+            for (int i = 0; i < _raycastBuffer.Count; i++)
+            {
+                var dropTarget = _raycastBuffer[i].gameObject.GetComponentInParent<IItemDropTarget>();
+                if (dropTarget == null || !dropTarget.CanAcceptDrop(item, _container)) continue;
+
+                // 드롭 대상이 원본에서 아이템을 빼면 RefreshUI가 아이콘을 정리하므로, 들고 있던 아이콘은 먼저 원위치
+                ReturnHeldItemToSlot();
+                dropTarget.AcceptDrop(item, _container);
+                return true;
+            }
+
+            // 2차: 다른 슬롯 컨테이너로 이동
             for (int i = 0; i < _raycastBuffer.Count; i++)
             {
                 var hitObject = _raycastBuffer[i].gameObject;
-
-                var dropTarget = hitObject.GetComponentInParent<IItemDropTarget>();
-                if (dropTarget != null)
-                {
-                    if (!dropTarget.CanAcceptDrop(item, _container)) return false;
-
-                    // 드롭 대상이 원본에서 아이템을 빼면 RefreshUI가 아이콘을 정리하므로, 들고 있던 아이콘은 먼저 원위치
-                    ReturnHeldItemToSlot();
-                    dropTarget.AcceptDrop(item, _container);
-                    return true;
-                }
-
                 var otherContainer = hitObject.GetComponentInParent<IItemContainerUI>();
                 if (otherContainer == null || ReferenceEquals(otherContainer, this)) continue;
 
@@ -289,6 +291,9 @@ namespace BagBack100.UI
             }
             else
             {
+                // 슬롯이 사라진 아이템의 아이콘은 최상단 캔버스에 남지 않도록 파괴 (DrawItems는 무효 슬롯을 건너뛴다)
+                if (item != null) _itemUIs.Remove(item);
+                Destroy(held.gameObject);
                 RefreshUI();
             }
         }
@@ -316,8 +321,12 @@ namespace BagBack100.UI
             var target = ResolveQuickTransferTarget();
             if (target == null || !target.CanAddItem(item)) return;
 
+            int originalSlot = item.SlotIndex;
             _container.RemoveItem(item);
-            target.TryAddNextAvailableSlot(item);
+            if (!target.TryAddNextAvailableSlot(item))
+            {
+                _container.AddItemAt(item, originalSlot);
+            }
         }
 
         private Camera GetUICamera()

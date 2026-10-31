@@ -161,7 +161,7 @@ namespace BagBack100.Data.Core
 
         public bool AddAt(RuntimeItem item, int slot)
         {
-            if (item == null || slot < 0 || slot >= _slots.Length) return false;
+            if (item == null || item.ItemData == null || slot < 0 || slot >= _slots.Length) return false;
 
             bool isInternal = _items.Contains(item);
             var target = _slots[slot];
@@ -203,7 +203,8 @@ namespace BagBack100.Data.Core
         /// <summary>스택 가능한 아이템은 기존 스택에 먼저 합치고, 남은 수량은 앞쪽 빈칸에 넣는다.</summary>
         public bool TryAddAuto(RuntimeItem item)
         {
-            if (!CanAdd(item)) return false;
+            // 외부에서 들어오는 아이템 전용. 내부 아이템을 넣으면 부분 병합 뒤 슬롯이 바뀌는 부작용이 있다.
+            if (Contains(item) || !CanAdd(item)) return false;
 
             if (item.ItemData.maxStack > 1)
             {

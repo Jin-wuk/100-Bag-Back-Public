@@ -60,8 +60,12 @@ namespace BagBack100.UI
             if (inventoryManager != null && inventoryManager.CanAddItem(clickedItem.Item))
             {
                 var item = clickedItem.Item;
+                int originalSlot = item.SlotIndex;
                 Container.RemoveItem(item);
-                inventoryManager.TryAddNextAvailableSlot(item);
+                if (!inventoryManager.TryAddNextAvailableSlot(item))
+                {
+                    Container.AddItemAt(item, originalSlot);
+                }
             }
         }
     }

@@ -5,6 +5,11 @@ using BagBack100.Data.Core;
 
 namespace BagBack100.Player
 {
+    /// <summary>
+    /// Role: 부위별 장착 장비 관리와 장비 스탯 합산. 가방 장착/해제 시 인벤토리 용량을 함께 조정한다. 변경 시 PlayerSessionData에 동기화.
+    /// Dependencies: InventoryManager, PlayerSessionData, EquipmentDataSO / BackpackDataSO
+    /// Events: OnManagerCreated(static), OnEquipmentChanged, OnEquipmentFailed(사유 메시지)
+    /// </summary>
     [RequireComponent(typeof(InventoryManager))]
     public class EquipmentManager : MonoBehaviour
     {
@@ -84,7 +89,8 @@ namespace BagBack100.Player
         {
             _equippedItems.TryGetValue(EquipType.Backpack, out RuntimeItem oldBag);
             bool hasOldBag = oldBag != null;
-            int extraItems = hasOldBag ? 0 : -1;
+            bool newBagInInventory = newBag.SlotIndex >= 0 && _inventoryManager.GetItemAtSlot(newBag.SlotIndex) == newBag;
+            int extraItems = (hasOldBag ? 1 : 0) - (newBagInInventory ? 1 : 0);
 
             if (!_inventoryManager.CanFitAfterResize(newBagData.bagAddedSlots, extraItems))
             {
@@ -94,9 +100,11 @@ namespace BagBack100.Player
 
             _inventoryManager.RemoveItem(newBag);
             _inventoryManager.UpdateBagCapacity(newBagData.bagAddedSlots);
-            if (hasOldBag)
+            if (hasOldBag && !_inventoryManager.TryAddNextAvailableSlot(oldBag))
             {
-                _inventoryManager.TryAddNextAvailableSlot(oldBag);
+                // 위 칸 수 검사로 도달 불가해야 하는 경로. 가방을 잃지 않도록 바닥 드랍으로 보존
+                Debug.LogError("[EquipmentManager] 기존 가방을 인벤토리에 넣지 못했습니다. 바닥에 떨굽니다.");
+                BagBack100.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(oldBag, transform.position);
             }
 
             _equippedItems[EquipType.Backpack] = newBag;

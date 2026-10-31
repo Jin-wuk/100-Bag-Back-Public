@@ -109,9 +109,11 @@ namespace BagBack100.Player
             _overflowBuffer.Clear();
         }
 
+        /// <summary>아이템을 모두 비우고 용량을 기본 칸으로 되돌린다 (사망 처리용. 직후 장비도 비워진다).</summary>
         public void ClearInventory()
         {
-            _container = new SlotContainer(_baseMaxSlots);
+            _container.Clear();
+            _container.Resize(_baseMaxSlots, null);
             NotifyInventoryChanged();
         }
 
