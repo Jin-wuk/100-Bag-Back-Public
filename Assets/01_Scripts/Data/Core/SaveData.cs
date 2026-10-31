@@ -27,9 +27,9 @@ namespace BagBack100.Data.Core
     }
 
     /// <summary>
-    /// Role: 씬 전환(02_HubScene <-> 03_DungeonScene) 간 인벤토리, 장착 장비, 창고, 보안 파우치, 퀵슬롯 등록을 보존하는 런타임 세션 컨테이너.
+    /// Role: 씬 전환(02_HubScene <-> 03_DungeonScene) 간 인벤토리, 장착 장비, 창고, 보안 파우치, 퀵슬롯 등록, 골드 지갑을 보존하는 런타임 세션 컨테이너.
     /// Dependencies: RuntimeItem, BackpackDataSO
-    /// Events: 없음
+    /// Events: OnGoldChanged(gold)
     /// </summary>
     public static class PlayerSessionData
     {

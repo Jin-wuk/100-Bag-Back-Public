@@ -72,9 +72,11 @@ namespace BagBack100.UI
             if (IsHoldingItem || clickedItem == null || clickedItem.Item == null || _contextMenu == null || _inventoryManager == null) return;
 
             var item = clickedItem.Item;
-            // 허브에는 바닥이 없으므로 버리기 버튼을 숨긴다 (판매 등 허브 전용 버튼은 이후 추가)
+            // 허브에는 바닥이 없으므로 버리기 버튼을 숨기고, 대장간이 열려 있을 때만 판매 버튼을 보인다
             System.Action onDiscard = _inventoryManager.CanDiscard ? () => RequestDiscard(item) : (System.Action)null;
-            _contextMenu.Open(eventData.position, eventData.pressEventCamera, onDiscard);
+            var sellSlot = FindObjectOfType<SellSlotUI>();
+            System.Action onSell = sellSlot != null && sellSlot.IsAvailable ? () => sellSlot.RequestSell(item, _inventoryManager) : (System.Action)null;
+            _contextMenu.Open(eventData.position, eventData.pressEventCamera, onDiscard, onSell);
         }
 
         // 1개짜리는 바로 버리고, 여러 개 쌓인 것은 수량을 고르게 한다

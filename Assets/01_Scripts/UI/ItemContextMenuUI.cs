@@ -16,8 +16,10 @@ namespace BagBack100.UI
         [SerializeField] private Button _blocker;
         [SerializeField] private RectTransform _menuPanel;
         [SerializeField] private Button _discardButton;
+        [SerializeField] private Button _sellButton;
 
         private Action _onDiscard;
+        private Action _onSell;
 
         private static int s_openCount;
         public static bool IsAnyOpen => s_openCount > 0;
@@ -31,6 +33,7 @@ namespace BagBack100.UI
         {
             if (_blocker != null) _blocker.onClick.AddListener(Close);
             if (_discardButton != null) _discardButton.onClick.AddListener(HandleDiscard);
+            if (_sellButton != null) _sellButton.onClick.AddListener(HandleSell);
             Close();
         }
 
@@ -38,16 +41,19 @@ namespace BagBack100.UI
         {
             if (_blocker != null) _blocker.onClick.RemoveListener(Close);
             if (_discardButton != null) _discardButton.onClick.RemoveListener(HandleDiscard);
+            if (_sellButton != null) _sellButton.onClick.RemoveListener(HandleSell);
         }
 
         private void OnDisable() => Close();
 
         /// <returns>보여줄 버튼이 하나도 없으면 열지 않고 false</returns>
-        public bool Open(Vector2 screenPosition, Camera eventCamera, Action onDiscard)
+        public bool Open(Vector2 screenPosition, Camera eventCamera, Action onDiscard, Action onSell = null)
         {
             _onDiscard = onDiscard;
-            bool hasAny = onDiscard != null;
+            _onSell = onSell;
+            bool hasAny = onDiscard != null || onSell != null;
             if (_discardButton != null) _discardButton.gameObject.SetActive(onDiscard != null);
+            if (_sellButton != null) _sellButton.gameObject.SetActive(onSell != null);
             if (!hasAny) return false;
 
             if (!IsOpen) s_openCount++;
@@ -72,9 +78,17 @@ namespace BagBack100.UI
         public void Close()
         {
             _onDiscard = null;
+            _onSell = null;
             if (IsOpen) s_openCount = Mathf.Max(0, s_openCount - 1);
             if (_blocker != null) _blocker.gameObject.SetActive(false);
             if (_menuPanel != null) _menuPanel.gameObject.SetActive(false);
+        }
+
+        private void HandleSell()
+        {
+            var callback = _onSell;
+            Close();
+            callback?.Invoke();
         }
 
         private void HandleDiscard()

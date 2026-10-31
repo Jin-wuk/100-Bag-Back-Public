@@ -33,6 +33,11 @@ namespace BagBack100.Data.Models
         public List<DropEntry> entries = new List<DropEntry>();
     }
 
+    /// <summary>
+    /// Role: 몬스터 처치 시 드랍 테이블 (확정 아이템 + 가중치 그룹 롤). 골드는 지갑 재화라 드랍하지 않고 고가 전리품으로 대신한다.
+    /// Dependencies: 없음 (itemID로 ItemDataSO 참조)
+    /// Events: 없음
+    /// </summary>
     [CreateAssetMenu(fileName = "NewDropPool", menuName = "BagBack100/Data/DropPool")]
     public class DropPoolSO : ScriptableObject
     {

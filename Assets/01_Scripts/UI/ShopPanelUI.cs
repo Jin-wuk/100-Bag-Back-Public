@@ -31,6 +31,20 @@ namespace BagBack100.UI
             BuildRows();
         }
 
+        private void OnDestroy() => ClearRows();
+
+        private void ClearRows()
+        {
+            for (int i = 0; i < _rows.Count; i++)
+            {
+                if (_rows[i] == null) continue;
+                var button = _rows[i].transform.Find("BuyButton")?.GetComponent<Button>();
+                if (button != null) button.onClick.RemoveAllListeners();
+                Destroy(_rows[i]);
+            }
+            _rows.Clear();
+        }
+
         private void OnDisable()
         {
             if (_tradeSystem != null)
@@ -48,8 +62,7 @@ namespace BagBack100.UI
         // 카탈로그는 열 때마다 다시 그려 인스펙터에서 바꾼 가격이 바로 반영되게 한다 (열 때만 실행되므로 할당 부담 없음)
         private void BuildRows()
         {
-            for (int i = 0; i < _rows.Count; i++) Destroy(_rows[i]);
-            _rows.Clear();
+            ClearRows();
 
             var catalog = _tradeSystem != null ? _tradeSystem.GeneralStoreCatalog : null;
             if (catalog == null || _rowContainer == null || _rowPrefab == null) return;

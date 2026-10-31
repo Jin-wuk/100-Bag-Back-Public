@@ -27,7 +27,7 @@ namespace BagBack100.Hub
 
         private void Start()
         {
-            // HubSystem.Awake가 매니저를 동적으로 붙인 뒤에 찾는다
+            // HubSystem.Awake가 매니저를 동적으로 붙인 뒤(Start 시점)에 한 번만 찾아 캐싱한다
             _inventory = FindObjectOfType<InventoryManager>();
             _storage = FindObjectOfType<StorageManager>();
         }
@@ -53,7 +53,11 @@ namespace BagBack100.Hub
             int price = GetSellPrice(item, amount);
             string name = item.ItemData.itemName;
 
-            if (!source.RemoveAmount(item, amount)) return false;
+            if (!source.RemoveAmount(item, amount))
+            {
+                OnTradeFailed?.Invoke("Could not sell this item.");
+                return false;
+            }
 
             PlayerSessionData.AddGold(price);
             OnTradeCompleted?.Invoke($"Sold {name} x{amount} for {price}G");
@@ -63,6 +67,11 @@ namespace BagBack100.Hub
         public bool TryBuy(ShopEntry entry)
         {
             if (entry.item == null) return false;
+            if (entry.price < 0)
+            {
+                Debug.LogError($"[HubTradeSystem] {entry.item.name}의 가격이 음수입니다. 카탈로그를 확인하세요.");
+                return false;
+            }
 
             if (PlayerSessionData.Gold < entry.price)
             {
@@ -78,16 +87,15 @@ namespace BagBack100.Hub
                 return false;
             }
 
-            // 공간을 먼저 확인했으므로 골드 차감 후 넣기는 실패하지 않는다
-            PlayerSessionData.TrySpendGold(entry.price);
+            // 아이템을 먼저 넣고 성공했을 때만 골드를 차감해 롤백 경로를 없앤다 (골드는 위에서 충분함을 확인)
             bool added = (_inventory != null && _inventory.TryAddNextAvailableSlot(bought)) ||
                          (_storage != null && _storage.TryAddNextAvailableSlot(bought));
             if (!added)
             {
-                PlayerSessionData.AddGold(entry.price);
                 OnTradeFailed?.Invoke("No space in bag or storage.");
                 return false;
             }
+            PlayerSessionData.TrySpendGold(entry.price);
 
             OnTradeCompleted?.Invoke($"Bought {entry.item.itemName} for {entry.price}G");
             return true;

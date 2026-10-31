@@ -1,3 +1,5 @@
+// Role: 게임 전역 enum 정의 (몬스터 등급, 아이템 분류, 장비 부위, 방어구 계열 등). 에셋에 int로 저장되므로 값은 뒤에만 추가한다.
+// Dependencies: 없음 / Events: 없음
 namespace BagBack100.Data.Core
 {
     public enum MonsterType { Normal, Elite, Boss }
