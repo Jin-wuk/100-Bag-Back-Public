@@ -8,6 +8,7 @@ namespace BagBack100.UI
     {
         [SerializeField] private EquipmentManager _equipmentManager;
         [SerializeField] private System.Collections.Generic.List<EquipmentSlotUI> _slots;
+        [SerializeField] private UIToast _toast;
 
         private void Awake()
         {
@@ -77,8 +78,8 @@ namespace BagBack100.UI
 
         private void ShowErrorMessage(string msg)
         {
-            Debug.LogWarning($"[System] {msg}");
-            // 화면 중앙 플로팅 텍스트 띄우기 로직 연동 가능
+            if (_toast != null) _toast.Show(msg);
+            else Debug.LogWarning($"[System] {msg}");
         }
     }
 }

@@ -27,6 +27,10 @@ namespace BagBack100.Player
         [SerializeField] private int _baseMaxSlots = 30;
         [Tooltip("가방에서 버린 아이템이 떨어질 수 있는 플레이어 주변 반경(칸)")]
         [Min(1)] [SerializeField] private int _discardRadius = 2;
+        [Tooltip("바닥에 버리기 허용 여부. 허브에는 바닥이 없으므로 던전 플레이어 프리팹에서만 켠다")]
+        [SerializeField] private bool _allowDiscard = false;
+
+        public bool CanDiscard => _allowDiscard;
 
         public int MaxSlots => _container != null ? _container.Capacity : _baseMaxSlots;
         public int BaseMaxSlots => _baseMaxSlots;
@@ -142,6 +146,11 @@ namespace BagBack100.Player
         public bool TryDiscard(RuntimeItem item, int amount)
         {
             if (item == null || !_container.Contains(item) || amount <= 0) return false;
+            if (!_allowDiscard)
+            {
+                OnInventoryActionFailed?.Invoke("여기서는 아이템을 버릴 수 없습니다.");
+                return false;
+            }
             amount = Mathf.Min(amount, item.Count);
 
             // 일부만 버리면 바닥에 놓일 새 묶음을 만들고, 전부 버리면 원래 개체를 그대로 바닥으로 보낸다

@@ -18,6 +18,11 @@ namespace BagBack100.UI
         [Header("References")]
         [SerializeField] private InventoryManager _inventoryManager;
 
+        [Header("Item Actions")]
+        [SerializeField] private ItemContextMenuUI _contextMenu;
+        [SerializeField] private ItemQuantityDialogUI _quantityDialog;
+        [SerializeField] private UIToast _toast;
+
         private void Awake()
         {
             InventoryManager.OnManagerCreated += OnManagerCreated;
@@ -34,13 +39,44 @@ namespace BagBack100.UI
         protected override void OnDestroy()
         {
             InventoryManager.OnManagerCreated -= OnManagerCreated;
+            if (_inventoryManager != null) _inventoryManager.OnInventoryActionFailed -= ShowMessage;
             base.OnDestroy();
         }
 
         private void OnManagerCreated(InventoryManager manager)
         {
+            if (_inventoryManager != null) _inventoryManager.OnInventoryActionFailed -= ShowMessage;
             _inventoryManager = manager;
+            if (_inventoryManager != null) _inventoryManager.OnInventoryActionFailed += ShowMessage;
             BindContainer(manager);
+        }
+
+        private void ShowMessage(string message)
+        {
+            if (_toast != null) _toast.Show(message);
+            else Debug.LogWarning($"[Inventory] {message}");
+        }
+
+        public override void OnItemRightClicked(DraggableItemUI clickedItem, UnityEngine.EventSystems.PointerEventData eventData)
+        {
+            if (IsHoldingItem || clickedItem == null || clickedItem.Item == null || _contextMenu == null || _inventoryManager == null) return;
+
+            var item = clickedItem.Item;
+            // 허브에는 바닥이 없으므로 버리기 버튼을 숨긴다 (판매 등 허브 전용 버튼은 이후 추가)
+            System.Action onDiscard = _inventoryManager.CanDiscard ? () => RequestDiscard(item) : (System.Action)null;
+            _contextMenu.Open(eventData.position, eventData.pressEventCamera, onDiscard);
+        }
+
+        // 1개짜리는 바로 버리고, 여러 개 쌓인 것은 수량을 고르게 한다
+        private void RequestDiscard(RuntimeItem item)
+        {
+            if (item.Count <= 1 || _quantityDialog == null)
+            {
+                _inventoryManager.TryDiscard(item, item.Count);
+                return;
+            }
+            _quantityDialog.Open($"{item.ItemData.itemName} 버리기", item.Count, "버리기",
+                amount => _inventoryManager.TryDiscard(item, amount));
         }
 
         public void Bind(InventoryManager invManager) => OnManagerCreated(invManager);

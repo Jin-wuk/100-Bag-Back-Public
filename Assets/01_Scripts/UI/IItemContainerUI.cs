@@ -14,5 +14,6 @@ namespace BagBack100.UI
         void OnItemDrag(DraggableItemUI draggedItem, UnityEngine.EventSystems.PointerEventData eventData);
         void OnItemEndDrag(DraggableItemUI draggedItem, UnityEngine.EventSystems.PointerEventData eventData);
         void OnItemDoubleClicked(DraggableItemUI clickedItem);
+        void OnItemRightClicked(DraggableItemUI clickedItem, UnityEngine.EventSystems.PointerEventData eventData);
     }
 }

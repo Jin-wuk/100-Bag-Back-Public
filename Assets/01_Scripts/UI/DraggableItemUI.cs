@@ -110,6 +110,10 @@ namespace BagBack100.UI
                     if (_uiController != null) _uiController.OnItemDoubleClicked(this);
                 }
             }
+            else if (eventData.button == PointerEventData.InputButton.Right)
+            {
+                if (_uiController != null) _uiController.OnItemRightClicked(this, eventData);
+            }
         }
     }
 }

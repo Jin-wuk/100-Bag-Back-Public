@@ -40,6 +40,9 @@ namespace BagBack100.UI
 
         public abstract void OnItemDoubleClicked(DraggableItemUI clickedItem);
 
+        /// <summary>우클릭 메뉴가 필요한 컨테이너(가방)만 재정의한다.</summary>
+        public virtual void OnItemRightClicked(DraggableItemUI clickedItem, PointerEventData eventData) { }
+
         protected void BindContainer(ISlotItemContainer container)
         {
             if (_container == container)

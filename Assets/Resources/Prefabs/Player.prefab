@@ -236,6 +236,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _baseMaxSlots: 35
+  _discardRadius: 2
+  _allowDiscard: 1
 --- !u!114 &6874008522880951106
 MonoBehaviour:
   m_ObjectHideFlags: 0
