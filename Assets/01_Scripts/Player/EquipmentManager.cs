@@ -7,7 +7,7 @@ namespace BagBack100.Player
 {
     /// <summary>
     /// Role: 부위별 장착 장비 관리와 장비 스탯 합산. 가방 장착/해제 시 인벤토리 용량을 함께 조정한다. 변경 시 PlayerSessionData에 동기화.
-    /// Dependencies: InventoryManager, PlayerCombatState(선택), PlayerSessionData, EquipmentDataSO / BackpackDataSO
+    /// Dependencies: InventoryManager, PlayerSessionData, EquipmentDataSO / BackpackDataSO
     /// Events: OnManagerCreated(static), OnEquipmentChanged, OnEquipmentFailed(사유 메시지)
     /// </summary>
     [RequireComponent(typeof(InventoryManager))]
@@ -19,14 +19,14 @@ namespace BagBack100.Player
         public event Action<string> OnEquipmentFailed;
 
         private Dictionary<EquipType, RuntimeItem> _equippedItems = new Dictionary<EquipType, RuntimeItem>();
+        [Tooltip("장비 장착·해제 허용 여부. 기획상 장비 교체는 허브에서만 가능하므로 던전 플레이어 프리팹에서는 끈다")]
+        [SerializeField] private bool _allowEquipmentChange = true;
+
         private InventoryManager _inventoryManager;
-        // 허브에는 플레이어가 없어 전투 상태 컴포넌트가 없을 수 있으므로 선택 참조
-        private PlayerCombatState _combatState;
 
         private void Awake()
         {
             _inventoryManager = GetComponent<InventoryManager>();
-            TryGetComponent(out _combatState);
             RestoreFromSession();
             OnManagerCreated?.Invoke(this);
         }
@@ -62,7 +62,7 @@ namespace BagBack100.Player
             if (!(item.ItemData is BagBack100.Data.Models.EquipmentDataSO eqData))
                 return false;
 
-            if (IsEquipLockedByCombat()) return false;
+            if (IsEquipmentChangeLocked()) return false;
 
             if (eqData.equipType == EquipType.Backpack && eqData is BagBack100.Data.Models.BackpackDataSO bagData)
             {
@@ -122,7 +122,7 @@ namespace BagBack100.Player
             if (!_equippedItems.TryGetValue(type, out RuntimeItem oldItem) || oldItem == null)
                 return false;
 
-            if (IsEquipLockedByCombat()) return false;
+            if (IsEquipmentChangeLocked()) return false;
 
             if (type == EquipType.Backpack)
             {
@@ -146,11 +146,11 @@ namespace BagBack100.Player
             return true;
         }
 
-        // 전투 중 장비 교체로 스킬 쿨타임·스탯을 우회하는 것을 막는다. 사망 처리(ClearEquipment)는 예외
-        private bool IsEquipLockedByCombat()
+        // 장비 교체는 허브 전용(기획 확정). 던전에서는 스킬 쿨타임·스탯 우회를 막기 위해 잠근다. 사망 처리(ClearEquipment)는 예외
+        private bool IsEquipmentChangeLocked()
         {
-            if (_combatState == null || !_combatState.IsInCombat) return false;
-            OnEquipmentFailed?.Invoke("전투 중에는 장비를 교체할 수 없습니다.");
+            if (_allowEquipmentChange) return false;
+            OnEquipmentFailed?.Invoke("장비는 기지에서만 교체할 수 있습니다.");
             return true;
         }
 

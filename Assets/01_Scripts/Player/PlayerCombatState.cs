@@ -6,7 +6,7 @@ namespace BagBack100.Player
 {
     /// <summary>
     /// Role: 플레이어 전투 상태 판정. 마지막 타격·피격 후 일정 시간 동안 전투 중으로 본다.
-    ///       포션 규칙(전투 중 지속 회복 + 공용 쿨타임)과 전투 중 장비 교체 잠금의 기준.
+    ///       포션 규칙(전투 중 지속 회복 + 공용 쿨타임)의 기준.
     /// Dependencies: 없음 (구독: GlobalEvents.OnEntityDamaged)
     /// Events: OnCombatStateChanged(bool isInCombat)
     /// </summary>
