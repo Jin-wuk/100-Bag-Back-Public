@@ -14,7 +14,7 @@
 - **`PlayerMovement.cs`**: 그리드 타일 기반 이동을 수행합니다. 고속 선형 이동 시 미세 Y축 바운스(`_hopHeight`), 발걸음 좌우 틸트 워블(`_wobbleAngle`), 도약/착지 스쿼시&스트레치(`_enableSquashAndStretch`)를 결합하여 GC Zero 기반의 유기적인 보행감(Locomotion Feel)을 제공합니다.
 - **`PlayerStatManager.cs`**: `MaxHp`/`MaxMp`와 `CurrentHp`/`CurrentMp`를 분리 관리하며, 피격 시 `GlobalEvents.OnEntityDamaged`를 발행합니다. `CurrentHp <= 0` 도달 시 `HandleDeath()`를 호출하여 가방과 장착 장비를 모두 증발시키고 `02_HubScene`으로 복귀시킵니다.
 - **`EntityCombat.cs` & `CombatFeedbackSystem.cs`**: 무기 이펙트 프리팹, 투사체(`Projectile.cs`), 절차적 타격 스파크, 데미지 플로팅 텍스트를 `Instantiate/Destroy` 없이 100% 오브젝트 풀링으로 처리하며, `Time.unscaledDeltaTime` 기반의 프레임 독립적 쿨다운과 무기별 `CameraFollow.cs` 카메라 쉐이크 및 마이크로 히트스톱(`GlobalEvents.OnCombatImpact`)을 구동합니다.
-- **`InventoryManager.cs`**: 플레이어 가방 슬롯 및 무게를 관리하며, `Awake` 시 `PlayerSessionData`에서 아이템과 가방 용량 보너스를 복원하고 변경 시 자동 동기화합니다.
+- **`InventoryManager.cs`**: 플레이어 가방 슬롯을 관리하며, `Awake` 시 `PlayerSessionData`에서 아이템과 가방 용량 보너스를 복원하고 변경 시 자동 동기화합니다.
 - **`EquipmentManager.cs`**: 장착 장비를 부위별로 관리하며, `Awake` 시 `PlayerSessionData`에서 장착 상태를 복원하고 변경 시 자동 동기화합니다.
 
 ## 📁 `Assets/01_Scripts/Hub/` & `Assets/01_Scripts/UI/`
