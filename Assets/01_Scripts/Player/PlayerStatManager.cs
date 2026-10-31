@@ -102,10 +102,14 @@ namespace BagBack100.Player
             OnStatsChanged?.Invoke(CurrentHp, CurrentMp, CurrentAttack, CurrentDefense, CurrentSpeed, CurrentRange);
         }
 
-        /// <returns>실제로 적용된 피해량. 사망 상태이거나 피해가 0 이하면 0 (흡혈 등 후속 효과 판정용)</returns>
+        /// <param name="damage">방어력 경감 전 원본 피해</param>
+        /// <returns>방어력 경감 후 실제로 깎인 체력. 사망 상태이거나 피해가 0 이하면 0 (흡혈 등 후속 효과 판정용)</returns>
         public int TakeDamage(int damage)
         {
             if (_isDead || damage <= 0) return 0;
+
+            // 방어력 경감 후 값이 이후 HP 차감·데미지 텍스트·반환값의 기준이 된다
+            damage = BagBack100.Core.CombatMath.Mitigate(damage, CurrentDefense);
 
             // 초과 피해(overkill)는 흡혈 등에 반영되지 않도록 실제 깎인 체력만 반환
             int dealt = Mathf.Min(damage, CurrentHp);

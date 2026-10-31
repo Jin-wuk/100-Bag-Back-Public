@@ -918,6 +918,9 @@ namespace BagBack100.Monster
         {
             if (_isDead || damage <= 0) return 0;
 
+            // 방어력 경감 → 보호막 흡수 → HP 순서. 경감 후 값이 데미지 텍스트·반환값의 기준
+            damage = CombatMath.Mitigate(damage, _monsterData != null ? _monsterData.def : 0);
+
             int remainingDamage = damage;
             bool hadShield = CurrentShield > 0;
 
