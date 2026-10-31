@@ -58,7 +58,11 @@ namespace BagBack100.Player
         }
 
         // 장비는 허브에서만 다루는 제작 전용 자산이라 파우치로 사망 보험을 걸 수 없게 한다 (기획 확정)
-        public static bool IsAllowed(RuntimeItem item) => item != null && item.ItemData != null && item.ItemData.category != ItemCategory.Equipment;
+        // 카테고리 값이 에셋에서 잘못 설정돼도 장비 타입이면 막도록 타입도 함께 검사
+        public static bool IsAllowed(RuntimeItem item) =>
+            item != null && item.ItemData != null &&
+            item.ItemData.category != ItemCategory.Equipment &&
+            !(item.ItemData is BagBack100.Data.Models.EquipmentDataSO);
 
         public bool CanAddItem(RuntimeItem item) => IsAllowed(item) && _container.CanAdd(item);
 

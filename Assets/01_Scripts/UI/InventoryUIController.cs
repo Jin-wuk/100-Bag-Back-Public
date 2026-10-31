@@ -9,8 +9,10 @@ using System.Linq;
 namespace BagBack100.UI
 {
     /// <summary>
-    /// Role: 플레이어 가방(InventoryManager) 그리드 뷰. 공통 동작은 ItemContainerUIBase, 여기서는 매니저 바인딩·더블클릭 장착·E키 대상(창고)만 정의.
-    /// Dependencies: InventoryManager, EquipmentManager, StorageUIController, StorageManager
+    /// Role: 플레이어 가방(InventoryManager) 그리드 뷰. 공통 동작은 ItemContainerUIBase, 여기서는 매니저 바인딩,
+    ///       더블클릭(장착·소모품 사용), 우클릭 메뉴(버리기), E키 대상(창고 또는 보안 파우치)을 정의.
+    /// Dependencies: InventoryManager, EquipmentManager, ConsumableController, StorageUIController, StorageManager,
+    ///               SecurePouchUIController, SecurePouchManager, ItemContextMenuUI, ItemQuantityDialogUI, UIToast
     /// Events: 없음
     /// </summary>
     public class InventoryUIController : ItemContainerUIBase
@@ -95,6 +97,9 @@ namespace BagBack100.UI
             var storageUI = FindObjectOfType<StorageUIController>();
             if (storageUI != null && storageUI.gameObject.activeInHierarchy) return FindObjectOfType<StorageManager>();
 
+            // 파우치 UI가 보이지 않는 상태에서 화면에 없는 칸으로 아이템이 옮겨지지 않게 한다
+            var pouchUI = FindObjectOfType<SecurePouchUIController>();
+            if (pouchUI == null || !pouchUI.gameObject.activeInHierarchy) return null;
             return _inventoryManager != null && _inventoryManager.TryGetComponent(out SecurePouchManager pouch) ? pouch : null;
         }
 
