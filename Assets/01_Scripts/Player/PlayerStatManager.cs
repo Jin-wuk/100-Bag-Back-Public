@@ -52,10 +52,6 @@ namespace BagBack100.Player
             {
                 _equipmentManager.OnEquipmentChanged += CalculateStats;
             }
-            if (_inventoryManager != null)
-            {
-                _inventoryManager.OnInventoryChanged += CalculateStats;
-            }
         }
 
         private void OnDisable()
@@ -63,10 +59,6 @@ namespace BagBack100.Player
             if (_equipmentManager != null)
             {
                 _equipmentManager.OnEquipmentChanged -= CalculateStats;
-            }
-            if (_inventoryManager != null)
-            {
-                _inventoryManager.OnInventoryChanged -= CalculateStats;
             }
         }
 
@@ -100,12 +92,7 @@ namespace BagBack100.Player
             CurrentDefense = _baseDefense + eqStats.def;
             CurrentRange = _baseRange + eqStats.range;
 
-            float speedPenalty = 0f;
-            if (_inventoryManager != null && _inventoryManager.CurrentWeight > _inventoryManager.MaxWeight)
-            {
-                speedPenalty = (_inventoryManager.CurrentWeight - _inventoryManager.MaxWeight) * 0.5f;
-            }
-            CurrentSpeed = Mathf.Max(1f, (_baseSpeed + eqStats.speed) - speedPenalty);
+            CurrentSpeed = Mathf.Max(1f, _baseSpeed + eqStats.speed);
             
             // 공격 속도 계산 로직
             // 무기의 고유 공격 속도가 우선순위, 없으면 플레이어 기본 스탯 사용, 이후 악세서리 등 합산
@@ -149,13 +136,14 @@ namespace BagBack100.Player
 
             Debug.Log("[Player] 사망! 인벤토리 및 장착 장비가 모두 증발하고 허브로 복귀합니다.");
 
-            if (_equipmentManager != null)
-            {
-                _equipmentManager.ClearEquipment();
-            }
+            // 가방을 먼저 비워야 장비(가방) 해제로 용량이 줄 때 넘친 아이템이 바닥에 떨어지는 일이 없다.
             if (_inventoryManager != null)
             {
                 _inventoryManager.ClearInventory();
+            }
+            if (_equipmentManager != null)
+            {
+                _equipmentManager.ClearEquipment();
             }
             PlayerSessionData.ClearPlayerLoadoutOnDeath();
 

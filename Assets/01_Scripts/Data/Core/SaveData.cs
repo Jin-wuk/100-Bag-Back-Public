@@ -77,17 +77,15 @@ namespace BagBack100.Data.Core
             }
         }
 
-        public static void GetEquippedBackpackBonus(out int addedSlots, out float addedWeight)
+        public static void GetEquippedBackpackBonus(out int addedSlots)
         {
             addedSlots = 0;
-            addedWeight = 0f;
 
             if (EquippedItems.TryGetValue(EquipType.Backpack, out var bagItem) &&
                 bagItem != null &&
                 bagItem.ItemData is BackpackDataSO bagData)
             {
                 addedSlots = bagData.bagAddedSlots;
-                addedWeight = bagData.bagMaxWeight;
             }
         }
 
