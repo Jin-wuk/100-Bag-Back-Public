@@ -47,6 +47,13 @@ namespace BagBack100.Hub
             {
                 managerHost.AddComponent<EquipmentManager>();
             }
+
+            // 퀵슬롯 등록은 허브에서도 할 수 있어야 한다 (사용은 던전에서만)
+            // RequireComponent(InventoryManager) 때문에 인벤토리와 같은 오브젝트에 붙여야 인벤토리가 중복 생성되지 않는다
+            if (FindObjectOfType<QuickSlotManager>() == null)
+            {
+                FindObjectOfType<InventoryManager>().gameObject.AddComponent<QuickSlotManager>();
+            }
         }
 
         private void OnEnable()

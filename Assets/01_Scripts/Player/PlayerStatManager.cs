@@ -178,5 +178,15 @@ namespace BagBack100.Player
             CurrentHp = Mathf.Clamp(CurrentHp + amount, 0, MaxHp);
             OnStatsChanged?.Invoke(CurrentHp, CurrentMp, CurrentAttack, CurrentDefense, CurrentSpeed, CurrentRange);
         }
+
+        public void RestoreMp(int amount)
+        {
+            if (_isDead) return;
+
+            CurrentMp = Mathf.Clamp(CurrentMp + amount, 0, MaxMp);
+            OnStatsChanged?.Invoke(CurrentHp, CurrentMp, CurrentAttack, CurrentDefense, CurrentSpeed, CurrentRange);
+        }
+
+        public bool IsDead => _isDead;
     }
 }

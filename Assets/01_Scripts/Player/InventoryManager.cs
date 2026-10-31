@@ -133,6 +133,43 @@ namespace BagBack100.Player
             if (_container.Remove(item)) NotifyInventoryChanged();
         }
 
+        /// <summary>스택에서 1개를 소모한다. 마지막 1개면 슬롯에서 제거한다.</summary>
+        public bool ConsumeOne(RuntimeItem item)
+        {
+            if (item == null || !_container.Contains(item)) return false;
+
+            if (item.Count > 1) item.Count--;
+            else _container.Remove(item);
+
+            NotifyInventoryChanged();
+            return true;
+        }
+
+        /// <summary>같은 itemID 아이템의 총 수량 (퀵슬롯 표시용)</summary>
+        public int CountItems(int itemID)
+        {
+            int total = 0;
+            var items = _container.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].ItemData.itemID == itemID) total += items[i].Count;
+            }
+            return total;
+        }
+
+        /// <summary>같은 itemID 중 가장 앞 슬롯의 아이템 (퀵슬롯 사용 대상)</summary>
+        public RuntimeItem FindFirstItem(int itemID)
+        {
+            RuntimeItem found = null;
+            var items = _container.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].ItemData.itemID != itemID) continue;
+                if (found == null || items[i].SlotIndex < found.SlotIndex) found = items[i];
+            }
+            return found;
+        }
+
         public IReadOnlyList<RuntimeItem> GetAllItems() => _container.Items;
 
         public RuntimeItem GetItemAtSlot(int slotIndex) => _container?.GetAt(slotIndex);

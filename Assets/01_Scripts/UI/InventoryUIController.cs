@@ -55,6 +55,15 @@ namespace BagBack100.UI
         public override void OnItemDoubleClicked(DraggableItemUI clickedItem)
         {
             if (IsHoldingItem || clickedItem == null || clickedItem.Item == null) return;
+
+            // 소모품은 더블클릭으로 바로 사용 (던전 전용. 허브에는 ConsumableController가 없어 무시)
+            if (clickedItem.Item.ItemData is BagBack100.Data.Models.ConsumableDataSO)
+            {
+                var consumables = FindObjectOfType<ConsumableController>();
+                if (consumables != null) consumables.TryUse(clickedItem.Item);
+                return;
+            }
+
             var equipmentManager = FindObjectOfType<EquipmentManager>();
             if (equipmentManager != null)
             {

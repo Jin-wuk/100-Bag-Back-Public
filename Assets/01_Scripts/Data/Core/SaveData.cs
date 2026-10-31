@@ -35,6 +35,10 @@ namespace BagBack100.Data.Core
         public static Dictionary<EquipType, RuntimeItem> EquippedItems { get; private set; } = new Dictionary<EquipType, RuntimeItem>();
         public static List<RuntimeItem> StorageItems { get; private set; } = new List<RuntimeItem>();
 
+        // 퀵슬롯 1·2·3에 연결된 소모품 itemID (0 = 비어 있음). 아이템 자체가 아니라 종류로 연결해 스택이 바뀌어도 유지된다
+        public const int QuickSlotCount = 3;
+        public static int[] QuickSlotItemIds { get; private set; } = new int[QuickSlotCount];
+
         public static void SaveInventory(IEnumerable<RuntimeItem> items)
         {
             InventoryItems.Clear();
