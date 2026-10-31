@@ -39,6 +39,40 @@ namespace BagBack100.Combat
             {
                 _itemDataCache[item.itemID] = item;
             }
+
+            WarnCraftOnlyItemsInDropPools(dropPools);
+        }
+
+        /// <summary>
+        /// 무기·방어구·가방은 기지 제작 전용이고 던전 드랍은 악세서리만 허용된다(기획 확정 D4/D7).
+        /// 데이터 입력 실수를 에디터 단계에서 잡기 위해 드랍 풀에 제작 전용 장비가 있으면 경고만 남긴다.
+        /// </summary>
+        private void WarnCraftOnlyItemsInDropPools(DropPoolSO[] dropPools)
+        {
+            foreach (var pool in dropPools)
+            {
+                if (pool.guaranteedDrops != null)
+                {
+                    foreach (var entry in pool.guaranteedDrops) WarnIfCraftOnly(pool, entry.itemID);
+                }
+                if (pool.randomDropGroups == null) continue;
+                foreach (var group in pool.randomDropGroups)
+                {
+                    if (group.entries == null) continue;
+                    foreach (var entry in group.entries) WarnIfCraftOnly(pool, entry.itemID);
+                }
+            }
+        }
+
+        private void WarnIfCraftOnly(DropPoolSO pool, int itemID)
+        {
+            if (!_itemDataCache.TryGetValue(itemID, out var data) || !(data is EquipmentDataSO eq)) return;
+
+            bool isAccessory = eq.equipType == EquipType.Ring || eq.equipType == EquipType.Necklace || eq.equipType == EquipType.Earring;
+            if (!isAccessory)
+            {
+                Debug.LogWarning($"[LootSystem] DropPool {pool.dropPoolID}({pool.name})에 제작 전용 장비 {itemID}({eq.equipType})가 들어 있습니다. 던전 드랍은 악세서리만 허용됩니다.");
+            }
         }
 
         private Grid _gridCache;
