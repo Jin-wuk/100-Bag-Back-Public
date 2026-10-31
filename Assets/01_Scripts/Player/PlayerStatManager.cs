@@ -115,9 +115,10 @@ namespace BagBack100.Player
             OnStatsChanged?.Invoke(CurrentHp, CurrentMp, CurrentAttack, CurrentDefense, CurrentSpeed, CurrentRange);
         }
 
-        public void TakeDamage(int damage)
+        /// <returns>실제로 적용된 피해량. 사망 상태이거나 피해가 0 이하면 0 (흡혈 등 후속 효과 판정용)</returns>
+        public int TakeDamage(int damage)
         {
-            if (_isDead) return;
+            if (_isDead || damage <= 0) return 0;
 
             CurrentHp -= damage;
             if (CurrentHp < 0) CurrentHp = 0;
@@ -128,7 +129,7 @@ namespace BagBack100.Player
             if (CurrentHp <= 0)
             {
                 HandleDeath();
-                return;
+                return damage;
             }
 
             var renderer = GetComponentInChildren<SpriteRenderer>();
@@ -136,6 +137,7 @@ namespace BagBack100.Player
             {
                 StartCoroutine(FlashRedRoutine(renderer));
             }
+            return damage;
         }
 
         private void HandleDeath()

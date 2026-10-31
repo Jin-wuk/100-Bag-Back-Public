@@ -608,7 +608,7 @@ namespace BagBack100.Player
         {
             if (CurrentState != PlayerState.Idle || _combat.IsAttackOnCooldown) return;
 
-            _combat.PerformRangedAttack(_projectilePrefab, _projectileSpawnPoint, _stats.CurrentSpeed, _stats.CurrentAttack, _facingDirection);
+            _combat.PerformRangedAttack(_projectilePrefab, _projectileSpawnPoint, _stats.CurrentAttackSpeed, _stats.CurrentAttack, _facingDirection);
         }
 
         private void HandleTileReached(Vector3 pos)

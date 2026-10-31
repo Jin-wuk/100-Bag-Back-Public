@@ -123,25 +123,42 @@ namespace BagBack100.Combat
             StartCoroutine(CooldownRoutine(1f / safeAtkSpeed));
         }
 
+        /// <summary>
+        /// 몬스터 패턴 타격처럼 시전자 자신의 공격 쿨다운과 무관하게 즉시 적용되어야 하는 피해.
+        /// 패턴은 MonsterController가 자체 쿨다운을 관리하므로, 여기서 EntityCombat 쿨다운에 막히면 데미지가 조용히 누락된다.
+        /// </summary>
+        /// <returns>대상에게 실제로 적용된 피해량 (대상이 없거나 이미 사망했으면 0)</returns>
+        public int ApplyImmediateHit(GameObject target, int damage, Vector3 direction, bool isHeavyHit)
+        {
+            Vector3 normDir = direction.sqrMagnitude > 0.001f ? direction.normalized : Vector3.right;
+            int dealt = ApplyDamageToTargetAndGetDealt(target, damage, normDir, isHeavyHit);
+            if (dealt > 0)
+            {
+                TriggerImpactFeedback(isHeavyHit);
+            }
+            return dealt;
+        }
+
         private bool ApplyDamageToTarget(GameObject target, int damage, Vector3 hitDir, bool isHeavyHit)
         {
-            if (target == null) return false;
+            return ApplyDamageToTargetAndGetDealt(target, damage, hitDir, isHeavyHit) > 0;
+        }
 
-            var targetMonster = target.GetComponent<MonsterController>();
-            if (targetMonster != null)
+        private int ApplyDamageToTargetAndGetDealt(GameObject target, int damage, Vector3 hitDir, bool isHeavyHit)
+        {
+            if (target == null) return 0;
+
+            if (target.TryGetComponent<MonsterController>(out var targetMonster))
             {
-                targetMonster.TakeDamage(damage, hitDir, isHeavyHit);
-                return true;
+                return targetMonster.TakeDamage(damage, hitDir, isHeavyHit);
             }
 
-            var targetPlayer = target.GetComponent<PlayerStatManager>();
-            if (targetPlayer != null)
+            if (target.TryGetComponent<PlayerStatManager>(out var targetPlayer))
             {
-                targetPlayer.TakeDamage(damage);
-                return true;
+                return targetPlayer.TakeDamage(damage);
             }
 
-            return false;
+            return 0;
         }
 
         private void TriggerImpactFeedback(bool isHeavyHit, float shakeMult = 1.0f, float hitStopMult = 1.0f)
