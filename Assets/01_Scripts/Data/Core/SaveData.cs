@@ -36,6 +36,9 @@ namespace BagBack100.Data.Core
         public static List<RuntimeItem> InventoryItems { get; private set; } = new List<RuntimeItem>();
         public static Dictionary<EquipType, RuntimeItem> EquippedItems { get; private set; } = new Dictionary<EquipType, RuntimeItem>();
         public static List<RuntimeItem> StorageItems { get; private set; } = new List<RuntimeItem>();
+        // 직전 던전 결과. 허브 결과 화면이 한 번 보여준 뒤 null로 비운다
+        public static RunResult LastRunResult { get; set; }
+
         // 보유 골드(지갑). 가방에 들어가지 않으므로 사망해도 잃지 않는다. 골드 가치가 있는 전리품은 허브에서 팔아야 지갑으로 들어온다
         public const int StartingGold = 1000;
         public static int Gold { get; private set; } = StartingGold;

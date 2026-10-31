@@ -146,6 +146,9 @@ namespace BagBack100.Player
 
             Debug.Log("[Player] 사망! 인벤토리 및 장착 장비가 모두 증발하고 허브로 복귀합니다.");
 
+            // 결과 화면용 기록은 세션 목록이 비워지기 전에 복사해야 잃은 목록이 남는다
+            PlayerSessionData.LastRunResult = RunResult.CreateFromSession(false);
+
             // 가방을 먼저 비워야 장비(가방) 해제로 용량이 줄 때 넘친 아이템이 바닥에 떨어지는 일이 없다.
             if (_inventoryManager != null)
             {
