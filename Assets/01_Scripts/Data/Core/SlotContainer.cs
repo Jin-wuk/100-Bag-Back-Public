@@ -222,11 +222,7 @@ namespace BagBack100.Data.Core
                     existing.Count += addCount;
                     item.Count -= addCount;
 
-                    if (item.Count <= 0)
-                    {
-                        if (_items.Contains(item)) Remove(item);
-                        return true;
-                    }
+                    if (item.Count <= 0) return true;
                 }
             }
 

@@ -83,7 +83,7 @@ namespace BagBack100.Player
 
         /// <summary>
         /// 가방 교체는 용량을 바꾸기 전에 칸 수를 먼저 검사한다.
-        /// 새 가방이 가방에서 빠지고(-1) 기존 가방이 들어오므로(+1) 필요한 칸은 현재 아이템 수 그대로다.
+        /// 필요한 칸 = 현재 아이템 수 + (기존 가방이 들어오면 +1) - (새 가방이 인벤토리에서 빠지면 -1).
         /// </summary>
         private bool TryEquipBackpack(RuntimeItem newBag, BagBack100.Data.Models.BackpackDataSO newBagData)
         {
