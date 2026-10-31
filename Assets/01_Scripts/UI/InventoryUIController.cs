@@ -89,11 +89,13 @@ namespace BagBack100.UI
 
         public void Bind(InventoryManager invManager) => OnManagerCreated(invManager);
 
+        // E키: 창고가 열려 있으면 창고로, 아니면 보안 파우치로 보낸다
         protected override ISlotItemContainer ResolveQuickTransferTarget()
         {
             var storageUI = FindObjectOfType<StorageUIController>();
-            if (storageUI == null || !storageUI.gameObject.activeInHierarchy) return null;
-            return FindObjectOfType<StorageManager>();
+            if (storageUI != null && storageUI.gameObject.activeInHierarchy) return FindObjectOfType<StorageManager>();
+
+            return _inventoryManager != null && _inventoryManager.TryGetComponent(out SecurePouchManager pouch) ? pouch : null;
         }
 
         public override void OnItemDoubleClicked(DraggableItemUI clickedItem)

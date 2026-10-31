@@ -8,7 +8,7 @@ namespace BagBack100.Hub
     /// <summary>
     /// Role: 허브 내 시스템 및 상태를 관리하는 2계층 System. 싱글톤을 쓰지 않고 전역 이벤트를 받아 분기한다.
     ///       플레이어가 없는 허브에서도 창고·가방·장비·퀵슬롯 매니저가 존재하도록 보장한다.
-    /// Dependencies: DungeonEntranceUI, StorageManager, InventoryManager, EquipmentManager, QuickSlotManager
+    /// Dependencies: DungeonEntranceUI, StorageManager, InventoryManager, EquipmentManager, QuickSlotManager, SecurePouchManager
     /// Events: 없음 (구독: GlobalEvents.OnHubObjectClicked)
     /// </summary>
     public class HubSystem : MonoBehaviour
@@ -52,9 +52,16 @@ namespace BagBack100.Hub
 
             // 퀵슬롯 등록은 허브에서도 할 수 있어야 한다 (사용은 던전에서만)
             // RequireComponent(InventoryManager) 때문에 인벤토리와 같은 오브젝트에 붙여야 인벤토리가 중복 생성되지 않는다
+            var inventory = FindObjectOfType<InventoryManager>();
             if (FindObjectOfType<QuickSlotManager>() == null)
             {
-                FindObjectOfType<InventoryManager>().gameObject.AddComponent<QuickSlotManager>();
+                inventory.gameObject.AddComponent<QuickSlotManager>();
+            }
+
+            // 보안 파우치는 허브에서 넣고 빼야 하므로 가방과 같은 오브젝트에 보장한다
+            if (FindObjectOfType<SecurePouchManager>() == null)
+            {
+                inventory.gameObject.AddComponent<SecurePouchManager>();
             }
         }
 

@@ -27,7 +27,7 @@ namespace BagBack100.Data.Core
     }
 
     /// <summary>
-    /// Role: 씬 전환(02_HubScene <-> 03_DungeonScene) 간 인벤토리, 장착 장비, 창고, 퀵슬롯 등록을 보존하는 런타임 세션 컨테이너.
+    /// Role: 씬 전환(02_HubScene <-> 03_DungeonScene) 간 인벤토리, 장착 장비, 창고, 보안 파우치, 퀵슬롯 등록을 보존하는 런타임 세션 컨테이너.
     /// Dependencies: RuntimeItem, BackpackDataSO
     /// Events: 없음
     /// </summary>
@@ -36,6 +36,8 @@ namespace BagBack100.Data.Core
         public static List<RuntimeItem> InventoryItems { get; private set; } = new List<RuntimeItem>();
         public static Dictionary<EquipType, RuntimeItem> EquippedItems { get; private set; } = new Dictionary<EquipType, RuntimeItem>();
         public static List<RuntimeItem> StorageItems { get; private set; } = new List<RuntimeItem>();
+        // 보안 파우치: 사망해도 비우지 않는다
+        public static List<RuntimeItem> PouchItems { get; private set; } = new List<RuntimeItem>();
 
         // 퀵슬롯 1·2·3에 연결된 소모품 itemID (0 = 비어 있음). 아이템 자체가 아니라 종류로 연결해 스택이 바뀌어도 유지된다
         public const int QuickSlotCount = 3;
@@ -71,6 +73,20 @@ namespace BagBack100.Data.Core
             }
         }
 
+        public static void SavePouch(IEnumerable<RuntimeItem> items)
+        {
+            PouchItems.Clear();
+            if (items == null) return;
+
+            foreach (var item in items)
+            {
+                if (item != null && item.ItemData != null)
+                {
+                    PouchItems.Add(item);
+                }
+            }
+        }
+
         public static void SaveStorage(IEnumerable<RuntimeItem> items)
         {
             StorageItems.Clear();
@@ -98,7 +114,7 @@ namespace BagBack100.Data.Core
         }
 
         /// <summary>
-        /// 플레이어 사망 시 가방(인벤토리) 및 장착 중인 모든 장비를 증발시킵니다. (허브 창고 아이템은 보존)
+        /// 플레이어 사망 시 가방(인벤토리) 및 장착 중인 모든 장비를 증발시킵니다. (허브 창고·보안 파우치 아이템은 보존)
         /// </summary>
         public static void ClearPlayerLoadoutOnDeath()
         {
