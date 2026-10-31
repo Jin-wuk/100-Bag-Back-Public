@@ -36,6 +36,14 @@ namespace BagBack100.UI
             if (existing != null) OnManagerCreated(existing);
         }
 
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            // 메뉴·대화상자가 프리팹 어디에 놓이든 가방이 닫히면 함께 닫아 남은 콜백이 실행되지 않게 한다
+            if (_contextMenu != null) _contextMenu.Close();
+            if (_quantityDialog != null) _quantityDialog.Close();
+        }
+
         protected override void OnDestroy()
         {
             InventoryManager.OnManagerCreated -= OnManagerCreated;

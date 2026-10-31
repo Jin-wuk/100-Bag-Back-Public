@@ -5,6 +5,11 @@ using BagBack100.Hub;
 
 namespace BagBack100.Core
 {
+    /// <summary>
+    /// Role: 도메인 간 결합을 끊기 위한 전역 이벤트 모음 (몬스터 사망, 아이템 드랍·버리기·획득, 피격, 타격감 등).
+    /// Dependencies: RuntimeItem, HubObjectType
+    /// Events: 이 클래스 자체가 이벤트 정의
+    /// </summary>
     public static class GlobalEvents
     {
         // 몬스터 사망 시: 몬스터 위치, 드랍 풀 ID

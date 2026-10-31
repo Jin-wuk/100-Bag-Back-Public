@@ -305,7 +305,7 @@ namespace BagBack100.UI
 
         protected virtual void Update()
         {
-            if (_heldItemUI == null && Input.GetKeyDown(KeyCode.E))
+            if (_heldItemUI == null && !ItemQuantityDialogUI.IsAnyOpen && !ItemContextMenuUI.IsAnyOpen && Input.GetKeyDown(KeyCode.E))
             {
                 TryQuickTransferItemUnderMouse();
             }

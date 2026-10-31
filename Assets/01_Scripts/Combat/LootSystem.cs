@@ -12,7 +12,7 @@ namespace BagBack100.Combat
     /// <summary>
     /// Role: 몬스터 사망 시 드랍 풀 추첨과 필드 아이템 스폰, 바닥 드랍 요청 처리. 드랍 풀 데이터 검증 경고.
     /// Dependencies: DropPoolSO, ItemDataSO, TileSystem, Pathfinder, FogVisibilityObject, LootableItem
-    /// Events: 없음 (구독: GlobalEvents.OnMonsterDied, GlobalEvents.OnItemDroppedOnGround)
+    /// Events: 없음 (구독: GlobalEvents.OnMonsterDied, GlobalEvents.OnItemDroppedOnGround, GlobalEvents.OnItemDiscardRequested)
     /// </summary>
     public class LootSystem : MonoBehaviour
     {

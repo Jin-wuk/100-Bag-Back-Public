@@ -8,7 +8,8 @@ namespace BagBack100.Player
     /// <summary>
     /// Role: 플레이어 가방(메인 인벤토리) 슬롯 관리. 용량 = 기본 칸 + 장착 가방 보너스. 변경 시 PlayerSessionData에 자동 동기화.
     /// Dependencies: SlotContainer, PlayerSessionData
-    /// Events: OnManagerCreated(static), OnInventoryChanged / OnContainerChanged,
+    /// Events: OnManagerCreated(static), OnInventoryChanged / OnContainerChanged, OnInventoryActionFailed,
+    ///         GlobalEvents.OnItemDiscardRequested (버리기 요청),
     ///         GlobalEvents.OnItemDroppedOnGround (세션 복원 시 용량 초과분 폴백 드랍)
     /// </summary>
     public class InventoryManager : MonoBehaviour, ISlotItemContainer

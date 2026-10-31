@@ -19,6 +19,14 @@ namespace BagBack100.UI
 
         private Action _onDiscard;
 
+        private static int s_openCount;
+        public static bool IsAnyOpen => s_openCount > 0;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => s_openCount = 0;
+
+        private bool IsOpen => _menuPanel != null && _menuPanel.gameObject.activeSelf;
+
         private void Awake()
         {
             if (_blocker != null) _blocker.onClick.AddListener(Close);
@@ -42,6 +50,7 @@ namespace BagBack100.UI
             if (_discardButton != null) _discardButton.gameObject.SetActive(onDiscard != null);
             if (!hasAny) return false;
 
+            if (!IsOpen) s_openCount++;
             if (_blocker != null)
             {
                 _blocker.gameObject.SetActive(true);
@@ -63,6 +72,7 @@ namespace BagBack100.UI
         public void Close()
         {
             _onDiscard = null;
+            if (IsOpen) s_openCount = Mathf.Max(0, s_openCount - 1);
             if (_blocker != null) _blocker.gameObject.SetActive(false);
             if (_menuPanel != null) _menuPanel.gameObject.SetActive(false);
         }

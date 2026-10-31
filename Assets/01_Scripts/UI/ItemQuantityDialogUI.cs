@@ -23,11 +23,21 @@ namespace BagBack100.UI
 
         private Action<int> _onConfirm;
         private int _maxAmount;
+        private Canvas _rootCanvas;
+
+        // 대화상자가 떠 있는 동안 다른 컨테이너의 E키 빠른 이동이 뒤에서 아이템을 옮기지 않도록 공유하는 열림 수
+        private static int s_openCount;
+        public static bool IsAnyOpen => s_openCount > 0;
 
         public bool IsOpen => _root != null && _root.activeSelf;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => s_openCount = 0;
+
         private void Awake()
         {
+            var canvas = GetComponentInParent<Canvas>();
+            _rootCanvas = canvas != null ? canvas.rootCanvas : null;
             if (_confirmButton != null) _confirmButton.onClick.AddListener(Confirm);
             if (_cancelButton != null) _cancelButton.onClick.AddListener(Close);
             if (_amountSlider != null) _amountSlider.onValueChanged.AddListener(HandleSliderChanged);
@@ -69,18 +79,22 @@ namespace BagBack100.UI
 
             if (_root != null)
             {
+                if (!_root.activeSelf) s_openCount++;
                 _root.SetActive(true);
                 _root.transform.SetAsLastSibling();
                 // 패널 배치와 무관하게 항상 화면 중앙에 띄운다
-                var canvas = GetComponentInParent<Canvas>();
-                if (canvas != null) _root.transform.position = canvas.rootCanvas.transform.position;
+                if (_rootCanvas != null) _root.transform.position = _rootCanvas.transform.position;
             }
         }
 
         public void Close()
         {
             _onConfirm = null;
-            if (_root != null) _root.SetActive(false);
+            if (_root != null && _root.activeSelf)
+            {
+                s_openCount = Mathf.Max(0, s_openCount - 1);
+                _root.SetActive(false);
+            }
         }
 
         private void Confirm()
