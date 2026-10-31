@@ -4,6 +4,11 @@ using BagBack100.Player;
 
 namespace BagBack100.Dungeon
 {
+    /// <summary>
+    /// Role: 탈출 포탈. 플레이어가 닿으면 탈출 결과(RunResult)를 기록하고 허브 씬으로 전환한다 (가방·장비·파우치는 세션에 보존).
+    /// Dependencies: PlayerController, PlayerSessionData, RunResult
+    /// Events: 없음
+    /// </summary>
     [RequireComponent(typeof(Collider2D))]
     public class DungeonExit : MonoBehaviour
     {
@@ -40,6 +45,7 @@ namespace BagBack100.Dungeon
             if (string.IsNullOrEmpty(_hubSceneName))
             {
                 Debug.LogError("[DungeonExit] Hub Scene Name is null or empty!");
+                _isTransitioning = false; // 설정을 고친 뒤 다시 닿으면 탈출할 수 있게 잠금을 푼다
                 return;
             }
 

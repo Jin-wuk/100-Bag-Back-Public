@@ -25,18 +25,28 @@ namespace BagBack100.Data.Core
 
             if (isExtracted)
             {
-                result.BroughtBack.AddRange(PlayerSessionData.InventoryItems);
-                result.BroughtBack.AddRange(PlayerSessionData.PouchItems);
+                AddSnapshots(result.BroughtBack, PlayerSessionData.InventoryItems);
+                AddSnapshots(result.BroughtBack, PlayerSessionData.PouchItems);
                 result.TotalValue = SumValue(result.BroughtBack);
             }
             else
             {
-                result.Lost.AddRange(PlayerSessionData.InventoryItems);
-                result.Lost.AddRange(PlayerSessionData.EquippedItems.Values);
-                result.Saved.AddRange(PlayerSessionData.PouchItems);
+                AddSnapshots(result.Lost, PlayerSessionData.InventoryItems);
+                AddSnapshots(result.Lost, PlayerSessionData.EquippedItems.Values);
+                AddSnapshots(result.Saved, PlayerSessionData.PouchItems);
                 result.TotalValue = SumValue(result.Lost);
             }
             return result;
+        }
+
+        // 결과 화면이 떠 있는 동안 허브에서 판매·병합으로 원본 수량이 바뀌어도 기록이 변하지 않도록 사본을 저장한다
+        private static void AddSnapshots(List<RuntimeItem> target, IEnumerable<RuntimeItem> source)
+        {
+            foreach (var item in source)
+            {
+                if (item?.ItemData == null) continue;
+                target.Add(new RuntimeItem(item.ItemData) { Count = item.Count });
+            }
         }
 
         private static int SumValue(List<RuntimeItem> items)
