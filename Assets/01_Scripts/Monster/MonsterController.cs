@@ -913,7 +913,7 @@ namespace BagBack100.Monster
         // 피격, 보호막(SHIELD), 자폭(EXPLOSIVE), 사망 처리
         // =====================================================================
 
-        /// <returns>적용된 피해량(보호막 흡수분 포함). 이미 사망했으면 0</returns>
+        /// <returns>보호막 흡수분 + 실제 깎인 체력 (초과 피해 제외). 이미 사망했으면 0</returns>
         public int TakeDamage(int damage, Vector3 hitDirection = default, bool isHeavyHit = false)
         {
             if (_isDead || damage <= 0) return 0;
@@ -928,6 +928,7 @@ namespace BagBack100.Monster
                 remainingDamage -= absorbed;
             }
 
+            int dealt = damage - remainingDamage + Mathf.Min(remainingDamage, Mathf.Max(0, CurrentHp));
             CurrentHp -= remainingDamage;
             string mName = _monsterData != null ? _monsterData.monsterName : name;
             Debug.Log($"[Monster] {mName} 가 {damage} 피해를 입음! 남은 HP: {CurrentHp} (Shield: {CurrentShield})");
@@ -940,7 +941,7 @@ namespace BagBack100.Monster
                 CurrentHp = 0;
                 Debug.Log($"[Monster] {mName} 처치됨!");
                 Die();
-                return damage;
+                return dealt;
             }
 
             if (_hitReactionCoroutine != null) StopCoroutine(_hitReactionCoroutine);
@@ -963,7 +964,7 @@ namespace BagBack100.Monster
                 _nextEscapeOnHitTime = Time.time + _monsterData.escapeOnHitCooldown;
                 TriggerInterruptRoutine(RangedEscapeOnHitRoutine());
             }
-            return damage;
+            return dealt;
         }
 
         private IEnumerator HitReactionRoutine(Vector3 hitDirection, bool isHeavyHit)

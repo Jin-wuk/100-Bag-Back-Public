@@ -120,6 +120,8 @@ namespace BagBack100.Player
         {
             if (_isDead || damage <= 0) return 0;
 
+            // 초과 피해(overkill)는 흡혈 등에 반영되지 않도록 실제 깎인 체력만 반환
+            int dealt = Mathf.Min(damage, CurrentHp);
             CurrentHp -= damage;
             if (CurrentHp < 0) CurrentHp = 0;
             Debug.Log($"[Player] {damage} 피해를 입음! 남은 HP: {CurrentHp}/{MaxHp}");
@@ -129,7 +131,7 @@ namespace BagBack100.Player
             if (CurrentHp <= 0)
             {
                 HandleDeath();
-                return damage;
+                return dealt;
             }
 
             var renderer = GetComponentInChildren<SpriteRenderer>();
@@ -137,7 +139,7 @@ namespace BagBack100.Player
             {
                 StartCoroutine(FlashRedRoutine(renderer));
             }
-            return damage;
+            return dealt;
         }
 
         private void HandleDeath()
