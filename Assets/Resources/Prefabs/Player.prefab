@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 6874008522880951106}
   - component: {fileID: 8867425315408697240}
   - component: {fileID: 4486916414795881682}
+  - component: {fileID: 6296150614967992182}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -233,7 +234,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _baseMaxSlots: 35
-  _baseMaxWeight: 50
 --- !u!114 &6874008522880951106
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -278,3 +278,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe9081e08f8ddf34aa3d01b663b29b6b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &6296150614967992182
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8512937500303504559}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61dba678c003d37429beaffb21065920, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _combatHoldDuration: 5

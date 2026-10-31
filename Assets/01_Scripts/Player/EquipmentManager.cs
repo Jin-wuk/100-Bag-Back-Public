@@ -7,7 +7,7 @@ namespace BagBack100.Player
 {
     /// <summary>
     /// Role: 부위별 장착 장비 관리와 장비 스탯 합산. 가방 장착/해제 시 인벤토리 용량을 함께 조정한다. 변경 시 PlayerSessionData에 동기화.
-    /// Dependencies: InventoryManager, PlayerSessionData, EquipmentDataSO / BackpackDataSO
+    /// Dependencies: InventoryManager, PlayerCombatState(선택), PlayerSessionData, EquipmentDataSO / BackpackDataSO
     /// Events: OnManagerCreated(static), OnEquipmentChanged, OnEquipmentFailed(사유 메시지)
     /// </summary>
     [RequireComponent(typeof(InventoryManager))]
@@ -20,10 +20,13 @@ namespace BagBack100.Player
 
         private Dictionary<EquipType, RuntimeItem> _equippedItems = new Dictionary<EquipType, RuntimeItem>();
         private InventoryManager _inventoryManager;
+        // 허브에는 플레이어가 없어 전투 상태 컴포넌트가 없을 수 있으므로 선택 참조
+        private PlayerCombatState _combatState;
 
         private void Awake()
         {
             _inventoryManager = GetComponent<InventoryManager>();
+            TryGetComponent(out _combatState);
             RestoreFromSession();
             OnManagerCreated?.Invoke(this);
         }
@@ -58,6 +61,8 @@ namespace BagBack100.Player
 
             if (!(item.ItemData is BagBack100.Data.Models.EquipmentDataSO eqData))
                 return false;
+
+            if (IsEquipLockedByCombat()) return false;
 
             if (eqData.equipType == EquipType.Backpack && eqData is BagBack100.Data.Models.BackpackDataSO bagData)
             {
@@ -117,6 +122,8 @@ namespace BagBack100.Player
             if (!_equippedItems.TryGetValue(type, out RuntimeItem oldItem) || oldItem == null)
                 return false;
 
+            if (IsEquipLockedByCombat()) return false;
+
             if (type == EquipType.Backpack)
             {
                 // 보너스 칸이 사라진 기본 용량에 (기존 아이템 + 해제할 가방)이 모두 들어가야 한다.
@@ -136,6 +143,14 @@ namespace BagBack100.Player
 
             _equippedItems.Remove(type);
             NotifyEquipmentChanged();
+            return true;
+        }
+
+        // 전투 중 장비 교체로 스킬 쿨타임·스탯을 우회하는 것을 막는다. 사망 처리(ClearEquipment)는 예외
+        private bool IsEquipLockedByCombat()
+        {
+            if (_combatState == null || !_combatState.IsInCombat) return false;
+            OnEquipmentFailed?.Invoke("전투 중에는 장비를 교체할 수 없습니다.");
             return true;
         }
 
