@@ -30,10 +30,12 @@ namespace BagBack100.Core
         private void OnDisable()
         {
             GlobalEvents.OnCombatImpact -= HandleCombatImpact;
-            if (Time.timeScale < 1f)
+            if (_hitStopCoroutine != null)
             {
-                Time.timeScale = 1f;
+                StopCoroutine(_hitStopCoroutine);
+                _hitStopCoroutine = null;
             }
+            GamePauseService.ClearHitStop();
         }
 
         public void SetTarget(Transform target)
@@ -65,14 +67,14 @@ namespace BagBack100.Core
 
         private IEnumerator HitStopRoutine(float duration)
         {
-            Time.timeScale = 0.05f;
+            GamePauseService.ApplyHitStop(0.05f);
             float elapsed = 0f;
             while (elapsed < duration)
             {
                 elapsed += Time.unscaledDeltaTime;
                 yield return null;
             }
-            Time.timeScale = 1f;
+            GamePauseService.ClearHitStop();
             _hitStopCoroutine = null;
         }
 

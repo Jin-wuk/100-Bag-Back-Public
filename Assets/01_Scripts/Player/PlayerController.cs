@@ -147,6 +147,7 @@ namespace BagBack100.Player
             _movement.OnMovementFinished += HandleMovementFinished;
             _movement.OnTileReached += HandleTileReached;
             _combat.OnAttackFinished += HandleAttackFinished;
+            BagBack100.Core.GamePauseService.OnPauseChanged += HandlePauseChanged;
         }
 
         private void Start()
@@ -194,6 +195,7 @@ namespace BagBack100.Player
             {
                 _combat.OnAttackFinished -= HandleAttackFinished;
             }
+            BagBack100.Core.GamePauseService.OnPauseChanged -= HandlePauseChanged;
                 
             if (_grid != null && BagBack100.Core.TileSystem.Instance != null)
             {
@@ -509,6 +511,28 @@ namespace BagBack100.Player
             }
         }
 
+        /// <summary>
+        /// 일시정지 진입 시 선입력을 비우고 차징을 취소한다.
+        /// 차징 루틴은 우클릭 해제를 감지해 강공격을 쏘므로, 가방을 열고 마우스를 떼면 멈춘 화면에서 공격이 발동하는 것을 막는다.
+        /// </summary>
+        private void HandlePauseChanged(bool isPaused)
+        {
+            if (!isPaused) return;
+
+            _inputBuffer.Clear();
+
+            if (CurrentState != PlayerState.Charging) return;
+
+            if (_chargeCoroutine != null)
+            {
+                StopCoroutine(_chargeCoroutine);
+                _chargeCoroutine = null;
+            }
+            _isChargeReady = false;
+            CancelChargeVisuals(Color.white, Vector3.one);
+            CurrentState = PlayerState.Idle;
+        }
+
         private void CancelChargeVisuals(Color origColor, Vector3 origScale)
         {
             ChargeProgress = 0f;
@@ -650,6 +674,13 @@ namespace BagBack100.Player
         /// </summary>
         private void TryConsumeBufferedCommand()
         {
+            // 가방이 열려 일시정지된 동안 선입력이 발동하면 멈춘 화면에서 공격·이동이 나가므로 버린다
+            if (BagBack100.Core.GamePauseService.IsPaused)
+            {
+                _inputBuffer.Clear();
+                return;
+            }
+
             if (!_inputBuffer.IsValid(Time.unscaledTime, _inputBufferWindow))
             {
                 _inputBuffer.Clear();

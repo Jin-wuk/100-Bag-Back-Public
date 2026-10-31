@@ -197,7 +197,8 @@ namespace BagBack100.Combat
             // Frame-Independent Combat: 히트스톱(Time.timeScale 변동)이나 프레임 드랍에 의해 모션 락 시간이 왜곡되지 않도록 unscaledDeltaTime 누적 및 Yield객체 GC Zero 달성
             while (elapsed < duration)
             {
-                elapsed += Time.unscaledDeltaTime;
+                // 히트스톱 중에는 흐르되, 가방을 열어 일시정지한 동안에는 멈춘다 (몬스터만 멈춘 채 쿨다운을 소진하는 꼼수 차단)
+                if (!GamePauseService.IsPaused) elapsed += Time.unscaledDeltaTime;
                 yield return null;
             }
             IsAttackOnCooldown = false;
