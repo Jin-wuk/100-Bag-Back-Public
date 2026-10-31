@@ -9,6 +9,11 @@ using System.Linq;
 
 namespace BagBack100.Combat
 {
+    /// <summary>
+    /// Role: 몬스터 사망 시 드랍 풀 추첨과 필드 아이템 스폰, 바닥 드랍 요청 처리. 드랍 풀 데이터 검증 경고.
+    /// Dependencies: DropPoolSO, ItemDataSO, TileSystem, Pathfinder, FogVisibilityObject, LootableItem
+    /// Events: 없음 (구독: GlobalEvents.OnMonsterDied, GlobalEvents.OnItemDroppedOnGround)
+    /// </summary>
     public class LootSystem : MonoBehaviour
     {
         [SerializeField] private LayerMask _obstacleLayerMask; // 벽 너머 드랍 방지용 장애물 레이어
@@ -58,7 +63,7 @@ namespace BagBack100.Combat
                 if (pool.randomDropGroups == null) continue;
                 foreach (var group in pool.randomDropGroups)
                 {
-                    if (group.entries == null) continue;
+                    if (group?.entries == null) continue;
                     foreach (var entry in group.entries) WarnIfCraftOnly(pool, entry.itemID);
                 }
             }
