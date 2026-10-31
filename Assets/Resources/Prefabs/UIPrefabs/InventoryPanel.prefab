@@ -234,12 +234,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e384422ec6def384dae0fdc50183dda5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _inventoryManager: {fileID: 0}
   _panelRoot: {fileID: 0}
   _gridContainer: {fileID: 579303866740181900}
   _dragContainer: {fileID: 0}
   _gridCellPrefab: {fileID: 9167176863813143353, guid: 3deb9bbb70691844f92620bc3be6bd14, type: 3}
   _draggableItemPrefab: {fileID: 1145650698865821164, guid: 1175bd088575d0e41ae034aeaa4b5d41, type: 3}
+  _inventoryManager: {fileID: 0}
 --- !u!1 &8503408421991263127
 GameObject:
   m_ObjectHideFlags: 0
@@ -333,6 +333,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 11
       objectReference: {fileID: 0}
+    - target: {fileID: 2559413394274558186, guid: 96475d578f7926f46b1a5ccfc701d970, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2827442751307209401, guid: 96475d578f7926f46b1a5ccfc701d970, type: 3}
       propertyPath: m_fontSize
       value: 25
@@ -372,6 +376,10 @@ PrefabInstance:
     - target: {fileID: 5928225256098744436, guid: 96475d578f7926f46b1a5ccfc701d970, type: 3}
       propertyPath: m_fontSizeBase
       value: 25
+      objectReference: {fileID: 0}
+    - target: {fileID: 7672532532856567704, guid: 96475d578f7926f46b1a5ccfc701d970, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7824643971135135361, guid: 96475d578f7926f46b1a5ccfc701d970, type: 3}
       propertyPath: m_Pivot.x
