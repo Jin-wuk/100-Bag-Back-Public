@@ -45,6 +45,11 @@ namespace BagBack100.Player
             if (_input != null) _input.OnQuickSlotInput -= Use;
         }
 
+        public Sprite GetIcon(int index)
+        {
+            return IsValidIndex(index) ? PlayerSessionData.QuickSlotIcons[index] : null;
+        }
+
         public int GetItemId(int index)
         {
             return IsValidIndex(index) ? PlayerSessionData.QuickSlotItemIds[index] : 0;
@@ -61,9 +66,12 @@ namespace BagBack100.Player
             var ids = PlayerSessionData.QuickSlotItemIds;
             for (int i = 0; i < ids.Length; i++)
             {
-                if (ids[i] == itemID) ids[i] = 0;
+                if (ids[i] != itemID) continue;
+                ids[i] = 0;
+                PlayerSessionData.QuickSlotIcons[i] = null;
             }
             ids[index] = itemID;
+            PlayerSessionData.QuickSlotIcons[index] = item.ItemData.itemIcon;
             OnQuickSlotsChanged?.Invoke();
             return true;
         }
@@ -72,6 +80,7 @@ namespace BagBack100.Player
         {
             if (!IsValidIndex(index)) return;
             PlayerSessionData.QuickSlotItemIds[index] = 0;
+            PlayerSessionData.QuickSlotIcons[index] = null;
             OnQuickSlotsChanged?.Invoke();
         }
 

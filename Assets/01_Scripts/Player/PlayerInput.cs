@@ -6,6 +6,12 @@ using BagBack100.UI;
 
 namespace BagBack100.Player
 {
+    /// <summary>
+    /// Role: 플레이어 입력 수집. WASD 이동, 마우스 8방향 조준·좌클릭 공격·우클릭 차징, Tab 가방, Z 원거리, 1·2·3 퀵슬롯을 이벤트로 전달.
+    /// Dependencies: Grid, MovementPreview, EventSystem
+    /// Events: OnInputCreated(static), OnMoveInput, OnAimInput, OnAttackInput, OnChargeStartInput, OnChargeReleaseInput,
+    ///         OnSpecialAttackKeyPressed, OnInventoryToggle, OnQuickSlotInput
+    /// </summary>
     public class PlayerInput : MonoBehaviour
     {
         public static event Action<PlayerInput> OnInputCreated;

@@ -15,7 +15,6 @@ namespace BagBack100.UI
         [SerializeField] private List<QuickSlotSlotUI> _slots = new List<QuickSlotSlotUI>();
 
         private QuickSlotManager _manager;
-        private readonly Dictionary<int, Sprite> _iconCache = new Dictionary<int, Sprite>();
 
         private void Awake()
         {
@@ -76,20 +75,8 @@ namespace BagBack100.UI
                 int itemID = _manager.GetItemId(slot.Index);
                 bool assigned = itemID != 0;
                 int count = assigned && _manager.Inventory != null ? _manager.Inventory.CountItems(itemID) : 0;
-                slot.Refresh(assigned ? GetIcon(itemID) : null, count, assigned);
+                slot.Refresh(assigned ? _manager.GetIcon(slot.Index) : null, count, assigned);
             }
-        }
-
-        // 가방에서 다 써도 아이콘을 보여주기 위해, 한 번 본 아이템의 아이콘을 기억한다
-        private Sprite GetIcon(int itemID)
-        {
-            var item = _manager.Inventory != null ? _manager.Inventory.FindFirstItem(itemID) : null;
-            if (item != null)
-            {
-                _iconCache[itemID] = item.ItemData.itemIcon;
-                return item.ItemData.itemIcon;
-            }
-            return _iconCache.TryGetValue(itemID, out var cached) ? cached : null;
         }
 
         private void Update()

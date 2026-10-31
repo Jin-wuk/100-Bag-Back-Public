@@ -6,8 +6,10 @@ using BagBack100.Player;
 namespace BagBack100.Hub
 {
     /// <summary>
-    /// 허브 내 시스템 및 상태를 관리하는 2계층 System.
-    /// 싱글톤을 사용하지 않으며, 전역 이벤트를 수신하여 로직을 분기합니다.
+    /// Role: 허브 내 시스템 및 상태를 관리하는 2계층 System. 싱글톤을 쓰지 않고 전역 이벤트를 받아 분기한다.
+    ///       플레이어가 없는 허브에서도 창고·가방·장비·퀵슬롯 매니저가 존재하도록 보장한다.
+    /// Dependencies: DungeonEntranceUI, StorageManager, InventoryManager, EquipmentManager, QuickSlotManager
+    /// Events: 없음 (구독: GlobalEvents.OnHubObjectClicked)
     /// </summary>
     public class HubSystem : MonoBehaviour
     {

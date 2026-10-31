@@ -59,8 +59,11 @@ namespace BagBack100.UI
             // 소모품은 더블클릭으로 바로 사용 (던전 전용. 허브에는 ConsumableController가 없어 무시)
             if (clickedItem.Item.ItemData is BagBack100.Data.Models.ConsumableDataSO)
             {
-                var consumables = FindObjectOfType<ConsumableController>();
-                if (consumables != null) consumables.TryUse(clickedItem.Item);
+                // 소모품 규칙은 인벤토리와 같은 플레이어 오브젝트에 붙어 있다
+                if (_inventoryManager != null && _inventoryManager.TryGetComponent(out ConsumableController consumables))
+                {
+                    consumables.TryUse(clickedItem.Item);
+                }
                 return;
             }
 

@@ -27,7 +27,9 @@ namespace BagBack100.Data.Core
     }
 
     /// <summary>
-    /// 씬 전환(02_HubScene <-> 03_DungeonScene) 간 인벤토리, 장착 장비, 창고 데이터를 보존하는 런타임 세션 컨테이너.
+    /// Role: 씬 전환(02_HubScene <-> 03_DungeonScene) 간 인벤토리, 장착 장비, 창고, 퀵슬롯 등록을 보존하는 런타임 세션 컨테이너.
+    /// Dependencies: RuntimeItem, BackpackDataSO
+    /// Events: 없음
     /// </summary>
     public static class PlayerSessionData
     {
@@ -38,6 +40,8 @@ namespace BagBack100.Data.Core
         // 퀵슬롯 1·2·3에 연결된 소모품 itemID (0 = 비어 있음). 아이템 자체가 아니라 종류로 연결해 스택이 바뀌어도 유지된다
         public const int QuickSlotCount = 3;
         public static int[] QuickSlotItemIds { get; private set; } = new int[QuickSlotCount];
+        // 가방에 해당 소모품이 하나도 없을 때(씬 전환 후 포함)도 퀵슬롯에 흐린 아이콘을 그리기 위해 등록 시점의 아이콘을 보존
+        public static UnityEngine.Sprite[] QuickSlotIcons { get; private set; } = new UnityEngine.Sprite[QuickSlotCount];
 
         public static void SaveInventory(IEnumerable<RuntimeItem> items)
         {
