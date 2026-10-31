@@ -15,6 +15,7 @@ namespace BagBack100.Player
     {
         public static event Action<InventoryManager> OnManagerCreated;
         public event Action OnInventoryChanged;
+        public event Action<string> OnInventoryActionFailed;
 
         event Action ISlotItemContainer.OnContainerChanged
         {
@@ -24,6 +25,8 @@ namespace BagBack100.Player
 
         [Header("Base Settings")]
         [SerializeField] private int _baseMaxSlots = 30;
+        [Tooltip("가방에서 버린 아이템이 떨어질 수 있는 플레이어 주변 반경(칸)")]
+        [Min(1)] [SerializeField] private int _discardRadius = 2;
 
         public int MaxSlots => _container != null ? _container.Capacity : _baseMaxSlots;
         public int BaseMaxSlots => _baseMaxSlots;
@@ -131,6 +134,46 @@ namespace BagBack100.Player
         public void RemoveItem(RuntimeItem item)
         {
             if (_container.Remove(item)) NotifyInventoryChanged();
+        }
+
+        /// <summary>
+        /// 아이템을 amount개만큼 플레이어 주변 바닥에 버린다. 반경 안에 빈 칸이 없거나 버릴 수 없는 곳(허브)이면 가방에 그대로 둔다.
+        /// </summary>
+        public bool TryDiscard(RuntimeItem item, int amount)
+        {
+            if (item == null || !_container.Contains(item) || amount <= 0) return false;
+            amount = Mathf.Min(amount, item.Count);
+
+            // 일부만 버리면 바닥에 놓일 새 묶음을 만들고, 전부 버리면 원래 개체를 그대로 바닥으로 보낸다
+            RuntimeItem dropped = amount == item.Count ? item : new RuntimeItem(item.ItemData) { Count = amount };
+
+            bool success = false;
+            var handler = BagBack100.Core.GlobalEvents.OnItemDiscardRequested;
+            if (handler != null) handler(dropped, transform.position, _discardRadius, result => success = result);
+
+            if (!success)
+            {
+                OnInventoryActionFailed?.Invoke(handler == null ? "여기서는 아이템을 버릴 수 없습니다." : "주변에 버릴 공간이 없습니다.");
+                return false;
+            }
+
+            RemoveAmount(item, amount);
+            return true;
+        }
+
+        /// <summary>아이템을 amount개만큼 영구 삭제한다 (휴지통).</summary>
+        public bool DeleteItem(RuntimeItem item, int amount)
+        {
+            if (item == null || !_container.Contains(item) || amount <= 0) return false;
+            RemoveAmount(item, Mathf.Min(amount, item.Count));
+            return true;
+        }
+
+        private void RemoveAmount(RuntimeItem item, int amount)
+        {
+            if (amount >= item.Count) _container.Remove(item);
+            else item.Count -= amount;
+            NotifyInventoryChanged();
         }
 
         /// <summary>스택에서 1개를 소모한다. 마지막 1개면 슬롯에서 제거한다.</summary>

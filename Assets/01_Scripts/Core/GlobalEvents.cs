@@ -13,6 +13,9 @@ namespace BagBack100.Core
         // 아이템이 맵에 버려질 때: 아이템 정보, 버려질 위치
         public static Action<RuntimeItem, Vector3> OnItemDroppedOnGround;
 
+        // 가방에서 아이템을 버리기 요청: 아이템, 플레이어 위치, 반경(칸), 성공 여부 콜백 (반경 안에 빈 칸이 없으면 false)
+        public static Action<RuntimeItem, Vector3, int, Action<bool>> OnItemDiscardRequested;
+
         // 플레이어가 발로 밟아 아이템을 획득할 때 (성공 여부 콜백)
         public static Action<RuntimeItem, Action<bool>> OnItemPickedUpByPlayer;
 
