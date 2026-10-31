@@ -4030,6 +4030,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: StoragePanel
       objectReference: {fileID: 0}
+    - target: {fileID: 3937135165459167764, guid: 0c4aa092280e9874299d7583081011af, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

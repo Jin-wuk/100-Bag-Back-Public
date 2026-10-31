@@ -388,7 +388,7 @@ MonoBehaviour:
   _obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 64
-  _startSafeStepRadius: 5
+  _startSafeStepRadius: 10
   _minMonsterSpacing: 3
   _farthestExitCandidateCount: 3
   _corridorMonsterCount: 4
@@ -433,7 +433,7 @@ MonoBehaviour:
   _sightRadius: 4
   _softEdgeWidth: 1.5
   _useLineOfSight: 1
-  _topWallExtraHeight: 1
+  _wallVerticalElevation: 1
   _obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 0
@@ -768,8 +768,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7157962007390842834, guid: 569f1a5e0c220dd4ea0e34257d73a77a, type: 3}
       propertyPath: _monsterCount
-      value: 3
+      value: 2
       objectReference: {fileID: 0}
+    - target: {fileID: 7157962007390842834, guid: 569f1a5e0c220dd4ea0e34257d73a77a, type: 3}
+      propertyPath: _overrideMonsterPool.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7157962007390842834, guid: 569f1a5e0c220dd4ea0e34257d73a77a, type: 3}
+      propertyPath: _overrideMonsterPool.Array.data[0]
+      value: 
+      objectReference: {fileID: 4769375905301041180, guid: 8df9a16836a132d4796e502b6c008942, type: 3}
     - target: {fileID: 7373799786730420094, guid: 569f1a5e0c220dd4ea0e34257d73a77a, type: 3}
       propertyPath: m_Name
       value: FixedMap
