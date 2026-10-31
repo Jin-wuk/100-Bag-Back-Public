@@ -99,7 +99,7 @@ namespace BagBack100.Player
 
             if (!_inventoryManager.CanFitAfterResize(newBagData.bagAddedSlots, extraItems))
             {
-                OnEquipmentFailed?.Invoke("가방 공간이 부족해 가방을 교체할 수 없습니다.");
+                OnEquipmentFailed?.Invoke("Not enough bag space to swap backpacks.");
                 return false;
             }
 
@@ -129,7 +129,7 @@ namespace BagBack100.Player
                 // 보너스 칸이 사라진 기본 용량에 (기존 아이템 + 해제할 가방)이 모두 들어가야 한다.
                 if (!_inventoryManager.CanFitAfterResize(0, 1))
                 {
-                    OnEquipmentFailed?.Invoke("가방에 빈 공간이 없습니다.");
+                    OnEquipmentFailed?.Invoke("No free space in the bag.");
                     return false;
                 }
                 _inventoryManager.UpdateBagCapacity(0);
@@ -137,7 +137,7 @@ namespace BagBack100.Player
 
             if (!_inventoryManager.TryAddNextAvailableSlot(oldItem))
             {
-                OnEquipmentFailed?.Invoke("가방에 빈 공간이 없습니다.");
+                OnEquipmentFailed?.Invoke("No free space in the bag.");
                 return false;
             }
 
@@ -150,7 +150,7 @@ namespace BagBack100.Player
         private bool IsEquipmentChangeLocked()
         {
             if (_allowEquipmentChange) return false;
-            OnEquipmentFailed?.Invoke("장비는 기지에서만 교체할 수 있습니다.");
+            OnEquipmentFailed?.Invoke("Equipment can only be changed at the base.");
             return true;
         }
 

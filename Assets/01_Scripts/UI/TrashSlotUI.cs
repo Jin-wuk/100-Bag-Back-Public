@@ -22,7 +22,7 @@ namespace BagBack100.UI
         {
             if (!(source is InventoryManager inventory)) return;
 
-            _dialog.Open($"{item.ItemData.itemName} 영구 삭제", item.Count, "삭제",
+            _dialog.Open($"Delete {item.ItemData.itemName} permanently", item.Count, "Delete",
                 amount => inventory.DeleteItem(item, amount));
         }
     }

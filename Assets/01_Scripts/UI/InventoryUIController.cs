@@ -75,7 +75,7 @@ namespace BagBack100.UI
                 _inventoryManager.TryDiscard(item, item.Count);
                 return;
             }
-            _quantityDialog.Open($"{item.ItemData.itemName} 버리기", item.Count, "버리기",
+            _quantityDialog.Open($"Drop {item.ItemData.itemName}", item.Count, "Drop",
                 amount => _inventoryManager.TryDiscard(item, amount));
         }
 

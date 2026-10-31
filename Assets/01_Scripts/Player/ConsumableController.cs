@@ -51,14 +51,14 @@ namespace BagBack100.Player
 
             if (!CanRestoreAnything(data))
             {
-                OnUseFailed?.Invoke("이미 가득 차 있습니다.");
+                OnUseFailed?.Invoke("Already full.");
                 return false;
             }
 
             bool inCombat = _combatState != null && _combatState.IsInCombat;
             if (inCombat && GcdRemaining > 0f)
             {
-                OnUseFailed?.Invoke("포션 재사용 대기 중입니다.");
+                OnUseFailed?.Invoke("Potion is on cooldown.");
                 return false;
             }
 

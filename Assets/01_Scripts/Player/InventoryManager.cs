@@ -148,7 +148,7 @@ namespace BagBack100.Player
             if (item == null || !_container.Contains(item) || amount <= 0) return false;
             if (!_allowDiscard)
             {
-                OnInventoryActionFailed?.Invoke("여기서는 아이템을 버릴 수 없습니다.");
+                OnInventoryActionFailed?.Invoke("Items cannot be dropped here.");
                 return false;
             }
             amount = Mathf.Min(amount, item.Count);
@@ -162,7 +162,7 @@ namespace BagBack100.Player
 
             if (!success)
             {
-                OnInventoryActionFailed?.Invoke(handler == null ? "여기서는 아이템을 버릴 수 없습니다." : "주변에 버릴 공간이 없습니다.");
+                OnInventoryActionFailed?.Invoke(handler == null ? "Items cannot be dropped here." : "No space nearby to drop the item.");
                 return false;
             }
 
