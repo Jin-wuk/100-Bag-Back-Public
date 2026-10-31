@@ -33,6 +33,7 @@ namespace BagBack100.Core
             OnPauseChanged = null;
             SceneManager.sceneUnloaded -= HandleSceneUnloaded;
             SceneManager.sceneUnloaded += HandleSceneUnloaded;
+            Time.timeScale = 1f;
         }
 
         // 일시정지 상태로 씬이 바뀌어 다음 씬(허브)이 멈춘 채 시작되는 것을 방지

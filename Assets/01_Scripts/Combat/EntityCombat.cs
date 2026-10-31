@@ -8,6 +8,11 @@ using BagBack100.Monster;
 
 namespace BagBack100.Combat
 {
+    /// <summary>
+    /// Role: 플레이어·몬스터 공용 공격 실행기. 근접/다중/원거리 공격, 공격 쿨다운(모션 락), 쿨다운 무관 즉시 타격.
+    /// Dependencies: MonsterController, PlayerStatManager, CombatFeedbackSystem, Projectile, GamePauseService
+    /// Events: OnMeleeAttack, OnRangedAttack, OnAttackFinished, GlobalEvents.OnCombatImpact
+    /// </summary>
     public class EntityCombat : MonoBehaviour
     {
         public event Action<Vector3> OnMeleeAttack;

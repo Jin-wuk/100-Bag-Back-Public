@@ -4,6 +4,11 @@ using BagBack100.Core;
 
 namespace BagBack100.UI
 {
+    /// <summary>
+    /// Role: 던전 가방(인벤토리·장비·보상) 패널 열기/닫기. 열려 있는 동안 이동 차단과 게임 일시정지를 요청한다.
+    /// Dependencies: PlayerInput, GamePauseService
+    /// Events: 없음
+    /// </summary>
     public class DungeonUIManager : MonoBehaviour
     {
         [Header("UI Panels")]
