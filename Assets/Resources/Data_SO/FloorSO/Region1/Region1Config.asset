@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9137ce0111a87564fb9cb0033de592eb, type: 3}
+  m_Name: Region1Config
+  m_EditorClassIdentifier: 
+  _regionId: 1
+  _regionName: "\uC9C0\uC5ED 1"
+  _earlyPool:
+  - {fileID: 11400000, guid: 748afffcfe4a6ae49986f608685be1d1, type: 2}
+  - {fileID: 11400000, guid: 28397cb7010779b49b475823cc27c075, type: 2}
+  _latePool:
+  - {fileID: 11400000, guid: 0c831f52f0816794481601840329e12a, type: 2}
+  - {fileID: 11400000, guid: 178e32a5a55d7ce4294c25d246da9647, type: 2}
+  _midBossFloor: {fileID: 11400000, guid: 5a3335ce97d8c214db269cc2c6069782, type: 2}
+  _bossFloor: {fileID: 11400000, guid: 5a3335ce97d8c214db269cc2c6069782, type: 2}
+  _floorRules:
+  - _exitChance: 0.1
+    _chestRolls: 1
+    _chestChance: 0.4
+  - _exitChance: 0.2
+    _chestRolls: 1
+    _chestChance: 0.4
+  - _exitChance: 0.3
+    _chestRolls: 1
+    _chestChance: 0.4
+  - _exitChance: 0.4
+    _chestRolls: 1
+    _chestChance: 0.4
+  - _exitChance: 0
+    _chestRolls: 0
+    _chestChance: 0
+  - _exitChance: 0.5
+    _chestRolls: 2
+    _chestChance: 0.4
+  - _exitChance: 0.5
+    _chestRolls: 2
+    _chestChance: 0.4
+  - _exitChance: 0.5
+    _chestRolls: 2
+    _chestChance: 0.4
+  - _exitChance: 0.5
+    _chestRolls: 2
+    _chestChance: 0.4
+  _debugAllowDuplicateDesigns: 1
