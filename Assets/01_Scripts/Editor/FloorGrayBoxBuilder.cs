@@ -401,6 +401,64 @@ namespace BagBack100.EditorTools
             Debug.Log($"[FloorGrayBoxBuilder] {DungeonSceneName}: 계단 프리팹 연결, FloorHUD 준비 후 저장.");
         }
 
+        // T3: 회색 박스 상자 프리팹을 만들고 03_DungeonScene의 DungeonGenerator에 연결한다
+        [MenuItem("BagBack100/Floor/Setup Chest Prefab")]
+        public static void SetupChestPrefab()
+        {
+            Scene scene = SceneManager.GetActiveScene();
+            if (scene.name != DungeonSceneName)
+            {
+                Debug.LogError($"[FloorGrayBoxBuilder] {DungeonSceneName}을 연 상태에서 실행하세요. (현재: {scene.name})");
+                return;
+            }
+
+            DungeonGenerator generator = Object.FindObjectOfType<DungeonGenerator>();
+            if (generator == null)
+            {
+                Debug.LogError("[FloorGrayBoxBuilder] 씬에 DungeonGenerator가 없습니다.");
+                return;
+            }
+
+            FloorChest chestPrefab = CreateOrUpdateChestPrefab();
+            var so = new SerializedObject(generator);
+            so.FindProperty("_chestPrefab").objectReferenceValue = chestPrefab;
+            so.ApplyModifiedProperties();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[FloorGrayBoxBuilder] {DungeonSceneName}: 상자 프리팹 연결 후 저장.");
+        }
+
+        private const string ChestPrefabPath = FloorPrefabFolder + "/FloorChest_GrayBox.prefab";
+
+        private static FloorChest CreateOrUpdateChestPrefab()
+        {
+            EnsureFolder(FloorPrefabFolder);
+            var go = new GameObject("FloorChest_GrayBox");
+            try
+            {
+                var renderer = go.AddComponent<SpriteRenderer>();
+                renderer.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+                renderer.color = new Color(1f, 0.82f, 0.2f, 0.95f);
+                renderer.sortingOrder = StairsSortingOrder;
+                go.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
+
+                var col = go.AddComponent<BoxCollider2D>();
+                col.isTrigger = true;
+                col.size = Vector2.one;
+                go.AddComponent<FloorChest>();
+                // 한 번 본 상자는 안개 아래에서도 계속 보인다 (기본 모드 RememberWhenExplored)
+                go.AddComponent<FogVisibilityObject>();
+
+                GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, ChestPrefabPath);
+                return prefab != null ? prefab.GetComponent<FloorChest>() : null;
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
         private const string StairsPrefabPath = FloorPrefabFolder + "/FloorStairs_GrayBox.prefab";
         private const int StairsSortingOrder = 11; // 탈출 포탈(ReturnPortal)과 같은 정렬 순서
 

@@ -14,7 +14,7 @@ namespace BagBack100.Dungeon
     /// Role: 층계 던전 맵 생성과 엔티티 스폰. RegionConfigSO에서 층 디자인을 골라 층 프리팹을 런타임 생성하고
     ///       마커(시작점·계단·탈출구·상자 후보)와 몬스터 구역(DungeonZone)으로 배치한다.
     ///       위층 계단(FloorStairs)으로 같은 씬 안에서 다음 층을 다시 만든다(층 전환).
-    /// Dependencies: RegionConfigSO, FloorDesignSO, FloorLayout, FloorMarker, FloorStairs, FloorDesignValidator, DungeonZone,
+    /// Dependencies: RegionConfigSO, FloorDesignSO, FloorLayout, FloorMarker, FloorStairs, FloorChest, FloorDesignValidator, DungeonZone,
     ///               FogOfWarSystem, TileSystem, GamePauseService, PlayerController, PlayerSessionData
     /// Events: GlobalEvents.OnFloorTransitionStarted, GlobalEvents.OnFloorEntered
     /// </summary>
@@ -58,6 +58,8 @@ namespace BagBack100.Dungeon
         [SerializeField, Min(0)] private int _markerSafeRadius = 1;
         [Tooltip("위층 계단 프리팹 (FloorStairs). 10층은 생성하지 않는다")]
         [SerializeField] private FloorStairs _stairsPrefab;
+        [Tooltip("상자 프리팹 (FloorChest). 층별 규칙의 굴림 횟수·확률로 상자 후보 마커에 놓는다")]
+        [SerializeField] private FloorChest _chestPrefab;
         [Tooltip("층 전환 페이드 아웃·인 시간(초, 실시간). 이 동안 게임을 일시정지하고 입력을 잠근다")]
         [SerializeField, Min(0f)] private float _floorFadeSeconds = 0.3f;
 
@@ -75,6 +77,7 @@ namespace BagBack100.Dungeon
         // 이번 판에 이미 쓴 층 프리팹 (씬이 던전 입장마다 다시 로드되므로 판이 바뀌면 자연히 비워진다)
         private readonly HashSet<FloorLayout> _usedLayouts = new HashSet<FloorLayout>();
         private readonly List<FloorDesignSO> _designCandidates = new List<FloorDesignSO>();
+        private readonly List<FloorMarker> _chestCandidates = new List<FloorMarker>();
 
         public static DungeonGenerator Instance { get; private set; }
 
@@ -323,7 +326,7 @@ namespace BagBack100.Dungeon
             Dictionary<Vector3Int, int> reachableSteps = BuildReachableTileMap(playerStartCell, 5000);
             HashSet<Vector3Int> occupiedCells = new HashSet<Vector3Int> { playerStartCell };
 
-            // 탈출구·계단 주변은 스폰 금지, 상자 후보 칸은 T3 상자 자리로 예약
+            // 탈출구·계단 주변은 스폰 금지, 상자 후보 칸은 상자 자리로 예약 (상자가 안 나와도 비워 둔다)
             ReserveMarkerCells(layout, FloorMarkerType.Exit, _markerSafeRadius, occupiedCells);
             ReserveMarkerCells(layout, FloorMarkerType.UpStairs, _markerSafeRadius, occupiedCells);
             ReserveMarkerCells(layout, FloorMarkerType.ChestCandidate, 0, occupiedCells);
@@ -334,6 +337,8 @@ namespace BagBack100.Dungeon
             {
                 Instantiate(_stairsPrefab, _grid.GetCellCenterWorld(LayoutToGridCell(layout, stairsMarker)), Quaternion.identity, _spawnRoot);
             }
+
+            SpawnChests(layout);
 
             // T1: 탈출구를 마커에 항상 배치한다. T4에서 클리어 시 확률 활성화로 교체한다.
             FloorMarker exitMarker = layout.GetSingleMarker(FloorMarkerType.Exit);
@@ -358,6 +363,32 @@ namespace BagBack100.Dungeon
             Vector3Int cell = _grid.WorldToCell(world);
             cell.z = 0;
             return cell;
+        }
+
+        /// <summary>
+        /// 상자 B안(Q30): 층 규칙의 굴림 횟수만큼 확률 판정을 하고, 당첨될 때마다 남은 상자 후보 중 무작위 1곳에 놓는다.
+        /// 후보를 몇 곳 찍든 상자 기대 개수는 같다. 보스층(5·10층)은 규칙이 0이라 놓이지 않는다.
+        /// </summary>
+        private void SpawnChests(FloorLayout layout)
+        {
+            if (_chestPrefab == null) return;
+
+            FloorRule rule = _regionConfig.GetRule(_currentFloorNumber);
+            if (rule.ChestRolls <= 0 || rule.ChestChance <= 0f) return;
+
+            layout.CollectMarkers(FloorMarkerType.ChestCandidate, _chestCandidates);
+            for (int roll = 0; roll < rule.ChestRolls; roll++)
+            {
+                if (_chestCandidates.Count == 0) break; // 검증을 우회한 데이터: 후보보다 굴림이 많음
+                if (Random.value >= rule.ChestChance) continue;
+
+                int index = Random.Range(0, _chestCandidates.Count);
+                FloorMarker marker = _chestCandidates[index];
+                _chestCandidates.RemoveAt(index);
+
+                FloorChest chest = Instantiate(_chestPrefab, _grid.GetCellCenterWorld(LayoutToGridCell(layout, marker)), Quaternion.identity, _spawnRoot);
+                chest.Initialize(_regionConfig.ChestDropPoolId);
+            }
         }
 
         private void ReserveMarkerCells(FloorLayout layout, FloorMarkerType type, int radius, HashSet<Vector3Int> occupiedCells)

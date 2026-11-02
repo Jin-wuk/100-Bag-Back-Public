@@ -665,6 +665,7 @@ MonoBehaviour:
   _regionConfig: {fileID: 11400000, guid: 0cce381313df6db4eacd648428a413f3, type: 2}
   _markerSafeRadius: 1
   _stairsPrefab: {fileID: 3547875023807878177, guid: 2e7a1a8cb1c1b5e499a6fa339bce9a04, type: 3}
+  _chestPrefab: {fileID: 3370671128642027910, guid: a49f1b3d6da892648944541e30b4bec8, type: 3}
   _floorFadeSeconds: 0.3
 --- !u!4 &525934923
 Transform:
