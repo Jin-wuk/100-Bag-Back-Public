@@ -304,8 +304,9 @@ namespace BagBack100.Dungeon
             Physics2D.SyncTransforms();
 
             var errors = new List<string>();
-            StairsRequirement stairs = design.Band == FloorBand.Boss ? StairsRequirement.Optional : StairsRequirement.Required;
-            if (!FloorDesignValidator.ValidateLayout(_currentFloor, stairs, 0, errors))
+            // 5층 중간 보스층은 6층으로 가는 계단이 필요하고, 10층만 계단이 없어도 된다
+            StairsRequirement stairs = _currentFloorNumber >= RegionConfigSO.BossFloor ? StairsRequirement.Optional : StairsRequirement.Required;
+            if (!FloorDesignValidator.ValidateLayout(_currentFloor, stairs, _regionConfig.GetRule(_currentFloorNumber).ChestRolls, errors))
             {
                 Debug.LogError($"[DungeonGenerator] 층 프리팹 규격 오류 ({design.name}):\n{string.Join("\n", errors)}");
             }
