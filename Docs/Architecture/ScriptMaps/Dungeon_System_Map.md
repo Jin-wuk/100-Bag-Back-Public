@@ -9,18 +9,23 @@ graph TD
     %% Scriptable Objects
     subgraph DataLayer["Data Layer"]
         DD["DungeonData.cs<br>- Chunk Layout<br>- Monster/Trap/Exit Prefabs"]
+        RC["RegionConfigSO.cs<br>- 1~5 / 6~9 Design Pools<br>- 5F/10F Boss Designs<br>- 1~9F Exit/Chest Rules"]
+        FD["FloorDesignSO.cs<br>- Floor Prefab / Band / Weight"]
     end
 
     %% Managers & Core Logic
     subgraph LogicLayer["Logic Layer"]
-        DG["DungeonGenerator.cs<br>- Mode: FixedMap / ProceduralChunks<br>- Flood Fill (BFS) & Zone Spawning"]
+        DG["DungeonGenerator.cs<br>- Floor Path (RegionConfigSO) / FixedMap Fallback<br>- Flood Fill (BFS) & Zone Spawning"]
+        FV["FloorDesignValidator.cs<br>- Marker Count / Walkable / Stairs-Exit Distance"]
         FOW["FogOfWarSystem.cs<br>- 3-State Fog: Unexplored / Explored / Visible<br>- Bresenham LOS & Dynamic Mask Texture<br>- North 2-Tile Elevation Offset"]
         LS["LootSystem.cs<br>- Field Loot Spawner<br>- Auto FogVisibilityObject Attach"]
     end
 
     %% Views & Objects
     subgraph ViewLayer["View / Object Layer"]
-        DZ["DungeonZone.cs<br>- Start / Combat / Chest / Corridor / Exit<br>- Box Bounds & Gizmos"]
+        FL["FloorLayout.cs<br>- Floor Prefab Root<br>- Floor/Wall Tilemaps, Markers, Zones"]
+        FM["FloorMarker.cs<br>- PlayerStart / UpStairs / Exit / ChestCandidate"]
+        DZ["DungeonZone.cs<br>- Floor Path: Combat / Corridor<br>- Box Bounds & Gizmos"]
         DC["DungeonChunk.cs<br>- Post-MVP 개별 청크"]
         DE["DungeonExit.cs<br>- Trigger Detection<br>- Scene Transition"]
         UI["DungeonEntranceUI.cs<br>- Enter Dungeon"]
@@ -31,6 +36,13 @@ graph TD
 
     %% Dependencies
     UI -->|LoadScene| DG
+    DG -->|Floor: Reads Config| RC
+    RC -->|Pools| FD
+    FD -->|Prefab| FL
+    DG -->|Floor: Instantiate under FloorGrid| FL
+    FL -->|Markers| FM
+    FL -->|Zones| DZ
+    DG -->|Validate Instance| FV
     DG -->|FixedMap: Flood Fill & Zone 스캔| DZ
     DG -->|FixedMap: Instantiate| DE
     DG -->|Initialize| FOW
@@ -47,7 +59,11 @@ graph TD
 
 ### 2.1. `DungeonGenerator` (`MonoBehaviour`)
 *   **역할**: 던전 씬 진입 시 맵 생성 및 엔티티 스폰을 전담하는 메인 매니저.
-*   **지원 모드**:
+*   **층 경로 (층계 던전, `_regionConfig` 지정 시)**: 기획 `07_Floor_Based_Dungeon_Design.md`.
+    *   `Awake`: 씬의 영속 `FloorGrid`(Grid) 아래 원점에 층 프리팹(`FloorLayout`)을 생성하고 `_floorTilemap`/`_wallTilemap`을 층 타일맵으로 바인딩, `Physics2D.SyncTransforms()` 후 `FloorDesignValidator`로 인스턴스 검증. Grid를 층 프리팹에 두지 않는 이유: 플레이어·몬스터가 `FindObjectOfType<Grid>()`로 Grid를 캐싱하므로 층 교체(T2) 때 Grid가 바뀌면 안 된다.
+    *   `Start`: `PlayerStart` 마커에 플레이어 스폰 → BFS → `Exit`·`UpStairs` 마커 반경 `_markerSafeRadius`(체비쇼프) 및 `ChestCandidate` 칸을 스폰 금지로 예약 → `Exit` 마커에 탈출 포탈(T4 전까지 항상) → `Combat`/`Corridor` 구역과 구역 밖 복도에 몬스터·함정 → 안개 초기화. 스폰물은 층 루트 아래 `Spawned`에 모은다.
+    *   현재(T1)는 `EarlyPool[0]`을 1층으로 쓴다. 층 추첨(T3), 층 전환(T2), 클리어 판정(T4)은 이후 태스크.
+*   **지원 모드 (`_regionConfig`가 비었을 때)**:
     1.  `FixedMap` (MVP 현행 - 구역 & Flood Fill 기반):
         *   `Start` 구역에서 플레이어를 스폰한 뒤, 해당 타일로부터 **4방향 BFS(Flood Fill)**를 수행하여 벽 안쪽의 실제 도달 가능한 바닥 타일(`FloorTilemap` 있음 & `WallTilemap` 없음 & 장애물 없음)과 이동 걸음 수를 산출. (벽 뒤의 빈 공간 100% 배제)
         *   실제 미로 이동 걸음 수가 가장 먼 `Exit` 구역 후보 중 1곳에 탈출 포탈 생성.
@@ -81,6 +97,7 @@ graph TD
 
 ### 2.6. `DungeonZone` (`MonoBehaviour`)
 *   **역할**: 통짜 미로 맵 위에 사각형 영역(`_size` 또는 `BoxCollider2D`)으로 배치되어 구역의 성격(`Start`, `Combat`, `Chest`, `Corridor`, `Exit`)과 스폰 수량을 정의.
+*   **층 경로**: `Combat`·`Corridor`만 쓴다. 시작점·탈출구·상자 후보는 `FloorMarker`가 맡는다(나머지 enum 값은 T3 청크 정리 때 함께 정리).
 *   **특징**:
     *   에디터 씬 뷰에서 구역 타입별 색상 반투명 기즈모(Gizmo) 렌더링.
     *   런타임 시 `BoxCollider2D`가 붙어 있으면 자동으로 비활성화하여 물리 충돌 간섭 방지.
@@ -93,3 +110,20 @@ graph TD
 
 ### 2.9. `DungeonExit` (`MonoBehaviour`)
 *   **역할**: 탈출구(포탈)의 상호작용 및 씬 전환 처리 (`LoadSceneMode.Single`).
+
+### 2.10. `FloorLayout` / `FloorMarker` (`MonoBehaviour`)
+*   **`FloorLayout`**: 층 프리팹 루트. `Floor`·`Wall` 타일맵 참조, 마커·구역 수집(지연 캐싱, Edit Mode에서는 매번 재수집), 루트 기준 칸 좌표(`GetLocalCell`, 셀 크기 1).
+*   **`FloorMarker`**: `PlayerStart` / `UpStairs` / `Exit` / `ChestCandidate`. 칸 중앙(+0.5)에 둔다.
+*   **층 프리팹 규격**: 루트(`FloorLayout`, Grid 없음) 아래 `Floor`, `Wall`(레이어 Wall, `TilemapCollider2D`), `Markers`, `Zones`. 타일맵은 루트 기준 위치·회전 0, 스케일 1.
+
+### 2.11. `FloorDesignSO` / `RegionConfigSO` (`ScriptableObject`)
+*   **`FloorDesignSO`**: 층 프리팹, 구간(`Early` 1~5 / `Late` 6~9 / `Boss`), 가중치.
+*   **`RegionConfigSO`**: 지역 번호·이름, 1~5 풀, 6~9 풀, 5층·10층 보스 디자인, 1~9층 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 디버그 "디자인 중복 허용".
+
+### 2.12. `FloorDesignValidator` (static)
+*   **역할**: 런타임·에디터 공용 규격 검증. 시작점 1, 탈출구 1, 계단 1(10층 보스층은 0~1), 마커 칸 보행 가능·중복 없음, 계단–탈출구 체비쇼프 거리 ≥ 3, 상자 후보 ≥ 구간 최대 굴림 횟수, 풀 구간 일치.
+
+### 2.13. `FloorGrayBoxBuilder` (Editor)
+*   메뉴 `BagBack100/Floor/Create Gray Box Floors`: 회색 박스 층 3장(일반 2 + 보스 1)과 `Region1Config`·`FloorDesignSO` 생성 후 검증.
+*   메뉴 `BagBack100/Floor/Validate Region Configs`: 모든 `RegionConfigSO` 검증.
+*   메뉴 `BagBack100/Floor/Setup Dungeon Scene For Floors`: `03_DungeonScene`의 `FixedMap` 인스턴스 제거, `FloorGrid` 생성, `DungeonGenerator._regionConfig` 연결 후 저장.

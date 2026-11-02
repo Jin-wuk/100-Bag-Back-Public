@@ -13,6 +13,12 @@ namespace BagBack100.Dungeon
         ProceduralChunks    // DungeonData 기반 그리드 청크 조립형 (Post-MVP)
     }
 
+    /// <summary>
+    /// Role: 던전 씬 맵 생성과 엔티티 스폰. 층 경로(RegionConfigSO → 층 프리팹 생성, 마커 기반 배치)와
+    ///       레거시 FixedMap/ProceduralChunks 경로(T3에서 정리)를 함께 가진다.
+    /// Dependencies: RegionConfigSO, FloorDesignSO, FloorLayout, FloorMarker, FloorDesignValidator, DungeonZone, FogOfWarSystem
+    /// Events: 없음
+    /// </summary>
     public class DungeonGenerator : MonoBehaviour
     {
         private static readonly Vector3Int[] CardinalDirs = new Vector3Int[]
@@ -58,6 +64,12 @@ namespace BagBack100.Dungeon
         [Tooltip("탈출 포탈 프리팹")]
         [SerializeField] private GameObject _fixedExitPrefab;
 
+        [Header("Floor Dungeon")]
+        [Tooltip("지정하면 층계 던전 경로(층 프리팹 런타임 생성), 비우면 씬 FixedMap 경로")]
+        [SerializeField] private RegionConfigSO _regionConfig;
+        [Tooltip("탈출구·위층 계단 마커 주변 몬스터·함정 스폰 금지 반경 (체비쇼프, 1 = 3x3)")]
+        [SerializeField, Min(0)] private int _markerSafeRadius = 1;
+
         [Header("Legacy / Procedural Configuration")]
         [Tooltip("절차적 청크 모드 또는 기본 프리팹 폴백용 ScriptableObject")]
         [SerializeField] private DungeonData _dungeonData;
@@ -65,6 +77,9 @@ namespace BagBack100.Dungeon
 
         private Grid _grid;
         private List<DungeonChunk> _spawnedChunks = new List<DungeonChunk>();
+        private FloorLayout _currentFloor;
+        private Transform _spawnRoot;
+        private readonly List<FloorMarker> _markerBuffer = new List<FloorMarker>();
 
         public static DungeonGenerator Instance { get; private set; }
 
@@ -85,7 +100,16 @@ namespace BagBack100.Dungeon
             }
 
             if (_grid == null) _grid = FindObjectOfType<Grid>();
-            AutoBindTilemapsIfNeeded();
+
+            // 층 경로는 Start 전에 타일맵을 바인딩해야 Pathfinder·FogOfWar가 새 층을 본다
+            if (_regionConfig != null)
+            {
+                BuildFloor(GetFirstFloorDesign());
+            }
+            else
+            {
+                AutoBindTilemapsIfNeeded();
+            }
         }
 
         public bool IsCellWalkable(Vector3Int cell)
@@ -97,7 +121,15 @@ namespace BagBack100.Dungeon
         {
             if (_grid == null) _grid = FindObjectOfType<Grid>();
 
-            if (_mode == DungeonMode.FixedMap)
+            if (_currentFloor != null)
+            {
+                SetupFloorLayout(_currentFloor);
+            }
+            else if (_regionConfig != null)
+            {
+                Debug.LogError("[DungeonGenerator] 층 프리팹 생성에 실패해 던전을 만들 수 없습니다.");
+            }
+            else if (_mode == DungeonMode.FixedMap)
             {
                 SetupFixedMap();
             }
@@ -106,6 +138,128 @@ namespace BagBack100.Dungeon
                 SetupProceduralDungeon();
             }
         }
+
+        #region Floor Dungeon Setup (FloorLayout + Marker)
+
+        // T1: 1~5 구간 풀의 첫 장. T3에서 구간·가중치·중복 금지 추첨으로 교체한다.
+        private FloorDesignSO GetFirstFloorDesign()
+        {
+            var pool = _regionConfig.EarlyPool;
+            return pool != null && pool.Count > 0 ? pool[0] : null;
+        }
+
+        private void BuildFloor(FloorDesignSO design)
+        {
+            if (_grid == null)
+            {
+                Debug.LogError("[DungeonGenerator] 씬에 영속 Grid가 없습니다. 층 프리팹은 Grid 자식으로 생성됩니다.");
+                return;
+            }
+            if (design == null || design.LayoutPrefab == null)
+            {
+                Debug.LogError($"[DungeonGenerator] {_regionConfig.name}에 1층 디자인(층 프리팹)이 없습니다.");
+                return;
+            }
+
+            _currentFloor = Instantiate(design.LayoutPrefab, _grid.transform);
+            _currentFloor.transform.localPosition = Vector3.zero;
+            _currentFloor.transform.localRotation = Quaternion.identity;
+            _currentFloor.transform.localScale = Vector3.one;
+
+            // 층 정리(T2)가 층 루트만 파괴하면 되도록 스폰물을 층 아래에 모은다
+            _spawnRoot = new GameObject("Spawned").transform;
+            _spawnRoot.SetParent(_currentFloor.transform, false);
+
+            _floorTilemap = _currentFloor.FloorTilemap;
+            _wallTilemap = _currentFloor.WallTilemap;
+
+            // 새 벽 콜라이더를 물리 월드에 즉시 반영해야 BFS의 OverlapPoint 판정이 맞는다
+            Physics2D.SyncTransforms();
+
+            var errors = new List<string>();
+            StairsRequirement stairs = design.Band == FloorBand.Boss ? StairsRequirement.Optional : StairsRequirement.Required;
+            if (!FloorDesignValidator.ValidateLayout(_currentFloor, stairs, 0, errors))
+            {
+                Debug.LogError($"[DungeonGenerator] 층 프리팹 규격 오류 ({design.name}):\n{string.Join("\n", errors)}");
+            }
+        }
+
+        private void SetupFloorLayout(FloorLayout layout)
+        {
+            FloorMarker startMarker = layout.GetSingleMarker(FloorMarkerType.PlayerStart);
+            if (startMarker == null)
+            {
+                Debug.LogError($"[DungeonGenerator] {layout.name}에 PlayerStart 마커가 정확히 1개 있어야 합니다.");
+                return;
+            }
+
+            Vector3Int playerStartCell = LayoutToGridCell(layout, startMarker);
+            SpawnPlayerAtCell(playerStartCell);
+
+            Dictionary<Vector3Int, int> reachableSteps = BuildReachableTileMap(playerStartCell, 5000);
+            HashSet<Vector3Int> occupiedCells = new HashSet<Vector3Int> { playerStartCell };
+
+            // 탈출구·계단 주변은 스폰 금지, 상자 후보 칸은 T3 상자 자리로 예약
+            ReserveMarkerCells(layout, FloorMarkerType.Exit, _markerSafeRadius, occupiedCells);
+            ReserveMarkerCells(layout, FloorMarkerType.UpStairs, _markerSafeRadius, occupiedCells);
+            ReserveMarkerCells(layout, FloorMarkerType.ChestCandidate, 0, occupiedCells);
+
+            // T1: 탈출구를 마커에 항상 배치한다. T4에서 클리어 시 확률 활성화로 교체한다.
+            FloorMarker exitMarker = layout.GetSingleMarker(FloorMarkerType.Exit);
+            GameObject exitPrefab = _fixedExitPrefab != null ? _fixedExitPrefab : (_dungeonData != null ? _dungeonData.exitPrefab : null);
+            if (exitMarker != null && exitPrefab != null)
+            {
+                Instantiate(exitPrefab, _grid.GetCellCenterWorld(LayoutToGridCell(layout, exitMarker)), Quaternion.identity, _spawnRoot);
+            }
+
+            List<DungeonZone> monsterZones = new List<DungeonZone>();
+            DungeonZone[] zones = layout.Zones;
+            for (int i = 0; i < zones.Length; i++)
+            {
+                DungeonZoneType type = zones[i].ZoneType;
+                if (type == DungeonZoneType.Combat || type == DungeonZoneType.Corridor)
+                {
+                    monsterZones.Add(zones[i]);
+                }
+                else
+                {
+                    Debug.LogWarning($"[DungeonGenerator] {layout.name}의 {type} 구역은 층 경로에서 쓰지 않습니다 (마커로 대체). 무시합니다.");
+                }
+            }
+
+            HashSet<Vector3Int> allZonedCells = new HashSet<Vector3Int>();
+            Dictionary<DungeonZone, List<Vector3Int>> zoneValidCells = BuildZoneValidCells(monsterZones, reachableSteps, allZonedCells);
+            SpawnZoneEntities(monsterZones, zoneValidCells, allZonedCells, reachableSteps, occupiedCells, _spawnRoot);
+            InitializeFogOfWar(playerStartCell);
+        }
+
+        // 층 프리팹은 Grid 원점에 생성되지만, 원점이 바뀌어도 맞도록 월드 좌표를 거쳐 Grid 칸으로 바꾼다.
+        private Vector3Int LayoutToGridCell(FloorLayout layout, FloorMarker marker)
+        {
+            Vector3Int local = layout.GetLocalCell(marker);
+            Vector3 world = layout.transform.TransformPoint(new Vector3(local.x + 0.5f, local.y + 0.5f, 0f));
+            Vector3Int cell = _grid.WorldToCell(world);
+            cell.z = 0;
+            return cell;
+        }
+
+        private void ReserveMarkerCells(FloorLayout layout, FloorMarkerType type, int radius, HashSet<Vector3Int> occupiedCells)
+        {
+            layout.CollectMarkers(type, _markerBuffer);
+            for (int i = 0; i < _markerBuffer.Count; i++)
+            {
+                Vector3Int center = LayoutToGridCell(layout, _markerBuffer[i]);
+                for (int dx = -radius; dx <= radius; dx++)
+                {
+                    for (int dy = -radius; dy <= radius; dy++)
+                    {
+                        occupiedCells.Add(new Vector3Int(center.x + dx, center.y + dy, 0));
+                    }
+                }
+            }
+        }
+
+        #endregion
 
         #region Fixed Map Setup (Zone + Flood Fill)
 
@@ -167,10 +321,24 @@ namespace BagBack100.Dungeon
             Dictionary<Vector3Int, int> reachableSteps = BuildReachableTileMap(playerStartCell, 5000);
 
             HashSet<Vector3Int> occupiedCells = new HashSet<Vector3Int> { playerStartCell };
-            List<Vector3Int> spawnedMonsterCells = new List<Vector3Int>();
             HashSet<Vector3Int> allZonedCells = new HashSet<Vector3Int>();
+            Dictionary<DungeonZone, List<Vector3Int>> zoneValidCells = BuildZoneValidCells(zones, reachableSteps, allZonedCells);
 
-            // 구역별 도달 가능 타일 캐싱
+            // 3. 탈출구(ExitZone) 선정 및 스폰 (실제 미로 걸음 수 기준 가장 먼 곳)
+            SpawnExitInFarthestZone(zones, zoneValidCells, reachableSteps, occupiedCells);
+
+            // 4~5. 구역 내부 + 구역 밖 복도 엔티티 스폰 (Start·Exit 구역은 내부에서 건너뜀)
+            SpawnZoneEntities(zones, zoneValidCells, allZonedCells, reachableSteps, occupiedCells, transform);
+
+            InitializeFogOfWar(playerStartCell);
+        }
+
+        // 구역별 도달 가능 타일 캐싱 (벽 너머·고립 칸 배제)
+        private Dictionary<DungeonZone, List<Vector3Int>> BuildZoneValidCells(
+            IList<DungeonZone> zones,
+            Dictionary<Vector3Int, int> reachableSteps,
+            HashSet<Vector3Int> allZonedCells)
+        {
             Dictionary<DungeonZone, List<Vector3Int>> zoneValidCells = new Dictionary<DungeonZone, List<Vector3Int>>();
             foreach (var zone in zones)
             {
@@ -186,9 +354,18 @@ namespace BagBack100.Dungeon
                 }
                 zoneValidCells[zone] = valid;
             }
+            return zoneValidCells;
+        }
 
-            // 3. 탈출구(ExitZone) 선정 및 스폰 (실제 미로 걸음 수 기준 가장 먼 곳)
-            SpawnExitInFarthestZone(zones, zoneValidCells, reachableSteps, occupiedCells);
+        private void SpawnZoneEntities(
+            IList<DungeonZone> zones,
+            Dictionary<DungeonZone, List<Vector3Int>> zoneValidCells,
+            HashSet<Vector3Int> allZonedCells,
+            Dictionary<Vector3Int, int> reachableSteps,
+            HashSet<Vector3Int> occupiedCells,
+            Transform parent)
+        {
+            List<Vector3Int> spawnedMonsterCells = new List<Vector3Int>();
 
             // 4. 보물방(ChestZone), 전투방(CombatZone), 수동 복도(CorridorZone) 내부 엔티티 스폰
             foreach (var zone in zones)
@@ -206,14 +383,14 @@ namespace BagBack100.Dungeon
                     List<GameObject> chestPool = (zone.OverrideChestPool != null && zone.OverrideChestPool.Count > 0)
                         ? zone.OverrideChestPool
                         : _chestPrefabPool;
-                    SpawnEntitiesInCells(candidates, chestCount, chestPool, null, reachableSteps, occupiedCells, null, false);
+                    SpawnEntitiesInCells(candidates, chestCount, chestPool, null, reachableSteps, occupiedCells, null, false, parent);
                 }
 
                 // 구역 함정 스폰
                 if (zone.TrapCount > 0)
                 {
                     GameObject defaultTrap = _dungeonData != null ? _dungeonData.trapPrefab : null;
-                    SpawnEntitiesInCells(candidates, zone.TrapCount, _trapPrefabPool, defaultTrap, reachableSteps, occupiedCells, null, true);
+                    SpawnEntitiesInCells(candidates, zone.TrapCount, _trapPrefabPool, defaultTrap, reachableSteps, occupiedCells, null, true, parent);
                 }
 
                 // 구역 몬스터 스폰 (최소 간격 유지)
@@ -223,7 +400,7 @@ namespace BagBack100.Dungeon
                         ? zone.OverrideMonsterPool
                         : _monsterPrefabPool;
                     GameObject defaultMonster = _dungeonData != null ? _dungeonData.monsterPrefab : null;
-                    SpawnEntitiesInCells(candidates, zone.MonsterCount, monsterPool, defaultMonster, reachableSteps, occupiedCells, spawnedMonsterCells, true);
+                    SpawnEntitiesInCells(candidates, zone.MonsterCount, monsterPool, defaultMonster, reachableSteps, occupiedCells, spawnedMonsterCells, true, parent);
                 }
             }
 
@@ -244,16 +421,15 @@ namespace BagBack100.Dungeon
 
                 if (_corridorTrapCount > 0)
                 {
-                    SpawnEntitiesInCells(unzonedCorridorCells, _corridorTrapCount, _trapPrefabPool, defaultTrap, reachableSteps, occupiedCells, null, true);
+                    SpawnEntitiesInCells(unzonedCorridorCells, _corridorTrapCount, _trapPrefabPool, defaultTrap, reachableSteps, occupiedCells, null, true, parent);
                 }
 
                 if (_corridorMonsterCount > 0)
                 {
-                    SpawnEntitiesInCells(unzonedCorridorCells, _corridorMonsterCount, _monsterPrefabPool, defaultMonster, reachableSteps, occupiedCells, spawnedMonsterCells, true);
+                    SpawnEntitiesInCells(unzonedCorridorCells, _corridorMonsterCount, _monsterPrefabPool, defaultMonster, reachableSteps, occupiedCells, spawnedMonsterCells, true, parent);
                 }
             }
 
-            InitializeFogOfWar(playerStartCell);
         }
 
         private void InitializeFogOfWar(Vector3Int playerStartCell)
@@ -419,7 +595,8 @@ namespace BagBack100.Dungeon
             Dictionary<Vector3Int, int> reachableSteps,
             HashSet<Vector3Int> occupiedCells,
             List<Vector3Int> spawnedMonsterCells,
-            bool applySafeRadius)
+            bool applySafeRadius,
+            Transform parent)
         {
             if (candidateCells == null || candidateCells.Count == 0 || count <= 0) return;
             bool hasPool = pool != null && pool.Count > 0;
@@ -468,7 +645,7 @@ namespace BagBack100.Dungeon
                 if (prefab == null) continue;
 
                 Vector3 worldPos = _grid.GetCellCenterWorld(cell);
-                Instantiate(prefab, worldPos, Quaternion.identity, transform);
+                Instantiate(prefab, worldPos, Quaternion.identity, parent);
 
                 occupiedCells.Add(cell);
                 if (spawnedMonsterCells != null)
