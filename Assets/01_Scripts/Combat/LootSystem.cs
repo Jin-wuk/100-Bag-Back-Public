@@ -5,7 +5,6 @@ using BagBack100.Data.Models;
 using BagBack100.Data.Core;
 using BagBack100.Map;
 using BagBack100.Dungeon; // [추가] FogOfWar 연동을 위한 네임스페이스
-using System.Linq;
 
 namespace BagBack100.Combat
 {
@@ -158,7 +157,8 @@ namespace BagBack100.Combat
 
                     if (rolls <= 0) continue;
 
-                    int totalWeight = group.entries.Sum(e => e.dropWeight);
+                    int totalWeight = 0;
+                    for (int w = 0; w < group.entries.Count; w++) totalWeight += group.entries[w].dropWeight;
                     if (totalWeight <= 0)
                     {
                         Debug.LogWarning($"[LootSystem] '{group.groupName}' 그룹의 총 가중치 합이 0입니다. 가중치를 확인해주세요.");
