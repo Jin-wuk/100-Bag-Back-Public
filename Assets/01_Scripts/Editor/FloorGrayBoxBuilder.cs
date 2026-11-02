@@ -210,11 +210,18 @@ namespace BagBack100.EditorTools
             }
 
             var errors = new List<string>();
+            var warnings = new List<string>();
             foreach (string guid in guids)
             {
                 var region = AssetDatabase.LoadAssetAtPath<RegionConfigSO>(AssetDatabase.GUIDToAssetPath(guid));
                 errors.Clear();
-                if (FloorDesignValidator.ValidateRegion(region, errors))
+                warnings.Clear();
+                bool valid = FloorDesignValidator.ValidateRegion(region, errors, warnings);
+                if (warnings.Count > 0)
+                {
+                    Debug.LogWarning($"[FloorValidator] {region.name}: 경고 {warnings.Count}건\n{string.Join("\n", warnings)}", region);
+                }
+                if (valid)
                 {
                     Debug.Log($"[FloorValidator] {region.name}: 오류 0건");
                 }

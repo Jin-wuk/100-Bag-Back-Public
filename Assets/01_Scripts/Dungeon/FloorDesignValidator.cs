@@ -104,9 +104,10 @@ namespace BagBack100.Dungeon
 
         /// <summary>
         /// 지역 전체 검증. 프리팹 에셋을 직접 읽으므로 에디터에서 호출해도 프리뷰 씬을 만들지 않는다.
-        /// 풀 장수(한 판 중복 금지) 검증은 T3에서 추가한다.
+        /// 풀 장수는 한 판 중복 금지(Q13)를 채울 수 있는지 본다: 고유 프리팹 수가 구간 층 수보다 적으면 오류,
+        /// 같으면 경고(추천 6장 이상). 디버그 중복 허용이 켜져 있으면 부족해도 경고로 낮춘다.
         /// </summary>
-        public static bool ValidateRegion(RegionConfigSO region, List<string> errors)
+        public static bool ValidateRegion(RegionConfigSO region, List<string> errors, List<string> warnings)
         {
             int errorCountBefore = errors.Count;
             if (region == null)
@@ -117,6 +118,9 @@ namespace BagBack100.Dungeon
 
             ValidatePool(region.EarlyPool, FloorBand.Early, region, errors);
             ValidatePool(region.LatePool, FloorBand.Late, region, errors);
+            ValidatePoolSize(region.EarlyPool, FloorBand.Early, RegionConfigSO.MidBossFloor - 1, region, errors, warnings);
+            ValidatePoolSize(region.LatePool, FloorBand.Late, RegionConfigSO.RuleFloorCount - RegionConfigSO.MidBossFloor, region, errors, warnings);
+            WarnSharedLayouts(region, warnings);
             ValidateDesign(region.MidBossFloorDesign, FloorBand.Boss, StairsRequirement.Required, region, errors);
             ValidateDesign(region.BossFloorDesign, FloorBand.Boss, StairsRequirement.Optional, region, errors);
             return errors.Count == errorCountBefore;
@@ -132,6 +136,53 @@ namespace BagBack100.Dungeon
             for (int i = 0; i < pool.Count; i++)
             {
                 ValidateDesign(pool[i], band, StairsRequirement.Required, region, errors);
+            }
+        }
+
+        public const int RecommendedPoolSize = 6;
+
+        private static void ValidatePoolSize(IReadOnlyList<FloorDesignSO> pool, FloorBand band, int floorCount,
+            RegionConfigSO region, List<string> errors, List<string> warnings)
+        {
+            int unique = CountUniqueLayouts(pool);
+            if (unique < floorCount)
+            {
+                string message = $"[{region.name}] {band} 풀 고유 디자인 {unique}장 < 구간 층 수 {floorCount}장 (한 판 중복 금지를 채울 수 없음).";
+                if (region.DebugAllowDuplicateDesigns) warnings.Add(message + " 디버그 중복 허용이 켜져 있어 경고로 처리.");
+                else errors.Add(message);
+            }
+            else if (unique == floorCount)
+            {
+                warnings.Add($"[{region.name}] {band} 풀 고유 디자인 {unique}장 = 구간 층 수. 매 판 같은 구성이 됩니다 (추천 {RecommendedPoolSize}장 이상).");
+            }
+        }
+
+        // Early와 Late가 같은 프리팹을 쓰면 한 판 중복 금지 때문에 두 구간이 후보를 나눠 쓴다
+        private static void WarnSharedLayouts(RegionConfigSO region, List<string> warnings)
+        {
+            var early = new HashSet<FloorLayout>();
+            AddLayouts(region.EarlyPool, early);
+            var late = new HashSet<FloorLayout>();
+            AddLayouts(region.LatePool, late);
+            foreach (FloorLayout layout in late)
+            {
+                if (early.Contains(layout)) warnings.Add($"[{region.name}] {layout.name}이 1~5 풀과 6~9 풀에 모두 있습니다 (한 판에 한 번만 쓰임).");
+            }
+        }
+
+        private static int CountUniqueLayouts(IReadOnlyList<FloorDesignSO> pool)
+        {
+            var set = new HashSet<FloorLayout>();
+            AddLayouts(pool, set);
+            return set.Count;
+        }
+
+        private static void AddLayouts(IReadOnlyList<FloorDesignSO> pool, HashSet<FloorLayout> set)
+        {
+            if (pool == null) return;
+            for (int i = 0; i < pool.Count; i++)
+            {
+                if (pool[i] != null && pool[i].LayoutPrefab != null) set.Add(pool[i].LayoutPrefab);
             }
         }
 

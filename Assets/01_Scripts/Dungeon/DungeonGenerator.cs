@@ -72,6 +72,9 @@ namespace BagBack100.Dungeon
         private PlayerInput _playerInput;
         private int _currentFloorNumber;
         private bool _isTransitioning;
+        // 이번 판에 이미 쓴 층 프리팹 (씬이 던전 입장마다 다시 로드되므로 판이 바뀌면 자연히 비워진다)
+        private readonly HashSet<FloorLayout> _usedLayouts = new HashSet<FloorLayout>();
+        private readonly List<FloorDesignSO> _designCandidates = new List<FloorDesignSO>();
 
         public static DungeonGenerator Instance { get; private set; }
 
@@ -136,17 +139,57 @@ namespace BagBack100.Dungeon
 
         #region Floor Dungeon Setup (FloorLayout + Marker)
 
-        // T2 임시 선택: 구간 풀을 순서대로 번갈아 쓴다. T3에서 가중치·한 판 중복 금지 추첨으로 교체한다.
+        /// <summary>
+        /// 층 디자인 추첨 (Q13). 1~4층은 Early 풀, 6~9층은 Late 풀에서 가중치로 뽑고, 5층·10층은 보스 디자인 고정.
+        /// 한 판(던전 입장) 안에서는 같은 층 프리팹을 다시 쓰지 않는다. 회색 박스처럼 SO 여러 개가 같은 프리팹을
+        /// 공유할 수 있으므로 SO가 아니라 프리팹으로 중복을 판정한다.
+        /// </summary>
         private FloorDesignSO SelectFloorDesign(int floor)
         {
             if (floor == RegionConfigSO.MidBossFloor) return _regionConfig.MidBossFloorDesign;
             if (floor >= RegionConfigSO.BossFloor) return _regionConfig.BossFloorDesign;
 
-            bool isEarly = floor < RegionConfigSO.MidBossFloor;
-            var pool = isEarly ? _regionConfig.EarlyPool : _regionConfig.LatePool;
+            var pool = floor < RegionConfigSO.MidBossFloor ? _regionConfig.EarlyPool : _regionConfig.LatePool;
             if (pool == null || pool.Count == 0) return null;
-            int order = isEarly ? floor - 1 : floor - (RegionConfigSO.MidBossFloor + 1);
-            return pool[order % pool.Count];
+
+            CollectDesignCandidates(pool, _regionConfig.DebugAllowDuplicateDesigns);
+            if (_designCandidates.Count == 0)
+            {
+                // 에디터 풀 검증을 통과하지 못한 데이터. 진행이 막히지 않게 중복을 허용해 다시 뽑는다
+                Debug.LogError($"[DungeonGenerator] {floor}층에 쓸 수 있는 미사용 디자인이 없습니다. 풀 장수를 확인하세요. 중복을 허용해 진행합니다.");
+                CollectDesignCandidates(pool, true);
+            }
+
+            FloorDesignSO picked = PickWeighted(_designCandidates);
+            if (picked != null && picked.LayoutPrefab != null) _usedLayouts.Add(picked.LayoutPrefab);
+            return picked;
+        }
+
+        private void CollectDesignCandidates(IReadOnlyList<FloorDesignSO> pool, bool allowDuplicate)
+        {
+            _designCandidates.Clear();
+            for (int i = 0; i < pool.Count; i++)
+            {
+                FloorDesignSO design = pool[i];
+                if (design == null || design.LayoutPrefab == null) continue;
+                if (!allowDuplicate && _usedLayouts.Contains(design.LayoutPrefab)) continue;
+                _designCandidates.Add(design);
+            }
+        }
+
+        private static FloorDesignSO PickWeighted(List<FloorDesignSO> candidates)
+        {
+            int totalWeight = 0;
+            for (int i = 0; i < candidates.Count; i++) totalWeight += candidates[i].Weight;
+            if (totalWeight <= 0) return null;
+
+            int roll = Random.Range(0, totalWeight);
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                roll -= candidates[i].Weight;
+                if (roll < 0) return candidates[i];
+            }
+            return candidates[candidates.Count - 1];
         }
 
         private void HandleStairsEntered()
