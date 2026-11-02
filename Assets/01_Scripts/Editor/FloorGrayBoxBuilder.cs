@@ -8,6 +8,7 @@ using UnityEngine.Tilemaps;
 using TMPro;
 using BagBack100.Dungeon;
 using BagBack100.Dungeon.Data;
+using BagBack100.Data.Models;
 
 namespace BagBack100.EditorTools
 {
@@ -284,6 +285,62 @@ namespace BagBack100.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             Debug.Log($"[FloorGrayBoxBuilder] {DungeonSceneName}: {FloorGridName} 준비, Region1Config·함정 풀 연결 후 저장.");
+        }
+
+        private const string ChestDropPoolPath = "Assets/Resources/Data_SO/DropPoolSO/DropPool_Chest_Region1.asset";
+        private const string LootMaterialFolder = "Assets/Resources/Data_SO/ItemSO/LootSO";
+        // 장비·포션 그룹: 악세서리(목걸이 14, 반지 15, 귀걸이 17) + HP 포션 2, MP 포션 3. 던전 드랍 장비는 악세서리만 허용
+        private static readonly int[] ChestBonusItemIds = { 14, 15, 17, 2, 3 };
+        private const int ChestBonusTotalWeight = 30;   // 30% 장비 또는 포션
+        private const int ChestBonusEmptyWeight = 70;   // 70% 꽝(itemID 0)
+
+        /// <summary>
+        /// 기획 5절 [추천] 상자 내용 "재료 2 확정 + 30% 장비 또는 포션"을 기존 DropPoolSO 구조로 만든다.
+        /// 재료 = 몬스터 전리품 하위 등급(itemID 끝자리 1·2). 값은 데이터라 플레이 테스트로 조정한다.
+        /// </summary>
+        [MenuItem("BagBack100/Floor/Create Region1 Chest Drop Pool")]
+        public static void CreateOrUpdateChestDropPool()
+        {
+            var materialEntries = new List<DropEntry>();
+            foreach (string guid in AssetDatabase.FindAssets("t:ItemDataSO", new[] { LootMaterialFolder }))
+            {
+                var item = AssetDatabase.LoadAssetAtPath<ItemDataSO>(AssetDatabase.GUIDToAssetPath(guid));
+                if (item == null) continue;
+                int tier = item.itemID % 10;
+                if (tier != 1 && tier != 2) continue;
+                materialEntries.Add(new DropEntry { itemID = item.itemID, dropWeight = 1, minAmount = 1, maxAmount = 1 });
+            }
+            materialEntries.Sort((a, b) => a.itemID.CompareTo(b.itemID));
+            if (materialEntries.Count == 0)
+            {
+                Debug.LogError($"[FloorGrayBoxBuilder] {LootMaterialFolder}에서 하위 등급 재료를 찾지 못했습니다.");
+                return;
+            }
+
+            var bonusEntries = new List<DropEntry>();
+            int perItemWeight = ChestBonusTotalWeight / ChestBonusItemIds.Length;
+            foreach (int id in ChestBonusItemIds)
+            {
+                bonusEntries.Add(new DropEntry { itemID = id, dropWeight = perItemWeight, minAmount = 1, maxAmount = 1 });
+            }
+            bonusEntries.Add(new DropEntry { itemID = 0, dropWeight = ChestBonusEmptyWeight, minAmount = 0, maxAmount = 0 });
+
+            var pool = AssetDatabase.LoadAssetAtPath<DropPoolSO>(ChestDropPoolPath);
+            if (pool == null)
+            {
+                pool = ScriptableObject.CreateInstance<DropPoolSO>();
+                AssetDatabase.CreateAsset(pool, ChestDropPoolPath);
+            }
+            pool.dropPoolID = RegionConfigSO.DefaultChestDropPoolId;
+            pool.guaranteedDrops = new List<FixedDropEntry>();
+            pool.randomDropGroups = new List<DropGroup>
+            {
+                new DropGroup { groupName = "재료 2 확정", minRolls = 2, maxRolls = 2, entries = materialEntries },
+                new DropGroup { groupName = "30% 장비 또는 포션", minRolls = 1, maxRolls = 1, entries = bonusEntries },
+            };
+            EditorUtility.SetDirty(pool);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[FloorGrayBoxBuilder] {ChestDropPoolPath} (ID {pool.dropPoolID}): 재료 {materialEntries.Count}종, 장비·포션 {ChestBonusItemIds.Length}종.");
         }
 
         // T2: 회색 박스 위층 계단 프리팹과 층 HUD를 만들고 03_DungeonScene에 연결한다

@@ -10,9 +10,9 @@ using System.Linq;
 namespace BagBack100.Combat
 {
     /// <summary>
-    /// Role: 몬스터 사망 시 드랍 풀 추첨과 필드 아이템 스폰, 바닥 드랍 요청 처리. 드랍 풀 데이터 검증 경고.
+    /// Role: 몬스터 사망·상자 열림 시 드랍 풀 추첨과 필드 아이템 스폰, 바닥 드랍 요청 처리. 드랍 풀 데이터 검증 경고.
     /// Dependencies: DropPoolSO, ItemDataSO, TileSystem, Pathfinder, FogVisibilityObject, LootableItem
-    /// Events: 없음 (구독: GlobalEvents.OnMonsterDied, GlobalEvents.OnItemDroppedOnGround, GlobalEvents.OnItemDiscardRequested)
+    /// Events: 없음 (구독: GlobalEvents.OnMonsterDied, GlobalEvents.OnChestOpened, GlobalEvents.OnItemDroppedOnGround, GlobalEvents.OnItemDiscardRequested)
     /// </summary>
     public class LootSystem : MonoBehaviour
     {
@@ -93,6 +93,7 @@ namespace BagBack100.Combat
         private void OnEnable()
         {
             GlobalEvents.OnMonsterDied += HandleMonsterDeath;
+            GlobalEvents.OnChestOpened += HandleChestOpened;
             GlobalEvents.OnItemDroppedOnGround += HandleItemDroppedOnGround;
             GlobalEvents.OnItemDiscardRequested += HandleItemDiscardRequested;
         }
@@ -100,11 +101,17 @@ namespace BagBack100.Combat
         private void OnDisable()
         {
             GlobalEvents.OnMonsterDied -= HandleMonsterDeath;
+            GlobalEvents.OnChestOpened -= HandleChestOpened;
             GlobalEvents.OnItemDroppedOnGround -= HandleItemDroppedOnGround;
             GlobalEvents.OnItemDiscardRequested -= HandleItemDiscardRequested;
         }
 
-        private void HandleMonsterDeath(Vector3 position, int dropPoolID)
+        private void HandleMonsterDeath(Vector3 position, int dropPoolID) => DropFromPool(position, dropPoolID);
+
+        private void HandleChestOpened(Vector3 position, int dropPoolID) => DropFromPool(position, dropPoolID);
+
+        // 몬스터와 상자가 같은 드랍 풀 구조(확정 + 가중치 그룹)를 공유한다
+        private void DropFromPool(Vector3 position, int dropPoolID)
         {
             if (!_dropPools.TryGetValue(dropPoolID, out var pool))
             {

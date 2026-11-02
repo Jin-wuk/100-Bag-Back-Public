@@ -41,5 +41,9 @@ namespace BagBack100.Core
 
         // 층계 던전: 층 생성이 끝나 플레이어가 들어섰을 때: 지역 번호, 지역 이름, 층 번호(1~10)
         public static Action<int, string, int> OnFloorEntered;
+
+        // 층계 던전: 상자가 열렸을 때: 상자 위치, 드랍 풀 ID.
+        // 몬스터 사망(OnMonsterDied)과 분리한다 — 층 클리어 카운터(T4)가 몬스터 사망만 세야 하므로
+        public static Action<Vector3, int> OnChestOpened;
     }
 }

@@ -30,7 +30,7 @@ namespace BagBack100.Dungeon.Data
     }
 
     /// <summary>
-    /// Role: 지역 1곳의 층 구성 정적 데이터 (디자인 풀, 보스층 디자인, 1~9층 탈출구·상자 표, 디버그 옵션).
+    /// Role: 지역 1곳의 층 구성 정적 데이터 (디자인 풀, 보스층 디자인, 1~9층 탈출구·상자 표, 상자 드랍 풀, 디버그 옵션).
     /// Dependencies: FloorDesignSO
     /// Events: 없음
     /// </summary>
@@ -40,6 +40,7 @@ namespace BagBack100.Dungeon.Data
         public const int RuleFloorCount = 9;
         public const int MidBossFloor = 5;
         public const int BossFloor = 10;
+        public const int DefaultChestDropPoolId = 1000;
 
         [Header("Region Identity")]
         [SerializeField] private int _regionId = 1;
@@ -58,6 +59,10 @@ namespace BagBack100.Dungeon.Data
         [Header("Floor Rules (index 0 = 1F, 9칸)")]
         [SerializeField] private FloorRule[] _floorRules = new FloorRule[RuleFloorCount];
 
+        [Header("Chest")]
+        [Tooltip("이 지역 상자를 열었을 때 쓰는 DropPoolSO의 dropPoolID")]
+        [SerializeField] private int _chestDropPoolId = DefaultChestDropPoolId;
+
         [Header("Debug")]
         [Tooltip("개발용: 한 판 안 디자인 중복 금지를 끈다 (회색 박스 2장으로 테스트할 때)")]
         [SerializeField] private bool _debugAllowDuplicateDesigns;
@@ -69,6 +74,7 @@ namespace BagBack100.Dungeon.Data
         public FloorDesignSO MidBossFloorDesign => _midBossFloor;
         public FloorDesignSO BossFloorDesign => _bossFloor;
         public bool DebugAllowDuplicateDesigns => _debugAllowDuplicateDesigns;
+        public int ChestDropPoolId => _chestDropPoolId;
 
         /// <summary>1~9층 규칙. 범위 밖(10층 등)은 기본값(전부 0).</summary>
         public FloorRule GetRule(int floor)
@@ -114,8 +120,9 @@ namespace BagBack100.Dungeon.Data
             int regionId, string regionName,
             List<FloorDesignSO> earlyPool, List<FloorDesignSO> latePool,
             FloorDesignSO midBossFloor, FloorDesignSO bossFloor,
-            FloorRule[] floorRules, bool debugAllowDuplicateDesigns)
+            FloorRule[] floorRules, bool debugAllowDuplicateDesigns, int chestDropPoolId = DefaultChestDropPoolId)
         {
+            _chestDropPoolId = chestDropPoolId;
             _regionId = regionId;
             _regionName = regionName;
             _earlyPool = new List<FloorDesignSO>(earlyPool);
