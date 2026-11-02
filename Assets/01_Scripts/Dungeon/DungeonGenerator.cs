@@ -1,9 +1,13 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using BagBack100.Core;
 using BagBack100.Dungeon.Data;
+using BagBack100.Combat;
+using BagBack100.Player;
+using BagBack100.Data.Core;
 
 namespace BagBack100.Dungeon
 {
@@ -16,8 +20,10 @@ namespace BagBack100.Dungeon
     /// <summary>
     /// Role: 던전 씬 맵 생성과 엔티티 스폰. 층 경로(RegionConfigSO → 층 프리팹 생성, 마커 기반 배치)와
     ///       레거시 FixedMap/ProceduralChunks 경로(T3에서 정리)를 함께 가진다.
-    /// Dependencies: RegionConfigSO, FloorDesignSO, FloorLayout, FloorMarker, FloorDesignValidator, DungeonZone, FogOfWarSystem
-    /// Events: 없음
+    ///       층 경로는 위층 계단(FloorStairs)으로 같은 씬 안에서 다음 층을 다시 만든다(층 전환).
+    /// Dependencies: RegionConfigSO, FloorDesignSO, FloorLayout, FloorMarker, FloorStairs, FloorDesignValidator, DungeonZone,
+    ///               FogOfWarSystem, TileSystem, GamePauseService, PlayerController, PlayerSessionData
+    /// Events: GlobalEvents.OnFloorTransitionStarted, GlobalEvents.OnFloorEntered
     /// </summary>
     public class DungeonGenerator : MonoBehaviour
     {
@@ -69,6 +75,10 @@ namespace BagBack100.Dungeon
         [SerializeField] private RegionConfigSO _regionConfig;
         [Tooltip("탈출구·위층 계단 마커 주변 몬스터·함정 스폰 금지 반경 (체비쇼프, 1 = 3x3)")]
         [SerializeField, Min(0)] private int _markerSafeRadius = 1;
+        [Tooltip("위층 계단 프리팹 (FloorStairs). 10층은 생성하지 않는다")]
+        [SerializeField] private FloorStairs _stairsPrefab;
+        [Tooltip("층 전환 페이드 아웃·인 시간(초, 실시간). 이 동안 게임을 일시정지하고 입력을 잠근다")]
+        [SerializeField, Min(0f)] private float _floorFadeSeconds = 0.3f;
 
         [Header("Legacy / Procedural Configuration")]
         [Tooltip("절차적 청크 모드 또는 기본 프리팹 폴백용 ScriptableObject")]
@@ -80,6 +90,10 @@ namespace BagBack100.Dungeon
         private FloorLayout _currentFloor;
         private Transform _spawnRoot;
         private readonly List<FloorMarker> _markerBuffer = new List<FloorMarker>();
+        private PlayerController _player;
+        private PlayerInput _playerInput;
+        private int _currentFloorNumber;
+        private bool _isTransitioning;
 
         public static DungeonGenerator Instance { get; private set; }
 
@@ -104,12 +118,25 @@ namespace BagBack100.Dungeon
             // 층 경로는 Start 전에 타일맵을 바인딩해야 Pathfinder·FogOfWar가 새 층을 본다
             if (_regionConfig != null)
             {
-                BuildFloor(GetFirstFloorDesign());
+                _currentFloorNumber = 1;
+                PlayerSessionData.SetCurrentFloor(_regionConfig.RegionId, _currentFloorNumber);
+                BuildFloor(SelectFloorDesign(_currentFloorNumber));
             }
             else
             {
                 AutoBindTilemapsIfNeeded();
             }
+        }
+
+        private void OnEnable()
+        {
+            FloorStairs.OnStairsEntered += HandleStairsEntered;
+        }
+
+        private void OnDisable()
+        {
+            FloorStairs.OnStairsEntered -= HandleStairsEntered;
+            if (_isTransitioning) EndTransitionLock();
         }
 
         public bool IsCellWalkable(Vector3Int cell)
@@ -124,6 +151,7 @@ namespace BagBack100.Dungeon
             if (_currentFloor != null)
             {
                 SetupFloorLayout(_currentFloor);
+                RaiseFloorEntered();
             }
             else if (_regionConfig != null)
             {
@@ -141,11 +169,97 @@ namespace BagBack100.Dungeon
 
         #region Floor Dungeon Setup (FloorLayout + Marker)
 
-        // T1: 1~5 구간 풀의 첫 장. T3에서 구간·가중치·중복 금지 추첨으로 교체한다.
-        private FloorDesignSO GetFirstFloorDesign()
+        // T2 임시 선택: 구간 풀을 순서대로 번갈아 쓴다. T3에서 가중치·한 판 중복 금지 추첨으로 교체한다.
+        private FloorDesignSO SelectFloorDesign(int floor)
         {
-            var pool = _regionConfig.EarlyPool;
-            return pool != null && pool.Count > 0 ? pool[0] : null;
+            if (floor == RegionConfigSO.MidBossFloor) return _regionConfig.MidBossFloorDesign;
+            if (floor >= RegionConfigSO.BossFloor) return _regionConfig.BossFloorDesign;
+
+            bool isEarly = floor < RegionConfigSO.MidBossFloor;
+            var pool = isEarly ? _regionConfig.EarlyPool : _regionConfig.LatePool;
+            if (pool == null || pool.Count == 0) return null;
+            int order = isEarly ? floor - 1 : floor - (RegionConfigSO.MidBossFloor + 1);
+            return pool[order % pool.Count];
+        }
+
+        private void HandleStairsEntered()
+        {
+            if (_isTransitioning || _regionConfig == null || _currentFloor == null) return;
+            if (_currentFloorNumber >= RegionConfigSO.BossFloor) return;
+            StartCoroutine(AscendRoutine());
+        }
+
+        private IEnumerator AscendRoutine()
+        {
+            _isTransitioning = true;
+
+            // 암전 동안 몬스터·투사체·자폭 퓨즈가 돌지 않게 멈춘다. 일시정지 진입 시 플레이어 차징·선입력도 취소된다
+            GamePauseService.Request(this);
+            SetPlayerInputLocked(true);
+            GlobalEvents.OnFloorTransitionStarted?.Invoke(_floorFadeSeconds);
+            yield return new WaitForSecondsRealtime(_floorFadeSeconds);
+
+            ClearFloor();
+            _currentFloorNumber++;
+            PlayerSessionData.SetCurrentFloor(_regionConfig.RegionId, _currentFloorNumber);
+            BuildFloor(SelectFloorDesign(_currentFloorNumber));
+            if (_currentFloor != null)
+            {
+                SetupFloorLayout(_currentFloor);
+            }
+            else
+            {
+                Debug.LogError($"[DungeonGenerator] {_currentFloorNumber}층을 만들지 못했습니다.");
+            }
+
+            RaiseFloorEntered();
+            yield return new WaitForSecondsRealtime(_floorFadeSeconds);
+            EndTransitionLock();
+        }
+
+        private void EndTransitionLock()
+        {
+            SetPlayerInputLocked(false);
+            GamePauseService.Release(this);
+            _isTransitioning = false;
+        }
+
+        private void SetPlayerInputLocked(bool locked)
+        {
+            if (_playerInput != null) _playerInput.IsInputLocked = locked;
+        }
+
+        private void RaiseFloorEntered()
+        {
+            GlobalEvents.OnFloorEntered?.Invoke(_regionConfig.RegionId, _regionConfig.RegionName, _currentFloorNumber);
+        }
+
+        /// <summary>
+        /// 현재 층과 그 위의 모든 것을 지운다. 플레이어·UI·카메라·Grid는 유지된다.
+        /// Destroy는 프레임 끝에 실행되므로 이전 층을 먼저 끄고 Grid에서 떼어 같은 프레임의
+        /// 안개 경계 계산(Grid 자식 타일맵 순회)과 BFS 물리 판정에서 즉시 빠지게 한다.
+        /// </summary>
+        private void ClearFloor()
+        {
+            Projectile.ReleaseAll();
+            AttackWarningUI.ReleaseAll();
+
+            if (_currentFloor != null)
+            {
+                GameObject oldFloor = _currentFloor.gameObject;
+                oldFloor.SetActive(false);
+                oldFloor.transform.SetParent(null, false);
+                Destroy(oldFloor);
+            }
+            _currentFloor = null;
+            _spawnRoot = null;
+            _floorTilemap = null;
+            _wallTilemap = null;
+
+            Physics2D.SyncTransforms();
+
+            // 점유·위험 칸과 바닥 아이템(층 루트 밖에 생성됨)을 비운다
+            if (TileSystem.Instance != null) TileSystem.Instance.ClearAll();
         }
 
         private void BuildFloor(FloorDesignSO design)
@@ -157,7 +271,7 @@ namespace BagBack100.Dungeon
             }
             if (design == null || design.LayoutPrefab == null)
             {
-                Debug.LogError($"[DungeonGenerator] {_regionConfig.name}에 1층 디자인(층 프리팹)이 없습니다.");
+                Debug.LogError($"[DungeonGenerator] {_regionConfig.name}에 {_currentFloorNumber}층 디자인(층 프리팹)이 없습니다.");
                 return;
             }
 
@@ -203,6 +317,13 @@ namespace BagBack100.Dungeon
             ReserveMarkerCells(layout, FloorMarkerType.Exit, _markerSafeRadius, occupiedCells);
             ReserveMarkerCells(layout, FloorMarkerType.UpStairs, _markerSafeRadius, occupiedCells);
             ReserveMarkerCells(layout, FloorMarkerType.ChestCandidate, 0, occupiedCells);
+
+            // T2: 위층 계단은 항상 열림. 10층은 계단 없음. 잠금·겹침 가드는 T4.
+            FloorMarker stairsMarker = layout.GetSingleMarker(FloorMarkerType.UpStairs);
+            if (stairsMarker != null && _stairsPrefab != null && _currentFloorNumber < RegionConfigSO.BossFloor)
+            {
+                Instantiate(_stairsPrefab, _grid.GetCellCenterWorld(LayoutToGridCell(layout, stairsMarker)), Quaternion.identity, _spawnRoot);
+            }
 
             // T1: 탈출구를 마커에 항상 배치한다. T4에서 클리어 시 확률 활성화로 교체한다.
             FloorMarker exitMarker = layout.GetSingleMarker(FloorMarkerType.Exit);
@@ -529,11 +650,22 @@ namespace BagBack100.Dungeon
             return true;
         }
 
+        // 1층에서만 생성하고, 2층부터는 같은 플레이어를 옮긴다 (새로 만들면 HP가 다시 가득 찬다 — 기획 Q2)
         private void SpawnPlayerAtCell(Vector3Int cell)
         {
-            if (_playerPrefab == null || _grid == null) return;
+            if (_grid == null) return;
             Vector3 worldPos = _grid.GetCellCenterWorld(cell);
-            Instantiate(_playerPrefab, worldPos, Quaternion.identity);
+
+            if (_player != null)
+            {
+                _player.ResetForFloorTransition(worldPos, cell);
+                return;
+            }
+
+            if (_playerPrefab == null) return;
+            GameObject playerGo = Instantiate(_playerPrefab, worldPos, Quaternion.identity);
+            playerGo.TryGetComponent(out _player);
+            playerGo.TryGetComponent(out _playerInput);
         }
 
         private void SpawnExitInFarthestZone(

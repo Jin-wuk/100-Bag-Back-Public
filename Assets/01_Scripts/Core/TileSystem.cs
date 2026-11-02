@@ -3,6 +3,11 @@ using UnityEngine;
 
 namespace BagBack100.Core
 {
+    /// <summary>
+    /// Role: 타일 단위 점유(엔티티), 바닥 아이템 칸, 위험 칸(장판 경로 비용) 관리. 층 전환 시 ClearAll로 전부 비운다.
+    /// Dependencies: LootableItem
+    /// Events: 없음
+    /// </summary>
     public class TileSystem : MonoBehaviour
     {
         public static TileSystem Instance { get; private set; }
@@ -115,6 +120,21 @@ namespace BagBack100.Core
         public void RemoveItemTile(Vector3Int cellPos)
         {
             _itemTiles.Remove(cellPos);
+        }
+
+        /// <summary>
+        /// 층 전환 시 점유·위험 칸을 비우고 바닥 아이템을 파괴한다.
+        /// 바닥 아이템은 모두 RegisterItemTile로 등록되므로 씬 탐색 없이 여기서 정리한다.
+        /// </summary>
+        public void ClearAll()
+        {
+            foreach (var item in _itemTiles.Values)
+            {
+                if (item != null) Destroy(item.gameObject);
+            }
+            _itemTiles.Clear();
+            _occupiedTiles.Clear();
+            _dangerExpirations.Clear();
         }
     }
 }

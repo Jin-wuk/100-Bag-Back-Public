@@ -27,7 +27,7 @@ namespace BagBack100.Data.Core
     }
 
     /// <summary>
-    /// Role: 씬 전환(02_HubScene <-> 03_DungeonScene) 간 인벤토리, 장착 장비, 창고, 보안 파우치, 퀵슬롯 등록, 골드 지갑을 보존하는 런타임 세션 컨테이너.
+    /// Role: 씬 전환(02_HubScene <-> 03_DungeonScene) 간 인벤토리, 장착 장비, 창고, 보안 파우치, 퀵슬롯 등록, 골드 지갑, 층계 던전 진행(지역·층)을 보존하는 런타임 세션 컨테이너.
     /// Dependencies: RuntimeItem, BackpackDataSO
     /// Events: OnGoldChanged(gold)
     /// </summary>
@@ -57,6 +57,16 @@ namespace BagBack100.Data.Core
             Gold -= amount;
             OnGoldChanged?.Invoke(Gold);
             return true;
+        }
+
+        // 층계 던전 진행: 현재 지역 번호와 층(1~10). 던전 입장 시 1층으로 시작한다 (결과 화면 표시용)
+        public static int CurrentRegionId { get; private set; }
+        public static int CurrentFloor { get; private set; }
+
+        public static void SetCurrentFloor(int regionId, int floor)
+        {
+            CurrentRegionId = regionId;
+            CurrentFloor = floor;
         }
 
         // 보안 파우치: 사망해도 비우지 않는다

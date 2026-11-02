@@ -35,5 +35,11 @@ namespace BagBack100.Core
 
         // 카메라 흔들림 및 역경직 요청: 강도(Intensity), 지속시간(Duration), 히트스톱 시간(HitStop)
         public static Action<float, float, float> OnCombatImpact;
+
+        // 층계 던전: 다음 층으로 전환을 시작할 때: 페이드 시간(초, 실시간). 같은 시간 뒤 새 층이 만들어진다
+        public static Action<float> OnFloorTransitionStarted;
+
+        // 층계 던전: 층 생성이 끝나 플레이어가 들어섰을 때: 지역 번호, 지역 이름, 층 번호(1~10)
+        public static Action<int, string, int> OnFloorEntered;
     }
 }

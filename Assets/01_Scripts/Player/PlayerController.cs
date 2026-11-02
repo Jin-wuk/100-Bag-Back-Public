@@ -541,6 +541,38 @@ namespace BagBack100.Player
             CurrentState = PlayerState.Idle;
         }
 
+        /// <summary>
+        /// 층 전환 순간이동. 이동 코루틴·차징·선입력을 모두 끊고 Idle로 되돌린 뒤 새 칸에 세운다.
+        /// HP·MP·쿨타임·HoT는 컴포넌트 상태 그대로 이어진다(기획 Q2).
+        /// </summary>
+        public void ResetForFloorTransition(Vector3 worldPos, Vector3Int cell)
+        {
+            if (_movement != null) _movement.StopImmediately();
+
+            if (_chargeCoroutine != null)
+            {
+                StopCoroutine(_chargeCoroutine);
+                _chargeCoroutine = null;
+            }
+            _isChargeReady = false;
+            CancelChargeVisuals(Color.white, _baseSpriteScale);
+            _inputBuffer.Clear();
+            CurrentState = PlayerState.Idle;
+
+            transform.position = worldPos;
+            cell.z = 0;
+            if (BagBack100.Core.TileSystem.Instance != null)
+            {
+                BagBack100.Core.TileSystem.Instance.RegisterInitialTile(cell, gameObject);
+            }
+            BagBack100.Core.GlobalEvents.OnPlayerCellChanged?.Invoke(cell);
+
+            if (Camera.main != null && Camera.main.TryGetComponent<BagBack100.Core.CameraFollow>(out var cameraFollow))
+            {
+                cameraFollow.SnapToTarget();
+            }
+        }
+
         private void CancelChargeVisuals(Color origColor, Vector3 origScale)
         {
             ChargeProgress = 0f;

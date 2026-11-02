@@ -4,9 +4,16 @@ using UnityEngine;
 
 namespace BagBack100.Combat
 {
+    /// <summary>
+    /// Role: 풀링되는 공격 예고 장판. 지정 시간 점멸 후 풀로 반납. ReleaseAll로 표시 중인 장판을 일괄 회수(층 전환, 보스 처치 정리).
+    /// Dependencies: 없음
+    /// Events: 없음
+    /// </summary>
     public class AttackWarningUI : MonoBehaviour
     {
         private static readonly Dictionary<int, Queue<AttackWarningUI>> Pools = new Dictionary<int, Queue<AttackWarningUI>>();
+        // 층 전환·보스 처치 정리 때 깔려 있는 예고 장판을 한 번에 회수하려고 활성 인스턴스를 따로 추적한다
+        private static readonly List<AttackWarningUI> ActiveInstances = new List<AttackWarningUI>();
         private static Transform _poolRoot;
 
         [SerializeField] private SpriteRenderer _renderer;
@@ -26,10 +33,26 @@ namespace BagBack100.Combat
 
         private void OnDestroy()
         {
+            ActiveInstances.Remove(this);
             // 씬 전환 등으로 루트가 파괴될 때 정적 캐시 정리
             if (_poolRoot == null)
             {
                 Pools.Clear();
+            }
+        }
+
+        /// <summary>표시 중인 예고 장판을 전부 풀로 회수한다 (층 전환, 보스 처치 정리).</summary>
+        public static void ReleaseAll()
+        {
+            for (int i = ActiveInstances.Count - 1; i >= 0; i--)
+            {
+                AttackWarningUI warning = ActiveInstances[i];
+                if (warning == null)
+                {
+                    ActiveInstances.RemoveAt(i);
+                    continue;
+                }
+                warning.CancelAndReturn();
             }
         }
 
@@ -63,6 +86,7 @@ namespace BagBack100.Combat
 
             instance._isInPool = false;
             instance.ShowWarning(position, duration);
+            if (!ActiveInstances.Contains(instance)) ActiveInstances.Add(instance);
             return instance;
         }
 
@@ -123,6 +147,7 @@ namespace BagBack100.Combat
 
         private void ReturnToPool()
         {
+            ActiveInstances.Remove(this);
             gameObject.SetActive(false);
 
             if (_prefabId == 0 || _isInPool) return;

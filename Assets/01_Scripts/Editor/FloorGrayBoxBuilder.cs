@@ -5,6 +5,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
+using TMPro;
 using BagBack100.Dungeon;
 using BagBack100.Dungeon.Data;
 
@@ -269,6 +270,159 @@ namespace BagBack100.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             Debug.Log($"[FloorGrayBoxBuilder] {DungeonSceneName}: FixedMap 제거({removedFixedMap}), {FloorGridName} 준비, Region1Config 연결 후 저장.");
+        }
+
+        // T2: 회색 박스 위층 계단 프리팹과 층 HUD를 만들고 03_DungeonScene에 연결한다
+        [MenuItem("BagBack100/Floor/Setup Stairs And Floor HUD")]
+        public static void SetupStairsAndFloorHud()
+        {
+            Scene scene = SceneManager.GetActiveScene();
+            if (scene.name != DungeonSceneName)
+            {
+                Debug.LogError($"[FloorGrayBoxBuilder] {DungeonSceneName}을 연 상태에서 실행하세요. (현재: {scene.name})");
+                return;
+            }
+
+            DungeonGenerator generator = Object.FindObjectOfType<DungeonGenerator>();
+            Canvas canvas = FindRootCanvas();
+            if (generator == null || canvas == null)
+            {
+                Debug.LogError("[FloorGrayBoxBuilder] 씬에 DungeonGenerator 또는 Canvas가 없습니다.");
+                return;
+            }
+
+            FloorStairs stairsPrefab = CreateOrUpdateStairsPrefab();
+
+            Undo.SetCurrentGroupName("Setup Stairs And Floor HUD");
+            int undoGroup = Undo.GetCurrentGroup();
+
+            var so = new SerializedObject(generator);
+            so.FindProperty("_stairsPrefab").objectReferenceValue = stairsPrefab;
+            so.ApplyModifiedProperties();
+
+            BagBack100.UI.FloorHUD existingHud = Object.FindObjectOfType<BagBack100.UI.FloorHUD>(true);
+            if (existingHud != null && existingHud.transform.parent != canvas.transform)
+            {
+                Undo.DestroyObjectImmediate(existingHud.gameObject); // 잘못된 캔버스 아래 만들어진 HUD 정리
+                existingHud = null;
+            }
+            if (existingHud == null)
+            {
+                CreateFloorHud(canvas.transform);
+            }
+
+            Undo.CollapseUndoOperations(undoGroup);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[FloorGrayBoxBuilder] {DungeonSceneName}: 계단 프리팹 연결, FloorHUD 준비 후 저장.");
+        }
+
+        private const string StairsPrefabPath = FloorPrefabFolder + "/FloorStairs_GrayBox.prefab";
+        private const int StairsSortingOrder = 11; // 탈출 포탈(ReturnPortal)과 같은 정렬 순서
+
+        private static FloorStairs CreateOrUpdateStairsPrefab()
+        {
+            EnsureFolder(FloorPrefabFolder);
+            var go = new GameObject("FloorStairs_GrayBox");
+            try
+            {
+                var renderer = go.AddComponent<SpriteRenderer>();
+                renderer.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+                renderer.color = new Color(0.65f, 0.4f, 1f, 0.9f);
+                renderer.sortingOrder = StairsSortingOrder;
+                go.transform.localScale = new Vector3(0.8f, 0.8f, 1f);
+
+                var col = go.AddComponent<BoxCollider2D>();
+                col.isTrigger = true;
+                col.size = Vector2.one;
+                go.AddComponent<FloorStairs>();
+
+                GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, StairsPrefabPath);
+                return prefab != null ? prefab.GetComponent<FloorStairs>() : null;
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        private static Canvas FindRootCanvas()
+        {
+            // 꺼진 하위 캔버스(Toast 등)도 isRootCanvas가 true이므로 켜진 Overlay 캔버스만 고른다
+            foreach (Canvas c in Object.FindObjectsOfType<Canvas>())
+            {
+                if (c.isRootCanvas && c.renderMode == RenderMode.ScreenSpaceOverlay) return c;
+            }
+            return null;
+        }
+
+        private static void CreateFloorHud(Transform canvas)
+        {
+            var root = new GameObject("FloorHUD", typeof(RectTransform));
+            Undo.RegisterCreatedObjectUndo(root, "Create FloorHUD");
+            var rootRect = (RectTransform)root.transform;
+            rootRect.SetParent(canvas, false);
+            Stretch(rootRect);
+            rootRect.SetAsLastSibling(); // 암전 이미지가 다른 HUD 위를 덮도록 맨 뒤에 둔다
+
+            // 상시 층 표시: 우측 상단
+            var label = CreateText(rootRect, "FloorLabel", 32f, TextAlignmentOptions.TopRight);
+            var labelRect = label.rectTransform;
+            labelRect.anchorMin = labelRect.anchorMax = labelRect.pivot = new Vector2(1f, 1f);
+            labelRect.anchoredPosition = new Vector2(-24f, -20f);
+            labelRect.sizeDelta = new Vector2(360f, 50f);
+
+            // 진입 배너: 상단 중앙
+            var bannerGo = new GameObject("Banner", typeof(RectTransform), typeof(CanvasGroup));
+            var bannerRect = (RectTransform)bannerGo.transform;
+            bannerRect.SetParent(rootRect, false);
+            bannerRect.anchorMin = bannerRect.anchorMax = bannerRect.pivot = new Vector2(0.5f, 1f);
+            bannerRect.anchoredPosition = new Vector2(0f, -120f);
+            bannerRect.sizeDelta = new Vector2(800f, 90f);
+            var bannerGroup = bannerGo.GetComponent<CanvasGroup>();
+            bannerGroup.alpha = 0f;
+            bannerGroup.blocksRaycasts = false;
+            bannerGroup.interactable = false;
+            var bannerText = CreateText(bannerRect, "BannerText", 56f, TextAlignmentOptions.Center);
+            Stretch(bannerText.rectTransform);
+
+            // 층 전환 암전: 전체 화면 (마우스 입력을 막지 않는다)
+            var fadeGo = new GameObject("Fade", typeof(RectTransform), typeof(UnityEngine.UI.Image));
+            var fadeRect = (RectTransform)fadeGo.transform;
+            fadeRect.SetParent(rootRect, false);
+            Stretch(fadeRect);
+            var fadeImage = fadeGo.GetComponent<UnityEngine.UI.Image>();
+            fadeImage.color = new Color(0f, 0f, 0f, 0f);
+            fadeImage.raycastTarget = false;
+
+            var hud = root.AddComponent<BagBack100.UI.FloorHUD>();
+            var so = new SerializedObject(hud);
+            so.FindProperty("_floorLabel").objectReferenceValue = label;
+            so.FindProperty("_bannerGroup").objectReferenceValue = bannerGroup;
+            so.FindProperty("_bannerText").objectReferenceValue = bannerText;
+            so.FindProperty("_fadeImage").objectReferenceValue = fadeImage;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static TMPro.TextMeshProUGUI CreateText(Transform parent, string name, float fontSize, TMPro.TextAlignmentOptions alignment)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(TMPro.TextMeshProUGUI));
+            go.transform.SetParent(parent, false);
+            var text = go.GetComponent<TMPro.TextMeshProUGUI>();
+            text.fontSize = fontSize;
+            text.alignment = alignment;
+            text.color = Color.white;
+            text.raycastTarget = false;
+            text.text = string.Empty;
+            return text;
+        }
+
+        private static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
 
         private static FloorLayout BuildAndSaveLayout(FloorSpec spec, Tilemap templateFloor, Tilemap templateWall,
