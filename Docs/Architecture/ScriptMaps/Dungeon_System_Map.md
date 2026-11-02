@@ -8,17 +8,17 @@
 graph TD
     %% Scriptable Objects
     subgraph DataLayer["Data Layer"]
-        DD["DungeonData.cs<br>- Chunk Layout<br>- Monster/Trap/Exit Prefabs"]
-        RC["RegionConfigSO.cs<br>- 1~5 / 6~9 Design Pools<br>- 5F/10F Boss Designs<br>- 1~9F Exit/Chest Rules"]
+        RC["RegionConfigSO.cs<br>- 1~5 / 6~9 Design Pools<br>- 5F/10F Boss Designs<br>- 1~9F Exit/Chest Rules<br>- Chest DropPool ID"]
+        CDP["DropPool_Chest_Region1<br>(DropPoolSO, ID 1000)"]
         FD["FloorDesignSO.cs<br>- Floor Prefab / Band / Weight"]
     end
 
     %% Managers & Core Logic
     subgraph LogicLayer["Logic Layer"]
-        DG["DungeonGenerator.cs<br>- Floor Path (RegionConfigSO) / FixedMap Fallback<br>- Flood Fill (BFS) & Zone Spawning"]
-        FV["FloorDesignValidator.cs<br>- Marker Count / Walkable / Stairs-Exit Distance"]
+        DG["DungeonGenerator.cs<br>- Floor Draw (Weighted, No Repeat per Run)<br>- Floor Transition<br>- Flood Fill (BFS) & Zone Spawning<br>- Chest B-Plan Rolls"]
+        FV["FloorDesignValidator.cs<br>- Marker Count / Walkable / Stairs-Exit Distance<br>- Pool Size / Shared Layouts"]
         FOW["FogOfWarSystem.cs<br>- 3-State Fog: Unexplored / Explored / Visible<br>- Bresenham LOS & Dynamic Mask Texture<br>- North 2-Tile Elevation Offset"]
-        LS["LootSystem.cs<br>- Field Loot Spawner<br>- Auto FogVisibilityObject Attach"]
+        LS["LootSystem.cs<br>- Field Loot Spawner (Monster / Chest)<br>- Auto FogVisibilityObject Attach"]
     end
 
     %% Views & Objects
@@ -26,7 +26,7 @@ graph TD
         FL["FloorLayout.cs<br>- Floor Prefab Root<br>- Floor/Wall Tilemaps, Markers, Zones"]
         FM["FloorMarker.cs<br>- PlayerStart / UpStairs / Exit / ChestCandidate"]
         DZ["DungeonZone.cs<br>- Floor Path: Combat / Corridor<br>- Box Bounds & Gizmos"]
-        DC["DungeonChunk.cs<br>- Post-MVP 개별 청크"]
+        FC["FloorChest.cs<br>- Step to Open<br>- OnChestOpened"]
         DE["DungeonExit.cs<br>- Trigger Detection<br>- Scene Transition"]
         UI["DungeonEntranceUI.cs<br>- Enter Dungeon"]
         FVO["FogVisibilityObject.cs<br>- VisibleOnly / RememberWhenExplored<br>- Renderer Culling Sync"]
@@ -43,12 +43,13 @@ graph TD
     FL -->|Markers| FM
     FL -->|Zones| DZ
     DG -->|Validate Instance| FV
-    DG -->|FixedMap: Flood Fill & Zone 스캔| DZ
-    DG -->|FixedMap: Instantiate| DE
+    DG -->|Flood Fill & Zone 스캔| DZ
+    DG -->|Instantiate at Exit Marker| DE
+    DG -->|B-Plan Spawn| FC
+    FC -->|GlobalEvents.OnChestOpened| LS
+    RC -->|Chest Pool ID| CDP
+    LS -->|Reads| CDP
     DG -->|Initialize| FOW
-    DG -->|Procedural: Reads Config| DD
-    DG -->|Procedural: Instantiate & Init| DC
-    DC -->|Instantiate Exit| DE
     FOW -->|Applies Mask| SHADER
     FOW -->|Manages Visibility| FVO
     FOW -->|Includes Lights| FVS
@@ -58,21 +59,15 @@ graph TD
 ## 2. 핵심 클래스 역할 명세 (Class Roles)
 
 ### 2.1. `DungeonGenerator` (`MonoBehaviour`)
-*   **역할**: 던전 씬 진입 시 맵 생성 및 엔티티 스폰을 전담하는 메인 매니저.
-*   **층 경로 (층계 던전, `_regionConfig` 지정 시)**: 기획 `07_Floor_Based_Dungeon_Design.md`.
+*   **역할**: 던전 씬 진입 시 맵 생성 및 엔티티 스폰을 전담하는 메인 매니저. 층계 던전 전용(`_regionConfig` 필수, 통맵·청크 경로는 T3에서 삭제).
+*   **층 경로**: 기획 `07_Floor_Based_Dungeon_Design.md`.
     *   `Awake`: 씬의 영속 `FloorGrid`(Grid) 아래 원점에 층 프리팹(`FloorLayout`)을 생성하고 `_floorTilemap`/`_wallTilemap`을 층 타일맵으로 바인딩, `Physics2D.SyncTransforms()` 후 `FloorDesignValidator`로 인스턴스 검증. Grid를 층 프리팹에 두지 않는 이유: 플레이어·몬스터가 `FindObjectOfType<Grid>()`로 Grid를 캐싱하므로 층 교체(T2) 때 Grid가 바뀌면 안 된다.
-    *   `Start`: `PlayerStart` 마커에 플레이어 스폰 → BFS → `Exit`·`UpStairs` 마커 반경 `_markerSafeRadius`(체비쇼프) 및 `ChestCandidate` 칸을 스폰 금지로 예약 → `Exit` 마커에 탈출 포탈(T4 전까지 항상) → `Combat`/`Corridor` 구역과 구역 밖 복도에 몬스터·함정 → 안개 초기화. 스폰물은 층 루트 아래 `Spawned`에 모은다.
-    *   층 디자인 선택(T2 임시): 1~4층 Early 풀 순서대로, 5층 중간 보스, 6~9층 Late 풀 순서대로, 10층 보스. T3에서 가중치·중복 금지 추첨으로 교체.
+    *   `Start`: `PlayerStart` 마커에 플레이어 스폰 → BFS → `Exit`·`UpStairs` 마커 반경 `_markerSafeRadius`(체비쇼프) 및 `ChestCandidate` 칸을 스폰 금지로 예약 → 상자 B안(`SpawnChests`) → `Exit` 마커에 탈출 포탈(T4 전까지 항상) → `Combat`/`Corridor` 구역과 구역 밖 복도에 몬스터·함정 → 안개 초기화. 스폰물은 층 루트 아래 `Spawned`에 모은다.
+    *   **층 추첨(T3, Q13)**: 1~4층 Early 풀·6~9층 Late 풀에서 `Weight` 가중치 추첨, 5층·10층 보스 디자인 고정. 한 판 안에서 같은 층 프리팹 재사용 금지(SO가 아닌 프리팹 기준, `_usedLayouts`). `DebugAllowDuplicateDesigns`면 무시. 후보가 0장이면 LogError 후 중복 허용으로 진행.
+    *   **상자 B안(T3, Q30)**: `FloorRule.ChestRolls`만큼 `ChestChance` 판정 → 당첨마다 남은 `ChestCandidate` 중 무작위 1곳에 `FloorChest`(지역 상자 드랍 풀 ID 주입). 보스층은 규칙 0.
     *   **층 전환(T2)**: `UpStairs` 마커에 `FloorStairs`(10층 제외)를 두고, 밟히면 `FloorStairs.OnStairsEntered` → `AscendRoutine`: `GamePauseService.Request` + `PlayerInput.IsInputLocked` → `GlobalEvents.OnFloorTransitionStarted(fade)` → 페이드 시간 대기(실시간) → `ClearFloor()`(투사체·예고 장판 `ReleaseAll`, 이전 층 루트 비활성·분리·파괴, `Physics2D.SyncTransforms`, `TileSystem.ClearAll`로 점유·위험 칸·바닥 아이템 정리) → 다음 층 `BuildFloor`/`SetupFloorLayout` → `GlobalEvents.OnFloorEntered` → 페이드 시간 대기 → 잠금 해제.
     *   플레이어는 1층에서만 생성하고 2층부터는 `PlayerController.ResetForFloorTransition`(이동 코루틴·차징·선입력 정지, 위치 이동, 타일 등록, 카메라 `SnapToTarget`)으로 재사용한다 → HP·MP·쿨타임·HoT 유지.
     *   현재 층은 `PlayerSessionData.CurrentRegionId/CurrentFloor`에 기록(결과 화면 T8용). 계단 잠금·클리어 판정은 T4.
-*   **지원 모드 (`_regionConfig`가 비었을 때)**:
-    1.  `FixedMap` (MVP 현행 - 구역 & Flood Fill 기반):
-        *   `Start` 구역에서 플레이어를 스폰한 뒤, 해당 타일로부터 **4방향 BFS(Flood Fill)**를 수행하여 벽 안쪽의 실제 도달 가능한 바닥 타일(`FloorTilemap` 있음 & `WallTilemap` 없음 & 장애물 없음)과 이동 걸음 수를 산출. (벽 뒤의 빈 공간 100% 배제)
-        *   실제 미로 이동 걸음 수가 가장 먼 `Exit` 구역 후보 중 1곳에 탈출 포탈 생성.
-        *   `Chest`, `Combat`, `Corridor` 구역 및 구역 미지정 일반 복도에 최소 간격(`_minMonsterSpacing`)과 출발 안전 반경(`_startSafeStepRadius`)을 준수하여 상자/몬스터/함정 비중복 스폰.
-        *   맵 세팅 직후 `FogOfWarSystem`을 자동 초기화하여 플레이어 시작 위치 기준으로 시야를 개방.
-    2.  `ProceduralChunks` (Post-MVP): `DungeonData`를 읽어 2x2 또는 3x3으로 청크 프리팹들을 절차적으로 조립 배치.
 
 ### 2.2. `FogOfWarSystem` (`MonoBehaviour`)
 *   **역할**: 플레이어의 타일 이동 이벤트(`GlobalEvents.OnPlayerCellChanged`) 및 시야원들을 추적하여 3단계 전장의 안개(`Unexplored`, `Explored`, `Visible`)와 엔티티 가시성을 총괄 제어하는 코어 비전 매니저.
@@ -99,17 +94,20 @@ graph TD
 *   **역할**: 안개 마스크 텍스처(`_FogTex`)를 샘플링하여 미탐험 색상(`_UnexploredColor`, 완전 흑색), 기탐험 색상(`_ExploredColor`, 반투명 흑색), 가시 영역(투명)을 블렌딩하는 전용 셰이더.
 
 ### 2.6. `DungeonZone` (`MonoBehaviour`)
-*   **역할**: 통짜 미로 맵 위에 사각형 영역(`_size` 또는 `BoxCollider2D`)으로 배치되어 구역의 성격(`Start`, `Combat`, `Chest`, `Corridor`, `Exit`)과 스폰 수량을 정의.
-*   **층 경로**: `Combat`·`Corridor`만 쓴다. 시작점·탈출구·상자 후보는 `FloorMarker`가 맡는다(나머지 enum 값은 T3 청크 정리 때 함께 정리).
+*   **역할**: 층 프리팹 안에 사각형 영역(`_size` 또는 `BoxCollider2D`)으로 배치되어 몬스터·함정 스폰 구역(`Combat`, `Corridor`)과 수량을 정의. 시작점·탈출구·상자 후보는 `FloorMarker`가 맡는다.
+*   **enum 값**: `Combat = 1`, `Corridor = 3`(삭제한 Start·Chest·Exit의 예전 번호와 직렬화 값을 맞추려고 유지).
 *   **특징**:
     *   에디터 씬 뷰에서 구역 타입별 색상 반투명 기즈모(Gizmo) 렌더링.
     *   런타임 시 `BoxCollider2D`가 붙어 있으면 자동으로 비활성화하여 물리 충돌 간섭 방지.
 
-### 2.7. `DungeonChunk` (`MonoBehaviour`)
-*   **역할**: 절차적 생성(Post-MVP) 시 개별 분할 청크의 내부 스폰 지점 관리 (또는 레거시 통짜맵 폴백).
+### 2.7. `FloorChest` (`MonoBehaviour`, Controller)
+*   **역할**: 층 상자. 플레이어가 밟으면 1회 열림(색 변경) → `GlobalEvents.OnChestOpened(위치, 드랍 풀 ID)`만 던진다. 확인창 없음.
+*   `LootSystem`이 구독해 몬스터와 같은 드랍 처리(`DropFromPool`)를 쓰되, 상자 칸은 건너뛰고 주변 칸부터 놓는다(열린 상자와 겹침·발밑 자동 습득 방지).
+*   몬스터 사망 이벤트와 분리한 이유: 층 클리어 카운터(T4)가 `OnMonsterDied`만 세야 한다.
+*   내용물 `DropPool_Chest_Region1`(ID 1000): 재료(전리품 하위 등급) 2회 + 장비(악세서리)·포션 30% / 꽝 70%. 기획 5절 [추천] 값, 플레이 테스트로 조정.
 
-### 2.8. `DungeonData` (`ScriptableObject`)
-*   **역할**: 맵 생성 규칙과 기본 프리팹들의 정적 데이터 보관.
+### 2.8. (삭제됨) `DungeonChunk` / `DungeonData`
+*   T3(Q11)에서 청크 조립·통맵(FixedMap) 코드와 에셋을 삭제했다.
 
 ### 2.9. `DungeonExit` (`MonoBehaviour`)
 *   **역할**: 탈출구(포탈)의 상호작용 및 씬 전환 처리 (`LoadSceneMode.Single`).
@@ -121,10 +119,11 @@ graph TD
 
 ### 2.11. `FloorDesignSO` / `RegionConfigSO` (`ScriptableObject`)
 *   **`FloorDesignSO`**: 층 프리팹, 구간(`Early` 1~5 / `Late` 6~9 / `Boss`), 가중치.
-*   **`RegionConfigSO`**: 지역 번호·이름, 1~5 풀, 6~9 풀, 5층·10층 보스 디자인, 1~9층 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 디버그 "디자인 중복 허용".
+*   **`RegionConfigSO`**: 지역 번호·이름, 1~5 풀, 6~9 풀, 5층·10층 보스 디자인, 1~9층 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 상자 드랍 풀 ID, 디버그 "디자인 중복 허용".
 
 ### 2.12. `FloorDesignValidator` (static)
 *   **역할**: 런타임·에디터 공용 규격 검증. 시작점 1, 탈출구 1, 계단 1(10층 보스층은 0~1), 마커 칸 보행 가능·중복 없음, 계단–탈출구 체비쇼프 거리 ≥ 3, 상자 후보 ≥ 구간 최대 굴림 횟수, 풀 구간 일치.
+*   **풀 장수(T3)**: 구간 고유 프리팹 수 < 구간 층 수(4) → 오류, = 4 → 경고(추천 6장 이상). 1~5 풀과 6~9 풀이 같은 프리팹을 쓰면 오류(6~9층 후보 부족 방지). 디버그 중복 허용이면 오류 대신 경고. 경고는 별도 목록으로 에디터 메뉴가 LogWarning.
 
 ### 2.12b. `FloorStairs` (`MonoBehaviour`, Controller)
 *   **역할**: 위층 계단 트리거. 플레이어가 밟으면 정적 지역 이벤트 `OnStairsEntered`만 던지고 1회 후 비활성. T2는 항상 열림, 잠금·겹침 가드는 T4.
@@ -133,7 +132,9 @@ graph TD
 *   **역할**: 현재 층 상시 표시(우측 상단), 층 진입 배너(상단 중앙), 층 전환 암전. `GlobalEvents.OnFloorTransitionStarted`/`OnFloorEntered`만 구독(OnEnable/OnDisable), 연출은 unscaled time. 서식 `{0}` 지역 번호, `{1}` 층, `{2}` 지역 이름.
 
 ### 2.13. `FloorGrayBoxBuilder` (Editor)
-*   메뉴 `BagBack100/Floor/Create Gray Box Floors`: 회색 박스 층 3장(일반 2 + 보스 1)과 `Region1Config`·`FloorDesignSO` 생성 후 검증.
+*   메뉴 `BagBack100/Floor/Create Gray Box Floors`: 회색 박스 층 3장(일반 2 + 보스 1)과 `Region1Config`·`FloorDesignSO` 생성 후 검증. 템플릿은 `Floor_GrayBox_Normal01.prefab`의 Floor·Wall(먼저 복제 후 템플릿을 닫고 저장).
+*   메뉴 `BagBack100/Floor/Create Region1 Chest Drop Pool`: 상자 드랍 풀(`DropPool_Chest_Region1`) 생성.
+*   메뉴 `BagBack100/Floor/Setup Chest Prefab`: 회색 박스 상자 프리팹(`FloorChest_GrayBox`) 생성·`DungeonGenerator._chestPrefab` 연결.
 *   메뉴 `BagBack100/Floor/Validate Region Configs`: 모든 `RegionConfigSO` 검증.
 *   메뉴 `BagBack100/Floor/Setup Stairs And Floor HUD`: 회색 박스 계단 프리팹(`FloorStairs_GrayBox`) 생성·`DungeonGenerator._stairsPrefab` 연결, 켜진 Overlay 캔버스 아래 `FloorHUD` 생성 후 저장.
-*   메뉴 `BagBack100/Floor/Setup Dungeon Scene For Floors`: `03_DungeonScene`의 `FixedMap` 인스턴스 제거, `FloorGrid` 생성, `DungeonGenerator._regionConfig` 연결 후 저장.
+*   메뉴 `BagBack100/Floor/Setup Dungeon Scene For Floors`: `FloorGrid` 생성, `DungeonGenerator._regionConfig` 연결, 함정 풀이 비어 있으면 `Hazard_Spike` 지정 후 저장.
