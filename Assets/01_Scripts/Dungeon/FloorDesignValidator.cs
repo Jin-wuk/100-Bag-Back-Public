@@ -120,7 +120,7 @@ namespace BagBack100.Dungeon
             ValidatePool(region.LatePool, FloorBand.Late, region, errors);
             ValidatePoolSize(region.EarlyPool, FloorBand.Early, RegionConfigSO.MidBossFloor - 1, region, errors, warnings);
             ValidatePoolSize(region.LatePool, FloorBand.Late, RegionConfigSO.RuleFloorCount - RegionConfigSO.MidBossFloor, region, errors, warnings);
-            WarnSharedLayouts(region, warnings);
+            CheckSharedLayouts(region, errors, warnings);
             ValidateDesign(region.MidBossFloorDesign, FloorBand.Boss, StairsRequirement.Required, region, errors);
             ValidateDesign(region.BossFloorDesign, FloorBand.Boss, StairsRequirement.Optional, region, errors);
             return errors.Count == errorCountBefore;
@@ -157,8 +157,9 @@ namespace BagBack100.Dungeon
             }
         }
 
-        // Early와 Late가 같은 프리팹을 쓰면 한 판 중복 금지 때문에 두 구간이 후보를 나눠 쓴다
-        private static void WarnSharedLayouts(RegionConfigSO region, List<string> warnings)
+        // Early와 Late가 같은 프리팹을 쓰면 한 판 중복 금지 때문에 1~4층이 그 프리팹을 먼저 써 버려
+        // 6~9층 후보가 모자랄 수 있다(런타임 후보 0장). 두 구간은 서로 다른 프리팹으로 채워야 한다.
+        private static void CheckSharedLayouts(RegionConfigSO region, List<string> errors, List<string> warnings)
         {
             var early = new HashSet<FloorLayout>();
             AddLayouts(region.EarlyPool, early);
@@ -166,7 +167,10 @@ namespace BagBack100.Dungeon
             AddLayouts(region.LatePool, late);
             foreach (FloorLayout layout in late)
             {
-                if (early.Contains(layout)) warnings.Add($"[{region.name}] {layout.name}이 1~5 풀과 6~9 풀에 모두 있습니다 (한 판에 한 번만 쓰임).");
+                if (!early.Contains(layout)) continue;
+                string message = $"[{region.name}] {layout.name}이 1~5 풀과 6~9 풀에 모두 있습니다 (6~9층 후보가 모자랄 수 있음).";
+                if (region.DebugAllowDuplicateDesigns) warnings.Add(message + " 디버그 중복 허용이 켜져 있어 경고로 처리.");
+                else errors.Add(message);
             }
         }
 

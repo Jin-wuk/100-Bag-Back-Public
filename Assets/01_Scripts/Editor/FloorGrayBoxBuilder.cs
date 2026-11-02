@@ -145,16 +145,29 @@ namespace BagBack100.EditorTools
                 return;
             }
 
-            GameObject template = PrefabUtility.LoadPrefabContents(TemplateMapPath);
+            // 템플릿이 덮어쓸 프리팹 중 하나이므로, Floor·Wall과 타일만 임시 Grid로 복제하고 템플릿을 먼저 닫은 뒤 저장한다
+            var templateHolder = new GameObject("TempGrid_GrayBoxTemplate", typeof(Grid));
             var savedLayouts = new Dictionary<string, FloorLayout>();
             try
             {
-                Tilemap templateFloor = FindTilemap(template, "Floor");
-                Tilemap templateWall = FindTilemap(template, "Wall");
-                if (templateFloor == null || templateWall == null)
+                Tilemap templateFloor;
+                Tilemap templateWall;
+                GameObject template = PrefabUtility.LoadPrefabContents(TemplateMapPath);
+                try
                 {
-                    Debug.LogError($"[FloorGrayBoxBuilder] {TemplateMapPath}에서 Floor/Wall 타일맵을 찾지 못했습니다.");
-                    return;
+                    Tilemap sourceFloor = FindTilemap(template, "Floor");
+                    Tilemap sourceWall = FindTilemap(template, "Wall");
+                    if (sourceFloor == null || sourceWall == null)
+                    {
+                        Debug.LogError($"[FloorGrayBoxBuilder] {TemplateMapPath}에서 Floor/Wall 타일맵을 찾지 못했습니다.");
+                        return;
+                    }
+                    templateFloor = Object.Instantiate(sourceFloor.gameObject, templateHolder.transform, false).GetComponent<Tilemap>();
+                    templateWall = Object.Instantiate(sourceWall.gameObject, templateHolder.transform, false).GetComponent<Tilemap>();
+                }
+                finally
+                {
+                    PrefabUtility.UnloadPrefabContents(template);
                 }
 
                 TileBase floorTile = FindMostUsedTile(templateFloor);
@@ -169,7 +182,7 @@ namespace BagBack100.EditorTools
             }
             finally
             {
-                PrefabUtility.UnloadPrefabContents(template);
+                Object.DestroyImmediate(templateHolder);
             }
 
             FloorDesignSO normal01 = CreateOrUpdateDesign("FloorDesign_GrayBox_Normal01", savedLayouts["Floor_GrayBox_Normal01"], FloorBand.Early);
