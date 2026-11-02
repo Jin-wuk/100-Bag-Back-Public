@@ -153,6 +153,13 @@ namespace BagBack100.Combat
         {
             if (target == null) return 0;
 
+            // 상자처럼 피해 대신 반응하는 오브젝트 (피해 0 → 타격감 연출도 없음)
+            if (target.TryGetComponent<BagBack100.Core.IAttackInteractable>(out var interactable))
+            {
+                interactable.OnAttacked(gameObject);
+                return 0;
+            }
+
             if (target.TryGetComponent<MonsterController>(out var targetMonster))
             {
                 return targetMonster.TakeDamage(damage, hitDir, isHeavyHit);

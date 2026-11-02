@@ -387,8 +387,9 @@ namespace BagBack100.Dungeon
                 FloorMarker marker = _chestCandidates[index];
                 _chestCandidates.RemoveAt(index);
 
-                FloorChest chest = Instantiate(_chestPrefab, _grid.GetCellCenterWorld(LayoutToGridCell(layout, marker)), Quaternion.identity, _spawnRoot);
-                chest.Initialize(_regionConfig.ChestDropPoolId);
+                Vector3Int chestCell = LayoutToGridCell(layout, marker);
+                FloorChest chest = Instantiate(_chestPrefab, _grid.GetCellCenterWorld(chestCell), Quaternion.identity, _spawnRoot);
+                chest.Initialize(_regionConfig.ChestDropPoolId, chestCell);
             }
         }
 

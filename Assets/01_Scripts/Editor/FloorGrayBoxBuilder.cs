@@ -401,7 +401,7 @@ namespace BagBack100.EditorTools
             Debug.Log($"[FloorGrayBoxBuilder] {DungeonSceneName}: 계단 프리팹 연결, FloorHUD 준비 후 저장.");
         }
 
-        // T3: 회색 박스 상자 프리팹을 만들고 03_DungeonScene의 DungeonGenerator에 연결한다
+        // T3: 회색 박스 상자 프리팹을 만들고(이미 있으면 그대로) 03_DungeonScene의 DungeonGenerator에 연결한다
         [MenuItem("BagBack100/Floor/Setup Chest Prefab")]
         public static void SetupChestPrefab()
         {
@@ -433,6 +433,10 @@ namespace BagBack100.EditorTools
 
         private static FloorChest CreateOrUpdateChestPrefab()
         {
+            // 이미 있으면 덮어쓰지 않는다 (유저가 넣은 상자 스프라이트 보존)
+            var existing = AssetDatabase.LoadAssetAtPath<FloorChest>(ChestPrefabPath);
+            if (existing != null) return existing;
+
             EnsureFolder(FloorPrefabFolder);
             var go = new GameObject("FloorChest_GrayBox");
             try
@@ -443,9 +447,7 @@ namespace BagBack100.EditorTools
                 renderer.sortingOrder = StairsSortingOrder;
                 go.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
 
-                var col = go.AddComponent<BoxCollider2D>();
-                col.isTrigger = true;
-                col.size = Vector2.one;
+                // 이동 차단은 TileSystem 점유로, 열기는 공격(IAttackInteractable)으로 처리하므로 콜라이더가 필요 없다
                 go.AddComponent<FloorChest>();
                 // 한 번 본 상자는 안개 아래에서도 계속 보인다 (기본 모드 RememberWhenExplored)
                 go.AddComponent<FogVisibilityObject>();
