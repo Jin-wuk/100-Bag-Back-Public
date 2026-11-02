@@ -26,7 +26,7 @@ graph TD
         FL["FloorLayout.cs<br>- Floor Prefab Root<br>- Floor/Wall Tilemaps, Markers, Zones"]
         FM["FloorMarker.cs<br>- PlayerStart / UpStairs / Exit / ChestCandidate"]
         DZ["DungeonZone.cs<br>- Floor Path: Combat / Corridor<br>- Box Bounds & Gizmos"]
-        FC["FloorChest.cs<br>- Step to Open<br>- OnChestOpened"]
+        FC["FloorChest.cs<br>- Blocks Tile (TileSystem)<br>- Open by Player Attack<br>- OnChestOpened"]
         DE["DungeonExit.cs<br>- Trigger Detection<br>- Scene Transition"]
         UI["DungeonEntranceUI.cs<br>- Enter Dungeon"]
         FVO["FogVisibilityObject.cs<br>- VisibleOnly / RememberWhenExplored<br>- Renderer Culling Sync"]
@@ -101,7 +101,7 @@ graph TD
     *   런타임 시 `BoxCollider2D`가 붙어 있으면 자동으로 비활성화하여 물리 충돌 간섭 방지.
 
 ### 2.7. `FloorChest` (`MonoBehaviour`, Controller)
-*   **역할**: 층 상자. 플레이어가 밟으면 1회 열림(색 변경) → `GlobalEvents.OnChestOpened(위치, 드랍 풀 ID)`만 던진다. 확인창 없음.
+*   **역할**: 층 상자. 생성 시 자기 칸을 `TileSystem` 점유로 등록해 플레이어·몬스터 이동을 막는다(열린 뒤에도 유지). `IAttackInteractable`을 구현해 플레이어의 근접·차지 공격(`EntityCombat`이 피해 대신 `OnAttacked` 호출)을 받으면 1회 열림(색 변경) → `GlobalEvents.OnChestOpened(위치, 드랍 풀 ID)`만 던진다. 몬스터 공격·투사체로는 열리지 않는다.
 *   `LootSystem`이 구독해 몬스터와 같은 드랍 처리(`DropFromPool`)를 쓰되, 상자 칸은 건너뛰고 주변 칸부터 놓는다(열린 상자와 겹침·발밑 자동 습득 방지).
 *   몬스터 사망 이벤트와 분리한 이유: 층 클리어 카운터(T4)가 `OnMonsterDied`만 세야 한다.
 *   내용물 `DropPool_Chest_Region1`(ID 1000): 재료(전리품 하위 등급) 2회 + 장비(악세서리)·포션 30% / 꽝 70%. 기획 5절 [추천] 값, 플레이 테스트로 조정.
