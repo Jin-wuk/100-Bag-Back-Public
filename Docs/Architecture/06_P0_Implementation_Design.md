@@ -195,6 +195,8 @@ public class ConsumableController : MonoBehaviour
 - 등록: 가방의 소모품을 퀵슬롯 UI로 드래그. 해당 아이템이 가방에서 사라지면 같은 `itemID`의 다른 스택으로 자동 재연결, 없으면 비움.
 - 입력: `PlayerInput`에 `OnQuickSlotInput(int index)` 추가 (1·2·3).
 - 세션 보존: `PlayerSessionData.QuickSlotItemIds` (itemID 기준).
+- 구현 현황: 칸은 `itemID`만 기억한다. 개수 표시(`InventoryManager.CountItems`)와 사용(`FindFirstItem`)은 가방만 대상으로 하고, 가방에 없으면 등록은 남긴 채 0으로 표시한다(되돌리면 다시 표시).
+- **보안 파우치 [확정, 2026-11-02 유저]**: 퀵슬롯은 가방만 센다. 파우치에 넣은 소모품은 개수에 포함하지 않고 퀵슬롯으로 쓸 수 없다(파우치는 사망 대비 금고). 쓰려면 비전투 상태에서 가방으로 옮긴다.
 
 ---
 

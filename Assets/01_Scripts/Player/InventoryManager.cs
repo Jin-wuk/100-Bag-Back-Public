@@ -203,6 +203,10 @@ namespace BagBack100.Player
         /// <summary>같은 itemID 아이템의 총 수량 (퀵슬롯 표시용)</summary>
         public int CountItems(int itemID)
         {
+            // 허브에서는 HubSystem.Awake가 이 컴포넌트의 Awake보다 먼저 퀵슬롯 UI를 갱신할 수 있다 (#21).
+            // 초기화 뒤 NotifyInventoryChanged가 UI를 다시 갱신하므로 그전에는 빈 가방으로 본다.
+            if (_container == null) return 0;
+
             int total = 0;
             var items = _container.Items;
             for (int i = 0; i < items.Count; i++)
@@ -215,6 +219,8 @@ namespace BagBack100.Player
         /// <summary>같은 itemID 중 가장 앞 슬롯의 아이템 (퀵슬롯 사용 대상)</summary>
         public RuntimeItem FindFirstItem(int itemID)
         {
+            if (_container == null) return null;
+
             RuntimeItem found = null;
             var items = _container.Items;
             for (int i = 0; i < items.Count; i++)
@@ -225,7 +231,7 @@ namespace BagBack100.Player
             return found;
         }
 
-        public IReadOnlyList<RuntimeItem> GetAllItems() => _container.Items;
+        public IReadOnlyList<RuntimeItem> GetAllItems() => _container != null ? _container.Items : System.Array.Empty<RuntimeItem>();
 
         public RuntimeItem GetItemAtSlot(int slotIndex) => _container?.GetAt(slotIndex);
 
