@@ -320,7 +320,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -454,7 +454,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -647,15 +647,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0ba59830f0e4e64bb45b17d659c9c7e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _mode: 0
-  _floorTilemap: {fileID: 0}
-  _wallTilemap: {fileID: 0}
   _obstacleLayerMask:
     serializedVersion: 2
     m_Bits: 64
   _startSafeStepRadius: 10
   _minMonsterSpacing: 3
-  _farthestExitCandidateCount: 3
   _corridorMonsterCount: 4
   _corridorTrapCount: 2
   _playerPrefab: {fileID: 8512937500303504559, guid: d7ab76544ca784842ad6cf9233b76fd7, type: 3}
@@ -663,15 +659,13 @@ MonoBehaviour:
   - {fileID: 4769375905301041180, guid: 8df9a16836a132d4796e502b6c008942, type: 3}
   - {fileID: 4769375905301041180, guid: a8e9c16836a132d4796e502b6c008999, type: 3}
   - {fileID: 5063341003800382751, guid: 7423487f6c961634da54a17013396bd0, type: 3}
-  _chestPrefabPool: []
-  _trapPrefabPool: []
+  _trapPrefabPool:
+  - {fileID: 709572298007640017, guid: 583d8656933d57c4fb2b969400b8c471, type: 3}
   _fixedExitPrefab: {fileID: 2438186420317738188, guid: 00acfe0bdf3b7a84db10595098f61626, type: 3}
   _regionConfig: {fileID: 11400000, guid: 0cce381313df6db4eacd648428a413f3, type: 2}
   _markerSafeRadius: 1
   _stairsPrefab: {fileID: 3547875023807878177, guid: 2e7a1a8cb1c1b5e499a6fa339bce9a04, type: 3}
   _floorFadeSeconds: 0.3
-  _dungeonData: {fileID: 11400000, guid: 421784c58c036f146826dd9ceb33abb0, type: 2}
-  _fixedMapChunk: {fileID: 0}
 --- !u!4 &525934923
 Transform:
   m_ObjectHideFlags: 0

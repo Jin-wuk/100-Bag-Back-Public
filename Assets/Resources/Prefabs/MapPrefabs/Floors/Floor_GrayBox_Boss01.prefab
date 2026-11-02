@@ -5379,9 +5379,7 @@ MonoBehaviour:
   _size: {x: 8, y: 5}
   _monsterCount: 1
   _trapCount: 0
-  _chestCount: 0
   _overrideMonsterPool: []
-  _overrideChestPool: []
 --- !u!1 &7947054921468290596
 GameObject:
   m_ObjectHideFlags: 0
