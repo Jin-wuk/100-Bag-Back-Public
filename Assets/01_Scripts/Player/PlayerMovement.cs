@@ -6,6 +6,11 @@ using BagBack100.Core;
 
 namespace BagBack100.Player
 {
+    /// <summary>
+    /// Role: 플레이어 타일 경로 이동(Pathfinder), 타일 점유 예약, 걸음 연출. 층 전환 순간이동 시 StopImmediately로 즉시 끊는다.
+    /// Dependencies: Pathfinder, TileSystem
+    /// Events: OnMovementFinished, OnTileReached
+    /// </summary>
     public class PlayerMovement : MonoBehaviour
     {
         public event Action OnMovementFinished;
@@ -108,6 +113,25 @@ namespace BagBack100.Player
                 _hasPendingTarget = false;
                 ResetVisuals();
             }
+        }
+
+        /// <summary>
+        /// 층 전환 순간이동 전용: 진행 중인 타일 보간 코루틴까지 즉시 끊는다.
+        /// CancelPath는 현재 칸 이동을 끝까지 마치므로, 그대로 두면 이전 층 좌표로 위치를 덮어쓴다.
+        /// OnMovementFinished는 보내지 않는다(호출한 쪽이 상태를 직접 Idle로 되돌린다).
+        /// </summary>
+        public void StopImmediately()
+        {
+            if (_moveCoroutine != null)
+            {
+                StopCoroutine(_moveCoroutine);
+                _moveCoroutine = null;
+            }
+            _currentPath.Clear();
+            _hasPendingTarget = false;
+            _isMoving = false;
+            if (_animator != null) _animator.speed = 1f;
+            ResetVisuals();
         }
 
         private IEnumerator MoveAlongPathCoroutine()

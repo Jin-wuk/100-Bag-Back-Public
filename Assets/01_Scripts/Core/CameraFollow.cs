@@ -54,6 +54,14 @@ namespace BagBack100.Core
             }
         }
 
+        /// <summary>대상이 순간이동했을 때(층 전환) 미끄러지지 않도록 즉시 붙이고 추적 속도·흔들림을 초기화한다.</summary>
+        public void SnapToTarget()
+        {
+            _velocity = Vector3.zero;
+            _shakeTimer = 0f;
+            SetTarget(_target);
+        }
+
         private void HandleCombatImpact(float shakeIntensity, float shakeDuration, float hitStopDuration)
         {
             if (shakeDuration > 0f && shakeIntensity >= _shakeIntensity)

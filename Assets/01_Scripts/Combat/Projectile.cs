@@ -5,9 +5,16 @@ using BagBack100.Monster;
 
 namespace BagBack100.Combat
 {
+    /// <summary>
+    /// Role: 풀링되는 투사체. 직진·수명·피격 처리 후 풀로 반납. ReleaseAll로 활성 투사체를 일괄 회수(층 전환, 보스 처치 정리).
+    /// Dependencies: MonsterController, PlayerStatManager
+    /// Events: 없음
+    /// </summary>
     public class Projectile : MonoBehaviour
     {
         private static readonly Dictionary<int, Queue<Projectile>> Pools = new Dictionary<int, Queue<Projectile>>();
+        // 층 전환·보스 처치 정리 때 날아가는 투사체를 한 번에 회수하려고 활성 인스턴스를 따로 추적한다
+        private static readonly List<Projectile> ActiveInstances = new List<Projectile>();
         private static Transform _poolRoot;
 
         [SerializeField] private float speed = 10f;
@@ -22,9 +29,25 @@ namespace BagBack100.Combat
 
         private void OnDestroy()
         {
+            ActiveInstances.Remove(this);
             if (_poolRoot == null)
             {
                 Pools.Clear();
+            }
+        }
+
+        /// <summary>활성 투사체를 전부 풀로 회수한다 (층 전환, 보스 처치 정리).</summary>
+        public static void ReleaseAll()
+        {
+            for (int i = ActiveInstances.Count - 1; i >= 0; i--)
+            {
+                Projectile projectile = ActiveInstances[i];
+                if (projectile == null)
+                {
+                    ActiveInstances.RemoveAt(i);
+                    continue;
+                }
+                projectile.ReturnToPool();
             }
         }
 
@@ -64,6 +87,7 @@ namespace BagBack100.Combat
             }
 
             instance.Initialize(direction, damage, owner);
+            ActiveInstances.Add(instance);
             return instance;
         }
 
@@ -134,6 +158,7 @@ namespace BagBack100.Combat
         {
             if (_isReturned) return;
             _isReturned = true;
+            ActiveInstances.Remove(this);
             gameObject.SetActive(false);
 
             if (_prefabId == 0)

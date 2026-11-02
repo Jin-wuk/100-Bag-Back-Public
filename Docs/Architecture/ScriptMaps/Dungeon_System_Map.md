@@ -62,7 +62,10 @@ graph TD
 *   **층 경로 (층계 던전, `_regionConfig` 지정 시)**: 기획 `07_Floor_Based_Dungeon_Design.md`.
     *   `Awake`: 씬의 영속 `FloorGrid`(Grid) 아래 원점에 층 프리팹(`FloorLayout`)을 생성하고 `_floorTilemap`/`_wallTilemap`을 층 타일맵으로 바인딩, `Physics2D.SyncTransforms()` 후 `FloorDesignValidator`로 인스턴스 검증. Grid를 층 프리팹에 두지 않는 이유: 플레이어·몬스터가 `FindObjectOfType<Grid>()`로 Grid를 캐싱하므로 층 교체(T2) 때 Grid가 바뀌면 안 된다.
     *   `Start`: `PlayerStart` 마커에 플레이어 스폰 → BFS → `Exit`·`UpStairs` 마커 반경 `_markerSafeRadius`(체비쇼프) 및 `ChestCandidate` 칸을 스폰 금지로 예약 → `Exit` 마커에 탈출 포탈(T4 전까지 항상) → `Combat`/`Corridor` 구역과 구역 밖 복도에 몬스터·함정 → 안개 초기화. 스폰물은 층 루트 아래 `Spawned`에 모은다.
-    *   현재(T1)는 `EarlyPool[0]`을 1층으로 쓴다. 층 추첨(T3), 층 전환(T2), 클리어 판정(T4)은 이후 태스크.
+    *   층 디자인 선택(T2 임시): 1~4층 Early 풀 순서대로, 5층 중간 보스, 6~9층 Late 풀 순서대로, 10층 보스. T3에서 가중치·중복 금지 추첨으로 교체.
+    *   **층 전환(T2)**: `UpStairs` 마커에 `FloorStairs`(10층 제외)를 두고, 밟히면 `FloorStairs.OnStairsEntered` → `AscendRoutine`: `GamePauseService.Request` + `PlayerInput.IsInputLocked` → `GlobalEvents.OnFloorTransitionStarted(fade)` → 페이드 시간 대기(실시간) → `ClearFloor()`(투사체·예고 장판 `ReleaseAll`, 이전 층 루트 비활성·분리·파괴, `Physics2D.SyncTransforms`, `TileSystem.ClearAll`로 점유·위험 칸·바닥 아이템 정리) → 다음 층 `BuildFloor`/`SetupFloorLayout` → `GlobalEvents.OnFloorEntered` → 페이드 시간 대기 → 잠금 해제.
+    *   플레이어는 1층에서만 생성하고 2층부터는 `PlayerController.ResetForFloorTransition`(이동 코루틴·차징·선입력 정지, 위치 이동, 타일 등록, 카메라 `SnapToTarget`)으로 재사용한다 → HP·MP·쿨타임·HoT 유지.
+    *   현재 층은 `PlayerSessionData.CurrentRegionId/CurrentFloor`에 기록(결과 화면 T8용). 계단 잠금·클리어 판정은 T4.
 *   **지원 모드 (`_regionConfig`가 비었을 때)**:
     1.  `FixedMap` (MVP 현행 - 구역 & Flood Fill 기반):
         *   `Start` 구역에서 플레이어를 스폰한 뒤, 해당 타일로부터 **4방향 BFS(Flood Fill)**를 수행하여 벽 안쪽의 실제 도달 가능한 바닥 타일(`FloorTilemap` 있음 & `WallTilemap` 없음 & 장애물 없음)과 이동 걸음 수를 산출. (벽 뒤의 빈 공간 100% 배제)
@@ -123,7 +126,14 @@ graph TD
 ### 2.12. `FloorDesignValidator` (static)
 *   **역할**: 런타임·에디터 공용 규격 검증. 시작점 1, 탈출구 1, 계단 1(10층 보스층은 0~1), 마커 칸 보행 가능·중복 없음, 계단–탈출구 체비쇼프 거리 ≥ 3, 상자 후보 ≥ 구간 최대 굴림 횟수, 풀 구간 일치.
 
+### 2.12b. `FloorStairs` (`MonoBehaviour`, Controller)
+*   **역할**: 위층 계단 트리거. 플레이어가 밟으면 정적 지역 이벤트 `OnStairsEntered`만 던지고 1회 후 비활성. T2는 항상 열림, 잠금·겹침 가드는 T4.
+
+### 2.12c. `FloorHUD` (`MonoBehaviour`, UI)
+*   **역할**: 현재 층 상시 표시(우측 상단), 층 진입 배너(상단 중앙), 층 전환 암전. `GlobalEvents.OnFloorTransitionStarted`/`OnFloorEntered`만 구독(OnEnable/OnDisable), 연출은 unscaled time. 서식 `{0}` 지역 번호, `{1}` 층, `{2}` 지역 이름.
+
 ### 2.13. `FloorGrayBoxBuilder` (Editor)
 *   메뉴 `BagBack100/Floor/Create Gray Box Floors`: 회색 박스 층 3장(일반 2 + 보스 1)과 `Region1Config`·`FloorDesignSO` 생성 후 검증.
 *   메뉴 `BagBack100/Floor/Validate Region Configs`: 모든 `RegionConfigSO` 검증.
+*   메뉴 `BagBack100/Floor/Setup Stairs And Floor HUD`: 회색 박스 계단 프리팹(`FloorStairs_GrayBox`) 생성·`DungeonGenerator._stairsPrefab` 연결, 켜진 Overlay 캔버스 아래 `FloorHUD` 생성 후 저장.
 *   메뉴 `BagBack100/Floor/Setup Dungeon Scene For Floors`: `03_DungeonScene`의 `FixedMap` 인스턴스 제거, `FloorGrid` 생성, `DungeonGenerator._regionConfig` 연결 후 저장.

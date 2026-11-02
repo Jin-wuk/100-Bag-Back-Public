@@ -26,6 +26,8 @@ namespace BagBack100.Player
         public event Action<int> OnQuickSlotInput; // 0~2 (키 1·2·3)
         
         public bool IsMovementBlocked { get; set; } = false;
+        // 층 전환 연출 중 전체 입력 잠금. 가방 UI가 IsMovementBlocked를 덮어쓰므로 별도 플래그로 둔다 (Tab 포함 차단)
+        public bool IsInputLocked { get; set; } = false;
         
         private Camera _mainCamera;
         private Grid _grid;
@@ -52,6 +54,12 @@ namespace BagBack100.Player
 
         private void Update()
         {
+            if (IsInputLocked)
+            {
+                if (_combatPreview != null) _combatPreview.Hide();
+                return;
+            }
+
             if (Input.GetKeyDown(KeyCode.Tab))
             {
                 OnInventoryToggle?.Invoke();
