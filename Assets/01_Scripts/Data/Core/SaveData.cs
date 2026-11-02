@@ -27,13 +27,46 @@ namespace BagBack100.Data.Core
     }
 
     /// <summary>
-    /// 씬 전환(02_HubScene <-> 03_DungeonScene) 간 인벤토리, 장착 장비, 창고 데이터를 보존하는 런타임 세션 컨테이너.
+    /// Role: 씬 전환(02_HubScene <-> 03_DungeonScene) 간 인벤토리, 장착 장비, 창고, 보안 파우치, 퀵슬롯 등록, 골드 지갑을 보존하는 런타임 세션 컨테이너.
+    /// Dependencies: RuntimeItem, BackpackDataSO
+    /// Events: OnGoldChanged(gold)
     /// </summary>
     public static class PlayerSessionData
     {
         public static List<RuntimeItem> InventoryItems { get; private set; } = new List<RuntimeItem>();
         public static Dictionary<EquipType, RuntimeItem> EquippedItems { get; private set; } = new Dictionary<EquipType, RuntimeItem>();
         public static List<RuntimeItem> StorageItems { get; private set; } = new List<RuntimeItem>();
+        // 직전 던전 결과. 허브 결과 화면이 한 번 보여준 뒤 null로 비운다
+        public static RunResult LastRunResult { get; set; }
+
+        // 보유 골드(지갑). 가방에 들어가지 않으므로 사망해도 잃지 않는다. 골드 가치가 있는 전리품은 허브에서 팔아야 지갑으로 들어온다
+        public const int StartingGold = 1000;
+        public static int Gold { get; private set; } = StartingGold;
+        public static event Action<int> OnGoldChanged;
+
+        public static void AddGold(int amount)
+        {
+            if (amount <= 0) return;
+            Gold += amount;
+            OnGoldChanged?.Invoke(Gold);
+        }
+
+        public static bool TrySpendGold(int amount)
+        {
+            if (amount < 0 || Gold < amount) return false;
+            Gold -= amount;
+            OnGoldChanged?.Invoke(Gold);
+            return true;
+        }
+
+        // 보안 파우치: 사망해도 비우지 않는다
+        public static List<RuntimeItem> PouchItems { get; private set; } = new List<RuntimeItem>();
+
+        // 퀵슬롯 1·2·3에 연결된 소모품 itemID (0 = 비어 있음). 아이템 자체가 아니라 종류로 연결해 스택이 바뀌어도 유지된다
+        public const int QuickSlotCount = 3;
+        public static int[] QuickSlotItemIds { get; private set; } = new int[QuickSlotCount];
+        // 가방에 해당 소모품이 하나도 없을 때(씬 전환 후 포함)도 퀵슬롯에 흐린 아이콘을 그리기 위해 등록 시점의 아이콘을 보존
+        public static UnityEngine.Sprite[] QuickSlotIcons { get; private set; } = new UnityEngine.Sprite[QuickSlotCount];
 
         public static void SaveInventory(IEnumerable<RuntimeItem> items)
         {
@@ -63,6 +96,20 @@ namespace BagBack100.Data.Core
             }
         }
 
+        public static void SavePouch(IEnumerable<RuntimeItem> items)
+        {
+            PouchItems.Clear();
+            if (items == null) return;
+
+            foreach (var item in items)
+            {
+                if (item != null && item.ItemData != null)
+                {
+                    PouchItems.Add(item);
+                }
+            }
+        }
+
         public static void SaveStorage(IEnumerable<RuntimeItem> items)
         {
             StorageItems.Clear();
@@ -77,22 +124,20 @@ namespace BagBack100.Data.Core
             }
         }
 
-        public static void GetEquippedBackpackBonus(out int addedSlots, out float addedWeight)
+        public static void GetEquippedBackpackBonus(out int addedSlots)
         {
             addedSlots = 0;
-            addedWeight = 0f;
 
             if (EquippedItems.TryGetValue(EquipType.Backpack, out var bagItem) &&
                 bagItem != null &&
                 bagItem.ItemData is BackpackDataSO bagData)
             {
                 addedSlots = bagData.bagAddedSlots;
-                addedWeight = bagData.bagMaxWeight;
             }
         }
 
         /// <summary>
-        /// 플레이어 사망 시 가방(인벤토리) 및 장착 중인 모든 장비를 증발시킵니다. (허브 창고 아이템은 보존)
+        /// 플레이어 사망 시 가방(인벤토리) 및 장착 중인 모든 장비를 증발시킵니다. (허브 창고·보안 파우치 아이템은 보존)
         /// </summary>
         public static void ClearPlayerLoadoutOnDeath()
         {

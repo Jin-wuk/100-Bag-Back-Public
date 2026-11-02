@@ -4,10 +4,16 @@ using BagBack100.Data.Core;
 
 namespace BagBack100.UI
 {
+    /// <summary>
+    /// Role: 장비 슬롯 8칸 뷰. 장착 상태 표시와 실패 안내 문구 표시.
+    /// Dependencies: EquipmentManager, EquipmentSlotUI, UIToast
+    /// Events: 없음 (구독: EquipmentManager.OnEquipmentChanged, OnEquipmentFailed)
+    /// </summary>
     public class EquipmentUIController : MonoBehaviour
     {
         [SerializeField] private EquipmentManager _equipmentManager;
         [SerializeField] private System.Collections.Generic.List<EquipmentSlotUI> _slots;
+        [SerializeField] private UIToast _toast;
 
         private void Awake()
         {
@@ -77,8 +83,8 @@ namespace BagBack100.UI
 
         private void ShowErrorMessage(string msg)
         {
-            Debug.LogWarning($"[System] {msg}");
-            // 화면 중앙 플로팅 텍스트 띄우기 로직 연동 가능
+            if (_toast != null) _toast.Show(msg);
+            else Debug.LogWarning($"[System] {msg}");
         }
     }
 }

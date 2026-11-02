@@ -7,6 +7,11 @@ using TMPro;
 
 namespace BagBack100.UI
 {
+    /// <summary>
+    /// Role: 슬롯 안 아이템 아이콘. 드래그·더블클릭·우클릭 입력을 소속 컨테이너 UI로 전달만 한다.
+    /// Dependencies: IItemContainerUI, RuntimeItem
+    /// Events: 없음
+    /// </summary>
     [RequireComponent(typeof(RectTransform))]
     [RequireComponent(typeof(CanvasGroup))]
     public class DraggableItemUI : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
@@ -109,6 +114,10 @@ namespace BagBack100.UI
                 {
                     if (_uiController != null) _uiController.OnItemDoubleClicked(this);
                 }
+            }
+            else if (eventData.button == PointerEventData.InputButton.Right)
+            {
+                if (_uiController != null) _uiController.OnItemRightClicked(this, eventData);
             }
         }
     }

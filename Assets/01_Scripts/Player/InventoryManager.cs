@@ -5,21 +5,40 @@ using BagBack100.Data.Core;
 
 namespace BagBack100.Player
 {
-    public class InventoryManager : MonoBehaviour
+    /// <summary>
+    /// Role: 플레이어 가방(메인 인벤토리) 슬롯 관리. 용량 = 기본 칸 + 장착 가방 보너스. 변경 시 PlayerSessionData에 자동 동기화.
+    /// Dependencies: SlotContainer, PlayerSessionData
+    /// Events: OnManagerCreated(static), OnInventoryChanged / OnContainerChanged, OnInventoryActionFailed,
+    ///         GlobalEvents.OnItemDiscardRequested (버리기 요청),
+    ///         GlobalEvents.OnItemDroppedOnGround (세션 복원 시 용량 초과분 폴백 드랍)
+    /// </summary>
+    public class InventoryManager : MonoBehaviour, ISlotItemContainer
     {
         public static event Action<InventoryManager> OnManagerCreated;
         public event Action OnInventoryChanged;
-        
+        public event Action<string> OnInventoryActionFailed;
+
+        event Action ISlotItemContainer.OnContainerChanged
+        {
+            add => OnInventoryChanged += value;
+            remove => OnInventoryChanged -= value;
+        }
+
         [Header("Base Settings")]
         [SerializeField] private int _baseMaxSlots = 30;
-        [SerializeField] private float _baseMaxWeight = 50f;
+        [Tooltip("가방에서 버린 아이템이 떨어질 수 있는 플레이어 주변 반경(칸)")]
+        [Min(1)] [SerializeField] private int _discardRadius = 2;
+        [Tooltip("바닥에 버리기 허용 여부. 허브에는 바닥이 없으므로 던전 플레이어 프리팹에서만 켠다")]
+        [SerializeField] private bool _allowDiscard = false;
 
-        public int MaxSlots { get; private set; }
-        public float MaxWeight { get; private set; }
-        public float CurrentWeight { get; private set; }
+        public bool CanDiscard => _allowDiscard;
 
-        private RuntimeItem[] _slots;
-        private List<RuntimeItem> _items = new List<RuntimeItem>();
+        public int MaxSlots => _container != null ? _container.Capacity : _baseMaxSlots;
+        public int BaseMaxSlots => _baseMaxSlots;
+        public int ItemCount => _container != null ? _container.ItemCount : 0;
+
+        private SlotContainer _container;
+        private readonly List<RuntimeItem> _overflowBuffer = new List<RuntimeItem>();
 
         private void Awake()
         {
@@ -29,22 +48,18 @@ namespace BagBack100.Player
 
         private void RestoreFromSession()
         {
-            _items.Clear();
-            foreach (var savedItem in PlayerSessionData.InventoryItems)
-            {
-                if (savedItem != null && savedItem.ItemData != null)
-                {
-                    _items.Add(savedItem);
-                }
-            }
+            PlayerSessionData.GetEquippedBackpackBonus(out int addedSlots);
+            _container = new SlotContainer(_baseMaxSlots + addedSlots);
 
-            PlayerSessionData.GetEquippedBackpackBonus(out int addedSlots, out float addedWeight);
-            InitializeBag(_baseMaxSlots + addedSlots, _baseMaxWeight + addedWeight);
+            _overflowBuffer.Clear();
+            _container.Load(PlayerSessionData.InventoryItems, _overflowBuffer);
+            DropOverflowOnGround();
+            NotifyInventoryChanged();
         }
 
         private void NotifyInventoryChanged()
         {
-            PlayerSessionData.SaveInventory(_items);
+            PlayerSessionData.SaveInventory(_container.Items);
             OnInventoryChanged?.Invoke();
         }
 
@@ -67,277 +82,158 @@ namespace BagBack100.Player
             }
             else
             {
-                Debug.LogWarning($"[Inventory] 가방이 꽉 찼거나 무거워서 {item.ItemData.itemName}을 획득할 수 없습니다.");
+                Debug.LogWarning($"[Inventory] 가방이 꽉 차서 {item.ItemData.itemName}을 획득할 수 없습니다.");
             }
             onResult?.Invoke(success);
         }
 
-        public void InitializeBag(int maxSlots, float maxWeight)
+        /// <summary>
+        /// 가방 보너스 칸을 바꾼다. 호출자(EquipmentManager)가 CanFitAfterResize로 미리 검사하므로 정상 흐름에서는 넘치는 아이템이 없다.
+        /// </summary>
+        public void UpdateBagCapacity(int addedSlots)
         {
-            MaxSlots = maxSlots;
-            MaxWeight = maxWeight;
-            
-            var newSlots = new RuntimeItem[maxSlots];
-            List<RuntimeItem> outOfBoundsItems = new List<RuntimeItem>();
-            
-            // 기존 아이템 마이그레이션
-            for(int i=0; i<_items.Count; i++)
-            {
-                var item = _items[i];
-                if (item.SlotIndex >= 0 && item.SlotIndex < maxSlots && newSlots[item.SlotIndex] == null)
-                {
-                    newSlots[item.SlotIndex] = item;
-                }
-                else
-                {
-                    outOfBoundsItems.Add(item);
-                }
-            }
-            _slots = newSlots;
-
-            // 초과된 아이템들을 앞쪽 빈 슬롯부터 채워넣음
-            foreach(var item in outOfBoundsItems)
-            {
-                bool placed = false;
-                for (int j = 0; j < maxSlots; j++)
-                {
-                    if (_slots[j] == null)
-                    {
-                        _slots[j] = item;
-                        item.SlotIndex = j;
-                        placed = true;
-                        break;
-                    }
-                }
-                
-                // 새로운 공간에도 빈칸이 없다면 바닥에 드랍
-                if (!placed)
-                {
-                    InternalRemoveItem(item);
-                    var player = FindObjectOfType<PlayerController>();
-                    Vector3 dropPos = player != null ? player.transform.position : Vector3.zero;
-                    BagBack100.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(item, dropPos);
-                }
-            }
-            RecalculateWeight();
+            _overflowBuffer.Clear();
+            _container.Resize(_baseMaxSlots + addedSlots, _overflowBuffer);
+            DropOverflowOnGround();
             NotifyInventoryChanged();
         }
 
-        public void UpdateBagCapacity(int addedSlots, float addedWeight)
+        /// <summary>가방 보너스를 addedSlots로 바꾼 뒤 (현재 아이템 수 + extraItems)가 들어가는지.</summary>
+        public bool CanFitAfterResize(int addedSlots, int extraItems)
         {
-            InitializeBag(_baseMaxSlots + addedSlots, _baseMaxWeight + addedWeight);
+            return ItemCount + extraItems <= _baseMaxSlots + addedSlots;
         }
 
+        // 세션 복원 등 예외 경로에서만 발생. 아이템을 조용히 잃지 않도록 플레이어 위치에 떨군다.
+        private void DropOverflowOnGround()
+        {
+            if (_overflowBuffer.Count == 0) return;
+
+            Debug.LogWarning($"[Inventory] 가방 용량 초과로 {_overflowBuffer.Count}개 아이템을 바닥에 떨굽니다.");
+            for (int i = 0; i < _overflowBuffer.Count; i++)
+            {
+                BagBack100.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(_overflowBuffer[i], transform.position);
+            }
+            _overflowBuffer.Clear();
+        }
+
+        /// <summary>아이템을 모두 비우고 용량을 기본 칸으로 되돌린다 (사망 처리용. 직후 장비도 비워진다).</summary>
         public void ClearInventory()
         {
-            _items.Clear();
-            MaxSlots = _baseMaxSlots;
-            MaxWeight = _baseMaxWeight;
-            _slots = new RuntimeItem[MaxSlots];
-            CurrentWeight = 0f;
+            _container.Clear();
+            _container.Resize(_baseMaxSlots, null);
             NotifyInventoryChanged();
         }
 
-        private void RecalculateWeight()
-        {
-            CurrentWeight = 0f;
-            foreach (var item in _items)
-            {
-                if (item != null && item.ItemData != null)
-                {
-                    CurrentWeight += item.ItemData.weight * item.Count;
-                }
-            }
-        }
+        public bool CanAddItem(RuntimeItem item) => _container.CanAdd(item);
 
-        // 아이템을 인벤토리에 넣을 수 있는지 여부 (특정 슬롯 지정 혹은 아무 슬롯)
-        public bool CanAddItem(RuntimeItem item)
-        {
-            if (item == null || item.ItemData == null) return false;
+        public bool CanPlaceItemAtSlot(RuntimeItem item, int targetSlot) => _container.CanPlaceAt(item, targetSlot);
 
-            // 무게 체크
-            if (CurrentWeight + (item.ItemData.weight * item.Count) > MaxWeight)
-                return false;
-
-            // 빈 슬롯이 하나라도 있으면 수용 가능
-            for (int i = 0; i < MaxSlots; i++)
-            {
-                if (_slots[i] == null) return true;
-            }
-
-            // 빈 슬롯이 없더라도 스택 가능한 여유 공간 합계가 충분하면 수용 가능
-            if (item.ItemData.maxStack > 1)
-            {
-                int availableSpace = 0;
-                for (int i = 0; i < MaxSlots; i++)
-                {
-                    var existing = _slots[i];
-                    if (existing != null && existing != item && existing.ItemData.itemID == item.ItemData.itemID)
-                    {
-                        availableSpace += Mathf.Max(0, existing.ItemData.maxStack - existing.Count);
-                        if (availableSpace >= item.Count) return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        // 특정 슬롯 인덱스에 아이템이 배치 가능한지 (스왑 포함)
-        public bool CanPlaceItemAtSlot(RuntimeItem item, int targetSlot)
-        {
-            if (item == null || item.ItemData == null || targetSlot < 0 || targetSlot >= MaxSlots)
-                return false;
-            
-            bool isInternal = _items.Contains(item);
-
-            // 인벤토리 외부(창고 등)에서 들어오는 아이템이라면 무게 및 대상 슬롯 상태 체크
-            if (!isInternal)
-            {
-                if (CurrentWeight + (item.ItemData.weight * item.Count) > MaxWeight) return false;
-
-                if (_slots[targetSlot] != null)
-                {
-                    var targetItem = _slots[targetSlot];
-                    if (targetItem.ItemData.itemID != item.ItemData.itemID ||
-                        item.ItemData.maxStack <= 1 ||
-                        targetItem.Count + item.Count > targetItem.ItemData.maxStack)
-                    {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-
-        // 외부에서 획득하거나 슬롯이동 시
         public bool AddItemAt(RuntimeItem item, int targetSlot)
         {
-            if (item == null || targetSlot < 0 || targetSlot >= MaxSlots) return false;
-
-            bool isInternal = _items.Contains(item);
-
-            // 대상 슬롯에 무언가 있고, 같은 아이템이며 스택 가능하다면 합침
-            if (_slots[targetSlot] != null && _slots[targetSlot] != item)
-            {
-                var targetItem = _slots[targetSlot];
-                if (targetItem.ItemData.itemID == item.ItemData.itemID && item.ItemData.maxStack > 1)
-                {
-                    int space = targetItem.ItemData.maxStack - targetItem.Count;
-                    if (space >= item.Count)
-                    {
-                        targetItem.Count += item.Count;
-                        if (isInternal) InternalRemoveItem(item); // 기존 슬롯에서 제거
-                        RecalculateWeight();
-                        NotifyInventoryChanged();
-                        return true;
-                    }
-                }
-                
-                // 단순 스왑 로직
-                if (isInternal && item.SlotIndex >= 0 && item.SlotIndex < MaxSlots)
-                {
-                    // 내부 이동인 경우 스왑
-                    int oldSlot = item.SlotIndex;
-                    _slots[oldSlot] = targetItem;
-                    targetItem.SlotIndex = oldSlot;
-                    
-                    _slots[targetSlot] = item;
-                    item.SlotIndex = targetSlot;
-                    
-                    NotifyInventoryChanged();
-                    return true;
-                }
-                else
-                {
-                    // 외부에서 온 건데 대상 슬롯이 차있고 스택도 안되면 실패
-                    return false;
-                }
-            }
-
-            // 단순 이동/추가
-            if (isInternal && item.SlotIndex >= 0 && item.SlotIndex < MaxSlots)
-            {
-                _slots[item.SlotIndex] = null;
-            }
-            
-            _slots[targetSlot] = item;
-            item.SlotIndex = targetSlot;
-            
-            if (!isInternal) _items.Add(item);
-
-            RecalculateWeight();
+            if (!_container.AddAt(item, targetSlot)) return false;
             NotifyInventoryChanged();
             return true;
-        }
-
-        private void InternalRemoveItem(RuntimeItem item)
-        {
-            if (item == null || !_items.Contains(item)) return;
-
-            if (item.SlotIndex >= 0 && item.SlotIndex < MaxSlots && _slots[item.SlotIndex] == item)
-            {
-                _slots[item.SlotIndex] = null;
-            }
-            _items.Remove(item);
-            item.SlotIndex = -1;
         }
 
         public void RemoveItem(RuntimeItem item)
         {
-            InternalRemoveItem(item);
-            RecalculateWeight();
-            NotifyInventoryChanged();
+            if (_container.Remove(item)) NotifyInventoryChanged();
         }
 
-        public IReadOnlyList<RuntimeItem> GetAllItems() => _items;
-
-        public RuntimeItem GetItemAtSlot(int slotIndex)
+        /// <summary>
+        /// 아이템을 amount개만큼 플레이어 주변 바닥에 버린다. 반경 안에 빈 칸이 없거나 버릴 수 없는 곳(허브)이면 가방에 그대로 둔다.
+        /// </summary>
+        public bool TryDiscard(RuntimeItem item, int amount)
         {
-            if (_slots == null || slotIndex < 0 || slotIndex >= MaxSlots) return null;
-            return _slots[slotIndex];
+            if (item == null || !_container.Contains(item) || amount <= 0) return false;
+            if (!_allowDiscard)
+            {
+                OnInventoryActionFailed?.Invoke("Items cannot be dropped here.");
+                return false;
+            }
+            amount = Mathf.Min(amount, item.Count);
+
+            // 일부만 버리면 바닥에 놓일 새 묶음을 만들고, 전부 버리면 원래 개체를 그대로 바닥으로 보낸다
+            RuntimeItem dropped = amount == item.Count ? item : new RuntimeItem(item.ItemData) { Count = amount };
+
+            bool success = false;
+            var handler = BagBack100.Core.GlobalEvents.OnItemDiscardRequested;
+            if (handler != null) handler(dropped, transform.position, _discardRadius, result => success = result);
+
+            if (!success)
+            {
+                OnInventoryActionFailed?.Invoke(handler == null ? "Items cannot be dropped here." : "No space nearby to drop the item.");
+                return false;
+            }
+
+            RemoveAmount(item, amount);
+            return true;
         }
+
+        /// <summary>아이템을 amount개만큼 영구 삭제한다 (휴지통).</summary>
+        public bool DeleteItem(RuntimeItem item, int amount)
+        {
+            if (item == null || !_container.Contains(item) || amount <= 0) return false;
+            RemoveAmount(item, Mathf.Min(amount, item.Count));
+            return true;
+        }
+
+        public bool RemoveAmount(RuntimeItem item, int amount)
+        {
+            if (item == null || !_container.Contains(item) || amount <= 0) return false;
+            if (amount >= item.Count) _container.Remove(item);
+            else item.Count -= amount;
+            NotifyInventoryChanged();
+            return true;
+        }
+
+        /// <summary>스택에서 1개를 소모한다. 마지막 1개면 슬롯에서 제거한다.</summary>
+        public bool ConsumeOne(RuntimeItem item)
+        {
+            if (item == null || !_container.Contains(item)) return false;
+
+            if (item.Count > 1) item.Count--;
+            else _container.Remove(item);
+
+            NotifyInventoryChanged();
+            return true;
+        }
+
+        /// <summary>같은 itemID 아이템의 총 수량 (퀵슬롯 표시용)</summary>
+        public int CountItems(int itemID)
+        {
+            int total = 0;
+            var items = _container.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].ItemData.itemID == itemID) total += items[i].Count;
+            }
+            return total;
+        }
+
+        /// <summary>같은 itemID 중 가장 앞 슬롯의 아이템 (퀵슬롯 사용 대상)</summary>
+        public RuntimeItem FindFirstItem(int itemID)
+        {
+            RuntimeItem found = null;
+            var items = _container.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].ItemData.itemID != itemID) continue;
+                if (found == null || items[i].SlotIndex < found.SlotIndex) found = items[i];
+            }
+            return found;
+        }
+
+        public IReadOnlyList<RuntimeItem> GetAllItems() => _container.Items;
+
+        public RuntimeItem GetItemAtSlot(int slotIndex) => _container?.GetAt(slotIndex);
 
         public bool TryAddNextAvailableSlot(RuntimeItem item)
         {
-            if (!CanAddItem(item)) return false;
-
-            bool isInternal = _items.Contains(item);
-
-            // 1. 중첩 가능한 아이템이면 상단 왼쪽(0번 슬롯)부터 기존 스택에 우선 합산
-            if (item.ItemData.maxStack > 1)
-            {
-                for (int i = 0; i < MaxSlots; i++)
-                {
-                    var existing = _slots[i];
-                    if (existing != null && existing != item && existing.ItemData.itemID == item.ItemData.itemID && existing.Count < existing.ItemData.maxStack)
-                    {
-                        int space = existing.ItemData.maxStack - existing.Count;
-                        int addCount = Mathf.Min(space, item.Count);
-                        existing.Count += addCount;
-                        item.Count -= addCount;
-
-                        if (item.Count <= 0)
-                        {
-                            if (isInternal) InternalRemoveItem(item);
-                            RecalculateWeight();
-                            NotifyInventoryChanged();
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            // 2. 남은 수량(또는 중첩 불가 아이템)은 가장 상단 왼쪽(0번 슬롯) 빈칸부터 채움
-            for (int i = 0; i < MaxSlots; i++)
-            {
-                if (_slots[i] == null)
-                {
-                    AddItemAt(item, i);
-                    return true;
-                }
-            }
-            return false;
+            if (!_container.TryAddAuto(item)) return false;
+            NotifyInventoryChanged();
+            return true;
         }
     }
 }

@@ -6,6 +6,12 @@ using BagBack100.UI;
 
 namespace BagBack100.Player
 {
+    /// <summary>
+    /// Role: 플레이어 입력 수집. WASD 이동, 마우스 8방향 조준·좌클릭 공격·우클릭 차징, Tab 가방, Z 원거리, 1·2·3 퀵슬롯을 이벤트로 전달.
+    /// Dependencies: Grid, MovementPreview, EventSystem
+    /// Events: OnInputCreated(static), OnMoveInput, OnAimInput, OnAttackInput, OnChargeStartInput, OnChargeReleaseInput,
+    ///         OnSpecialAttackKeyPressed, OnInventoryToggle, OnQuickSlotInput
+    /// </summary>
     public class PlayerInput : MonoBehaviour
     {
         public static event Action<PlayerInput> OnInputCreated;
@@ -17,6 +23,7 @@ namespace BagBack100.Player
         public event Action OnChargeReleaseInput;
         public event Action OnSpecialAttackKeyPressed;
         public event Action OnInventoryToggle;
+        public event Action<int> OnQuickSlotInput; // 0~2 (키 1·2·3)
         
         public bool IsMovementBlocked { get; set; } = false;
         
@@ -50,6 +57,9 @@ namespace BagBack100.Player
                 OnInventoryToggle?.Invoke();
             }
 
+            // 퀵슬롯은 마우스가 HUD 위에 있어도 써야 하므로 포인터 차단 검사보다 먼저 처리한다
+            if (!IsMovementBlocked) HandleQuickSlotInput();
+
             if (IsMovementBlocked || (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
             {
                 if (_combatPreview != null) _combatPreview.Hide();
@@ -58,6 +68,13 @@ namespace BagBack100.Player
 
             HandleAimAndAttackInput();
             HandleKeyboardMoveInput();
+        }
+
+        private void HandleQuickSlotInput()
+        {
+            if (Input.GetKeyDown(KeyCode.Alpha1)) OnQuickSlotInput?.Invoke(0);
+            else if (Input.GetKeyDown(KeyCode.Alpha2)) OnQuickSlotInput?.Invoke(1);
+            else if (Input.GetKeyDown(KeyCode.Alpha3)) OnQuickSlotInput?.Invoke(2);
         }
 
         private void HandleKeyboardMoveInput()

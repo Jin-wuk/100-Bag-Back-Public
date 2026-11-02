@@ -8,6 +8,11 @@ using BagBack100.Monster;
 
 namespace BagBack100.Combat
 {
+    /// <summary>
+    /// Role: 플레이어·몬스터 공용 공격 실행기. 근접/다중/원거리 공격, 공격 쿨다운(모션 락), 쿨다운 무관 즉시 타격.
+    /// Dependencies: MonsterController, PlayerStatManager, CombatFeedbackSystem, Projectile, GamePauseService
+    /// Events: OnMeleeAttack, OnRangedAttack, OnAttackFinished, GlobalEvents.OnCombatImpact
+    /// </summary>
     public class EntityCombat : MonoBehaviour
     {
         public event Action<Vector3> OnMeleeAttack;
@@ -123,25 +128,42 @@ namespace BagBack100.Combat
             StartCoroutine(CooldownRoutine(1f / safeAtkSpeed));
         }
 
+        /// <summary>
+        /// 몬스터 패턴 타격처럼 시전자 자신의 공격 쿨다운과 무관하게 즉시 적용되어야 하는 피해.
+        /// 패턴은 MonsterController가 자체 쿨다운을 관리하므로, 여기서 EntityCombat 쿨다운에 막히면 데미지가 조용히 누락된다.
+        /// </summary>
+        /// <returns>대상에게 실제로 적용된 피해량 (대상이 없거나 이미 사망했으면 0)</returns>
+        public int ApplyImmediateHit(GameObject target, int damage, Vector3 direction, bool isHeavyHit)
+        {
+            Vector3 normDir = direction.sqrMagnitude > 0.001f ? direction.normalized : Vector3.right;
+            int dealt = ApplyDamageToTargetAndGetDealt(target, damage, normDir, isHeavyHit);
+            if (dealt > 0)
+            {
+                TriggerImpactFeedback(isHeavyHit);
+            }
+            return dealt;
+        }
+
         private bool ApplyDamageToTarget(GameObject target, int damage, Vector3 hitDir, bool isHeavyHit)
         {
-            if (target == null) return false;
+            return ApplyDamageToTargetAndGetDealt(target, damage, hitDir, isHeavyHit) > 0;
+        }
 
-            var targetMonster = target.GetComponent<MonsterController>();
-            if (targetMonster != null)
+        private int ApplyDamageToTargetAndGetDealt(GameObject target, int damage, Vector3 hitDir, bool isHeavyHit)
+        {
+            if (target == null) return 0;
+
+            if (target.TryGetComponent<MonsterController>(out var targetMonster))
             {
-                targetMonster.TakeDamage(damage, hitDir, isHeavyHit);
-                return true;
+                return targetMonster.TakeDamage(damage, hitDir, isHeavyHit);
             }
 
-            var targetPlayer = target.GetComponent<PlayerStatManager>();
-            if (targetPlayer != null)
+            if (target.TryGetComponent<PlayerStatManager>(out var targetPlayer))
             {
-                targetPlayer.TakeDamage(damage);
-                return true;
+                return targetPlayer.TakeDamage(damage);
             }
 
-            return false;
+            return 0;
         }
 
         private void TriggerImpactFeedback(bool isHeavyHit, float shakeMult = 1.0f, float hitStopMult = 1.0f)
@@ -180,7 +202,8 @@ namespace BagBack100.Combat
             // Frame-Independent Combat: 히트스톱(Time.timeScale 변동)이나 프레임 드랍에 의해 모션 락 시간이 왜곡되지 않도록 unscaledDeltaTime 누적 및 Yield객체 GC Zero 달성
             while (elapsed < duration)
             {
-                elapsed += Time.unscaledDeltaTime;
+                // 히트스톱 중에는 흐르되, 가방을 열어 일시정지한 동안에는 멈춘다 (몬스터만 멈춘 채 쿨다운을 소진하는 꼼수 차단)
+                if (!GamePauseService.IsPaused) elapsed += Time.unscaledDeltaTime;
                 yield return null;
             }
             IsAttackOnCooldown = false;

@@ -3,6 +3,11 @@ using UnityEngine;
 
 namespace BagBack100.Core
 {
+    /// <summary>
+    /// Role: 플레이어 추적 카메라, 타격 카메라 쉐이크, 히트스톱 요청(GamePauseService 경유).
+    /// Dependencies: GamePauseService
+    /// Events: 없음 (구독: GlobalEvents.OnCombatImpact)
+    /// </summary>
     public class CameraFollow : MonoBehaviour
     {
         [Header("Follow Settings")]
@@ -30,10 +35,12 @@ namespace BagBack100.Core
         private void OnDisable()
         {
             GlobalEvents.OnCombatImpact -= HandleCombatImpact;
-            if (Time.timeScale < 1f)
+            if (_hitStopCoroutine != null)
             {
-                Time.timeScale = 1f;
+                StopCoroutine(_hitStopCoroutine);
+                _hitStopCoroutine = null;
             }
+            GamePauseService.ClearHitStop();
         }
 
         public void SetTarget(Transform target)
@@ -65,14 +72,14 @@ namespace BagBack100.Core
 
         private IEnumerator HitStopRoutine(float duration)
         {
-            Time.timeScale = 0.05f;
+            GamePauseService.ApplyHitStop(0.05f);
             float elapsed = 0f;
             while (elapsed < duration)
             {
                 elapsed += Time.unscaledDeltaTime;
                 yield return null;
             }
-            Time.timeScale = 1f;
+            GamePauseService.ClearHitStop();
             _hitStopCoroutine = null;
         }
 
@@ -86,7 +93,8 @@ namespace BagBack100.Core
             _basePosition = Vector3.SmoothDamp(_basePosition, targetPosition, ref _velocity, _smoothTime);
 
             Vector3 finalPos = _basePosition;
-            if (_shakeTimer > 0f)
+            // 히트스톱 중에는 흔들리되, 가방을 열어 일시정지한 동안에는 흔들림도 멈춘다
+            if (_shakeTimer > 0f && !GamePauseService.IsPaused)
             {
                 _shakeTimer -= Time.unscaledDeltaTime;
                 float progress = Mathf.Clamp01(_shakeTimer / Mathf.Max(0.001f, _shakeDuration));

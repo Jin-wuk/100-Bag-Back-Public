@@ -5,6 +5,11 @@ using BagBack100.Hub;
 
 namespace BagBack100.Core
 {
+    /// <summary>
+    /// Role: 도메인 간 결합을 끊기 위한 전역 이벤트 모음 (몬스터 사망, 아이템 드랍·버리기·획득, 피격, 타격감 등).
+    /// Dependencies: RuntimeItem, HubObjectType
+    /// Events: 이 클래스 자체가 이벤트 정의
+    /// </summary>
     public static class GlobalEvents
     {
         // 몬스터 사망 시: 몬스터 위치, 드랍 풀 ID
@@ -12,6 +17,9 @@ namespace BagBack100.Core
 
         // 아이템이 맵에 버려질 때: 아이템 정보, 버려질 위치
         public static Action<RuntimeItem, Vector3> OnItemDroppedOnGround;
+
+        // 가방에서 아이템을 버리기 요청: 아이템, 플레이어 위치, 반경(칸), 성공 여부 콜백 (반경 안에 빈 칸이 없으면 false)
+        public static Action<RuntimeItem, Vector3, int, Action<bool>> OnItemDiscardRequested;
 
         // 플레이어가 발로 밟아 아이템을 획득할 때 (성공 여부 콜백)
         public static Action<RuntimeItem, Action<bool>> OnItemPickedUpByPlayer;

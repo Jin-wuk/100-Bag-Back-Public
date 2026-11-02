@@ -9,6 +9,11 @@ using System.Linq;
 
 namespace BagBack100.Combat
 {
+    /// <summary>
+    /// Role: 몬스터 사망 시 드랍 풀 추첨과 필드 아이템 스폰, 바닥 드랍 요청 처리. 드랍 풀 데이터 검증 경고.
+    /// Dependencies: DropPoolSO, ItemDataSO, TileSystem, Pathfinder, FogVisibilityObject, LootableItem
+    /// Events: 없음 (구독: GlobalEvents.OnMonsterDied, GlobalEvents.OnItemDroppedOnGround, GlobalEvents.OnItemDiscardRequested)
+    /// </summary>
     public class LootSystem : MonoBehaviour
     {
         [SerializeField] private LayerMask _obstacleLayerMask; // 벽 너머 드랍 방지용 장애물 레이어
@@ -39,6 +44,40 @@ namespace BagBack100.Combat
             {
                 _itemDataCache[item.itemID] = item;
             }
+
+            WarnCraftOnlyItemsInDropPools(dropPools);
+        }
+
+        /// <summary>
+        /// 무기·방어구·가방은 기지 제작 전용이고 던전 드랍은 악세서리만 허용된다(기획 확정 D4/D7).
+        /// 데이터 입력 실수를 에디터 단계에서 잡기 위해 드랍 풀에 제작 전용 장비가 있으면 경고만 남긴다.
+        /// </summary>
+        private void WarnCraftOnlyItemsInDropPools(DropPoolSO[] dropPools)
+        {
+            foreach (var pool in dropPools)
+            {
+                if (pool.guaranteedDrops != null)
+                {
+                    foreach (var entry in pool.guaranteedDrops) WarnIfCraftOnly(pool, entry.itemID);
+                }
+                if (pool.randomDropGroups == null) continue;
+                foreach (var group in pool.randomDropGroups)
+                {
+                    if (group?.entries == null) continue;
+                    foreach (var entry in group.entries) WarnIfCraftOnly(pool, entry.itemID);
+                }
+            }
+        }
+
+        private void WarnIfCraftOnly(DropPoolSO pool, int itemID)
+        {
+            if (!_itemDataCache.TryGetValue(itemID, out var data) || !(data is EquipmentDataSO eq)) return;
+
+            bool isAccessory = eq.equipType == EquipType.Ring || eq.equipType == EquipType.Necklace || eq.equipType == EquipType.Earring;
+            if (!isAccessory)
+            {
+                Debug.LogWarning($"[LootSystem] DropPool {pool.dropPoolID}({pool.name})에 제작 전용 장비 {itemID}({eq.equipType})가 들어 있습니다. 던전 드랍은 악세서리만 허용됩니다.");
+            }
         }
 
         private Grid _gridCache;
@@ -55,12 +94,14 @@ namespace BagBack100.Combat
         {
             GlobalEvents.OnMonsterDied += HandleMonsterDeath;
             GlobalEvents.OnItemDroppedOnGround += HandleItemDroppedOnGround;
+            GlobalEvents.OnItemDiscardRequested += HandleItemDiscardRequested;
         }
 
         private void OnDisable()
         {
             GlobalEvents.OnMonsterDied -= HandleMonsterDeath;
             GlobalEvents.OnItemDroppedOnGround -= HandleItemDroppedOnGround;
+            GlobalEvents.OnItemDiscardRequested -= HandleItemDiscardRequested;
         }
 
         private void HandleMonsterDeath(Vector3 position, int dropPoolID)
@@ -69,16 +110,6 @@ namespace BagBack100.Combat
             {
                 Debug.LogWarning($"[LootSystem] DropPoolID {dropPoolID} 를 찾을 수 없습니다.");
                 return;
-            }
-
-            // 1. 확정 재화 (골드)
-            if (pool.maxGold > 0)
-            {
-                int goldAmount = Random.Range(pool.minGold, pool.maxGold + 1);
-                if (goldAmount > 0)
-                {
-                    SpawnLootableItem(pool.goldItemID, goldAmount, position, true);
-                }
             }
 
             // 2. 확정 아이템
@@ -187,20 +218,98 @@ namespace BagBack100.Combat
             }
         }
 
-        private void SpawnLootableItem(RuntimeItem item, Vector3 position)
+        private static readonly Vector3Int[] DiscardDirs =
         {
-            Vector3Int cellPos = Vector3Int.zero;
-            Vector3 spawnPos = position;
+            Vector3Int.up, Vector3Int.right, Vector3Int.down, Vector3Int.left,
+            new Vector3Int(1, 1, 0), new Vector3Int(1, -1, 0), new Vector3Int(-1, -1, 0), new Vector3Int(-1, 1, 0)
+        };
+        private readonly Queue<Vector3Int> _discardQueue = new Queue<Vector3Int>();
+        private readonly HashSet<Vector3Int> _discardVisited = new HashSet<Vector3Int>();
 
-            if (_grid != null && TileSystem.Instance != null)
+        private void HandleItemDiscardRequested(RuntimeItem item, Vector3 playerPosition, int radius, System.Action<bool> onResult)
+        {
+            if (item == null || _grid == null || TileSystem.Instance == null)
             {
-                Vector3Int startCell = _grid.WorldToCell(position);
-                startCell.z = 0;
-
-                cellPos = GetNearestEmptyItemTile(startCell);
-                spawnPos = _grid.GetCellCenterWorld(cellPos);
+                onResult?.Invoke(false);
+                return;
             }
 
+            Vector3Int playerCell = _grid.WorldToCell(playerPosition);
+            playerCell.z = 0;
+
+            if (!TryFindDiscardCell(playerCell, radius, out Vector3Int cell))
+            {
+                onResult?.Invoke(false);
+                return;
+            }
+
+            SpawnLootableItemAtCell(item, cell);
+            onResult?.Invoke(true);
+        }
+
+        /// <summary>
+        /// 플레이어 칸 기준 체비셰프 반경 안에서 가장 가까운 빈 칸을 찾는다. 플레이어가 서 있는 칸은 제외(바로 다시 줍지 않도록).
+        /// 벽은 통과하지 않고, 대각선은 양옆 직교 칸이 모두 열려 있을 때만 확장해 벽 모서리 틈으로 넘어가지 않는다.
+        /// </summary>
+        private bool TryFindDiscardCell(Vector3Int origin, int radius, out Vector3Int result)
+        {
+            _discardQueue.Clear();
+            _discardVisited.Clear();
+            _discardQueue.Enqueue(origin);
+            _discardVisited.Add(origin);
+
+            while (_discardQueue.Count > 0)
+            {
+                Vector3Int curr = _discardQueue.Dequeue();
+
+                if (curr != origin && TileSystem.Instance.GetItemAtTile(curr) == null && TileSystem.Instance.GetEntityAtTile(curr) == null)
+                {
+                    result = curr;
+                    return true;
+                }
+
+                for (int i = 0; i < DiscardDirs.Length; i++)
+                {
+                    Vector3Int dir = DiscardDirs[i];
+                    Vector3Int next = curr + dir;
+                    if (_discardVisited.Contains(next)) continue;
+                    if (Mathf.Max(Mathf.Abs(next.x - origin.x), Mathf.Abs(next.y - origin.y)) > radius) continue;
+                    if (IsBlocked(next)) continue;
+
+                    bool isDiagonal = dir.x != 0 && dir.y != 0;
+                    if (isDiagonal && (IsBlocked(new Vector3Int(curr.x + dir.x, curr.y, 0)) || IsBlocked(new Vector3Int(curr.x, curr.y + dir.y, 0)))) continue;
+
+                    _discardVisited.Add(next);
+                    _discardQueue.Enqueue(next);
+                }
+            }
+
+            result = origin;
+            return false;
+        }
+
+        private bool IsBlocked(Vector3Int cell) => Pathfinder.IsObstacle(_grid, new Vector2Int(cell.x, cell.y), _obstacleLayerMask);
+
+        private void SpawnLootableItem(RuntimeItem item, Vector3 position)
+        {
+            if (_grid == null || TileSystem.Instance == null)
+            {
+                SpawnLootableItemAt(item, Vector3Int.zero, position);
+                return;
+            }
+
+            Vector3Int startCell = _grid.WorldToCell(position);
+            startCell.z = 0;
+            SpawnLootableItemAtCell(item, GetNearestEmptyItemTile(startCell));
+        }
+
+        private void SpawnLootableItemAtCell(RuntimeItem item, Vector3Int cellPos)
+        {
+            SpawnLootableItemAt(item, cellPos, _grid.GetCellCenterWorld(cellPos));
+        }
+
+        private void SpawnLootableItemAt(RuntimeItem item, Vector3Int cellPos, Vector3 spawnPos)
+        {
             // TODO: 풀링 시스템 연동 필요. 임시로 Instantiate 사용
             GameObject go = new GameObject($"LootableItem_{item.ItemData.itemName}");
             go.transform.position = spawnPos;

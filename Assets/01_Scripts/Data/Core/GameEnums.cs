@@ -1,8 +1,14 @@
+// Role: 게임 전역 enum 정의 (몬스터 등급, 아이템 분류, 장비 부위, 방어구 계열 등). 에셋에 int로 저장되므로 값은 뒤에만 추가한다.
+// Dependencies: 없음 / Events: 없음
 namespace BagBack100.Data.Core
 {
     public enum MonsterType { Normal, Elite, Boss }
-    public enum ItemCategory { Equipment, Consumable, Material, Key }
-    public enum EquipType { None, Helmet, Armor, Weapon, Ring, Necklace, Backpack }
+    // 에셋에 int로 직렬화되므로 뒤에만 추가. Valuable = 골드 가치가 높은 전리품(금접시 등), 허브에서 팔아 골드로 바꾼다
+    public enum ItemCategory { Equipment, Consumable, Material, Key, Valuable }
+    // 에셋에 int로 직렬화되므로 기존 값의 순서를 바꾸지 말고 뒤에만 추가할 것. Armor = 갑옷(몸통)
+    public enum EquipType { None, Helmet, Armor, Weapon, Ring, Necklace, Backpack, Boots, Earring }
+    // 방어구 테크트리 분기: 탐험형(이동·행동 속도) / 방어형(방어·체력) / 기동·전술형(이동 쿨 감소·MP·회피)
+    public enum ArmorBranch { Explorer, Heavy, Tactical }
     public enum ItemRarity { Common, Rare, Legendary }
     public enum SkillActivationType { Active, Passive }
     public enum SkillRoleType { Interrupt, Survival, Execution, General }

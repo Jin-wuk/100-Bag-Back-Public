@@ -73,6 +73,11 @@ namespace BagBack100.Player
     [RequireComponent(typeof(PlayerMovement))]
     [RequireComponent(typeof(EntityCombat))]
     [RequireComponent(typeof(PlayerStatManager))]
+    /// <summary>
+    /// Role: 플레이어 상태(Idle/Moving/Attacking/Charging)와 전투 입력 총괄. 선입력 버퍼, 3타 콤보, 우클릭 차징, 일시정지 시 입력·차징 정리.
+    /// Dependencies: PlayerInput, PlayerMovement, EntityCombat, PlayerStatManager, EquipmentManager, GamePauseService, TileSystem
+    /// Events: GlobalEvents.OnPlayerCellChanged (구독: GamePauseService.OnPauseChanged)
+    /// </summary>
     public class PlayerController : MonoBehaviour
     {
         public PlayerState CurrentState { get; private set; } = PlayerState.Idle;
@@ -120,6 +125,7 @@ namespace BagBack100.Player
 
         // 우클릭 홀드 차징 및 무기 히트박스 버퍼 (GC Zero를 위해 사전 할당)
         private Coroutine _chargeCoroutine;
+        private Vector3 _baseSpriteScale = Vector3.one;
         private bool _isChargeReady = false;
         private readonly List<GameObject> _chargedTargetBuffer = new List<GameObject>(8);
         private readonly List<Vector3Int> _weaponHitboxCellBuffer = new List<Vector3Int>(8);
@@ -137,6 +143,8 @@ namespace BagBack100.Player
             _stats = GetComponent<PlayerStatManager>();
             _equipment = GetComponent<EquipmentManager>();
             _spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+            // 차징 연출이 스케일을 바꾸므로, 취소 경로에서 되돌릴 원래 스케일을 미리 저장
+            _baseSpriteScale = _spriteRenderer != null ? _spriteRenderer.transform.localScale : Vector3.one;
             
             _input.OnMoveInput += HandleMoveInput;
             _input.OnAimInput += HandleAimInput;
@@ -147,6 +155,7 @@ namespace BagBack100.Player
             _movement.OnMovementFinished += HandleMovementFinished;
             _movement.OnTileReached += HandleTileReached;
             _combat.OnAttackFinished += HandleAttackFinished;
+            BagBack100.Core.GamePauseService.OnPauseChanged += HandlePauseChanged;
         }
 
         private void Start()
@@ -194,6 +203,7 @@ namespace BagBack100.Player
             {
                 _combat.OnAttackFinished -= HandleAttackFinished;
             }
+            BagBack100.Core.GamePauseService.OnPauseChanged -= HandlePauseChanged;
                 
             if (_grid != null && BagBack100.Core.TileSystem.Instance != null)
             {
@@ -504,9 +514,31 @@ namespace BagBack100.Player
                     StopCoroutine(_chargeCoroutine);
                     _chargeCoroutine = null;
                 }
-                CancelChargeVisuals(Color.white, Vector3.one);
+                CancelChargeVisuals(Color.white, _baseSpriteScale);
                 CurrentState = PlayerState.Idle;
             }
+        }
+
+        /// <summary>
+        /// 일시정지 진입 시 선입력을 비우고 차징을 취소한다.
+        /// 차징 루틴은 우클릭 해제를 감지해 강공격을 쏘므로, 가방을 열고 마우스를 떼면 멈춘 화면에서 공격이 발동하는 것을 막는다.
+        /// </summary>
+        private void HandlePauseChanged(bool isPaused)
+        {
+            if (!isPaused) return;
+
+            _inputBuffer.Clear();
+
+            if (CurrentState != PlayerState.Charging) return;
+
+            if (_chargeCoroutine != null)
+            {
+                StopCoroutine(_chargeCoroutine);
+                _chargeCoroutine = null;
+            }
+            _isChargeReady = false;
+            CancelChargeVisuals(Color.white, _baseSpriteScale);
+            CurrentState = PlayerState.Idle;
         }
 
         private void CancelChargeVisuals(Color origColor, Vector3 origScale)
@@ -608,7 +640,7 @@ namespace BagBack100.Player
         {
             if (CurrentState != PlayerState.Idle || _combat.IsAttackOnCooldown) return;
 
-            _combat.PerformRangedAttack(_projectilePrefab, _projectileSpawnPoint, _stats.CurrentSpeed, _stats.CurrentAttack, _facingDirection);
+            _combat.PerformRangedAttack(_projectilePrefab, _projectileSpawnPoint, _stats.CurrentAttackSpeed, _stats.CurrentAttack, _facingDirection);
         }
 
         private void HandleTileReached(Vector3 pos)
@@ -650,6 +682,13 @@ namespace BagBack100.Player
         /// </summary>
         private void TryConsumeBufferedCommand()
         {
+            // 가방이 열려 일시정지된 동안 선입력이 발동하면 멈춘 화면에서 공격·이동이 나가므로 버린다
+            if (BagBack100.Core.GamePauseService.IsPaused)
+            {
+                _inputBuffer.Clear();
+                return;
+            }
+
             if (!_inputBuffer.IsValid(Time.unscaledTime, _inputBufferWindow))
             {
                 _inputBuffer.Clear();

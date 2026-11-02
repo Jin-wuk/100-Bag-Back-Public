@@ -10,7 +10,6 @@ namespace BagBack100.Data.Models
         public string itemName;
         public Sprite itemIcon;
         public ItemCategory category;
-        public float weight = 1f;
         public int maxStack = 1;
 
         public int baseValue;

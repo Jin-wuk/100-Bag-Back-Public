@@ -7,6 +7,5 @@ namespace BagBack100.Data.Models
     {
         [Header("Backpack Specific")]
         public int bagAddedSlots = 10;
-        public float bagMaxWeight = 50f;
     }
 }

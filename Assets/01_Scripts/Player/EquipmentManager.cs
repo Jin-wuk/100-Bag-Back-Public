@@ -5,6 +5,11 @@ using BagBack100.Data.Core;
 
 namespace BagBack100.Player
 {
+    /// <summary>
+    /// Role: 부위별 장착 장비 관리와 장비 스탯 합산. 가방 장착/해제 시 인벤토리 용량을 함께 조정한다. 변경 시 PlayerSessionData에 동기화.
+    /// Dependencies: InventoryManager, PlayerSessionData, EquipmentDataSO / BackpackDataSO
+    /// Events: OnManagerCreated(static), OnEquipmentChanged, OnEquipmentFailed(사유 메시지)
+    /// </summary>
     [RequireComponent(typeof(InventoryManager))]
     public class EquipmentManager : MonoBehaviour
     {
@@ -14,6 +19,9 @@ namespace BagBack100.Player
         public event Action<string> OnEquipmentFailed;
 
         private Dictionary<EquipType, RuntimeItem> _equippedItems = new Dictionary<EquipType, RuntimeItem>();
+        [Tooltip("장비 장착·해제 허용 여부. 기획상 장비 교체는 허브에서만 가능하므로 던전 플레이어 프리팹에서는 끈다")]
+        [SerializeField] private bool _allowEquipmentChange = true;
+
         private InventoryManager _inventoryManager;
 
         private void Awake()
@@ -54,56 +62,96 @@ namespace BagBack100.Player
             if (!(item.ItemData is BagBack100.Data.Models.EquipmentDataSO eqData))
                 return false;
 
+            if (IsEquipmentChangeLocked()) return false;
+
+            if (eqData.equipType == EquipType.Backpack && eqData is BagBack100.Data.Models.BackpackDataSO bagData)
+            {
+                return TryEquipBackpack(item, bagData);
+            }
+
             EquipType type = eqData.equipType;
             int originalSlot = item.SlotIndex;
 
-            // 기존에 장착된 동일 부위 아이템이 있다면 먼저 해제 시도 (인벤토리 공간 확보를 위해 장착할 아이템을 먼저 치워둠)
-            if (_equippedItems.TryGetValue(type, out RuntimeItem oldItem) && oldItem != null)
-            {
-                _inventoryManager.RemoveItem(item);
-                
-                if (!Unequip(type))
-                {
-                    // 해제 실패 (예: 가방 공간 부족) 시 원래 상태로 복구
-                    _inventoryManager.AddItemAt(item, originalSlot);
-                    return false;
-                }
-            }
-            else
-            {
-                _inventoryManager.RemoveItem(item);
-            }
+            // 장착할 아이템을 먼저 빼서 기존 장비가 돌아갈 칸을 확보
+            _inventoryManager.RemoveItem(item);
 
-            if (type == EquipType.Backpack && eqData is BagBack100.Data.Models.BackpackDataSO bagData)
+            if (_equippedItems.TryGetValue(type, out RuntimeItem oldItem) && oldItem != null && !Unequip(type))
             {
-                _inventoryManager.UpdateBagCapacity(bagData.bagAddedSlots, bagData.bagMaxWeight);
+                _inventoryManager.AddItemAt(item, originalSlot);
+                return false;
             }
 
             _equippedItems[type] = item;
-            
+            NotifyEquipmentChanged();
+            return true;
+        }
+
+        /// <summary>
+        /// 가방 교체는 용량을 바꾸기 전에 칸 수를 먼저 검사한다.
+        /// 필요한 칸 = 현재 아이템 수 + (기존 가방이 들어오면 +1) - (새 가방이 인벤토리에서 빠지면 -1).
+        /// </summary>
+        private bool TryEquipBackpack(RuntimeItem newBag, BagBack100.Data.Models.BackpackDataSO newBagData)
+        {
+            _equippedItems.TryGetValue(EquipType.Backpack, out RuntimeItem oldBag);
+            bool hasOldBag = oldBag != null;
+            bool newBagInInventory = newBag.SlotIndex >= 0 && _inventoryManager.GetItemAtSlot(newBag.SlotIndex) == newBag;
+            int extraItems = (hasOldBag ? 1 : 0) - (newBagInInventory ? 1 : 0);
+
+            if (!_inventoryManager.CanFitAfterResize(newBagData.bagAddedSlots, extraItems))
+            {
+                OnEquipmentFailed?.Invoke("Not enough bag space to swap backpacks.");
+                return false;
+            }
+
+            _inventoryManager.RemoveItem(newBag);
+            _inventoryManager.UpdateBagCapacity(newBagData.bagAddedSlots);
+            if (hasOldBag && !_inventoryManager.TryAddNextAvailableSlot(oldBag))
+            {
+                // 위 칸 수 검사로 도달 불가해야 하는 경로. 가방을 잃지 않도록 바닥 드랍으로 보존
+                Debug.LogError("[EquipmentManager] 기존 가방을 인벤토리에 넣지 못했습니다. 바닥에 떨굽니다.");
+                BagBack100.Core.GlobalEvents.OnItemDroppedOnGround?.Invoke(oldBag, transform.position);
+            }
+
+            _equippedItems[EquipType.Backpack] = newBag;
             NotifyEquipmentChanged();
             return true;
         }
 
         public bool Unequip(EquipType type)
         {
-            if (_equippedItems.TryGetValue(type, out RuntimeItem oldItem) && oldItem != null)
+            if (!_equippedItems.TryGetValue(type, out RuntimeItem oldItem) || oldItem == null)
+                return false;
+
+            if (IsEquipmentChangeLocked()) return false;
+
+            if (type == EquipType.Backpack)
             {
-                if (!_inventoryManager.TryAddNextAvailableSlot(oldItem))
+                // 보너스 칸이 사라진 기본 용량에 (기존 아이템 + 해제할 가방)이 모두 들어가야 한다.
+                if (!_inventoryManager.CanFitAfterResize(0, 1))
                 {
-                    OnEquipmentFailed?.Invoke("가방에 빈 공간이 없습니다.");
+                    OnEquipmentFailed?.Invoke("No free space in the bag.");
                     return false;
                 }
-
-                if (type == EquipType.Backpack)
-                {
-                    _inventoryManager.UpdateBagCapacity(0, 0);
-                }
-                _equippedItems.Remove(type);
-                NotifyEquipmentChanged();
-                return true;
+                _inventoryManager.UpdateBagCapacity(0);
             }
-            return false;
+
+            if (!_inventoryManager.TryAddNextAvailableSlot(oldItem))
+            {
+                OnEquipmentFailed?.Invoke("No free space in the bag.");
+                return false;
+            }
+
+            _equippedItems.Remove(type);
+            NotifyEquipmentChanged();
+            return true;
+        }
+
+        // 장비 교체는 허브 전용(기획 확정). 던전에서는 스킬 쿨타임·스탯 우회를 막기 위해 잠근다. 사망 처리(ClearEquipment)는 예외
+        private bool IsEquipmentChangeLocked()
+        {
+            if (_allowEquipmentChange) return false;
+            OnEquipmentFailed?.Invoke("Equipment can only be changed at the base.");
+            return true;
         }
 
         public void ClearEquipment()
@@ -111,7 +159,7 @@ namespace BagBack100.Player
             _equippedItems.Clear();
             if (_inventoryManager != null)
             {
-                _inventoryManager.UpdateBagCapacity(0, 0);
+                _inventoryManager.UpdateBagCapacity(0);
             }
             NotifyEquipmentChanged();
         }

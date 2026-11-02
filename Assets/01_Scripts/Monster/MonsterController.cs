@@ -858,19 +858,10 @@ namespace BagBack100.Monster
                 return false;
             }
 
-            Combat.PerformMeleeAttack(
-                Player.gameObject,
-                _monsterData != null ? _monsterData.speed : 2f,
-                damage,
-                hitDir,
-                null,
-                null,
-                0.5f,
-                null,
-                isHeavyHit
-            );
+            int dealt = Combat.ApplyImmediateHit(Player.gameObject, damage, hitDir, isHeavyHit);
+            if (dealt <= 0) return false;
 
-            ApplyLifestealIfApplicable(damage);
+            ApplyLifestealIfApplicable(dealt);
             return true;
         }
 
@@ -922,9 +913,13 @@ namespace BagBack100.Monster
         // 피격, 보호막(SHIELD), 자폭(EXPLOSIVE), 사망 처리
         // =====================================================================
 
-        public void TakeDamage(int damage, Vector3 hitDirection = default, bool isHeavyHit = false)
+        /// <returns>보호막 흡수분 + 실제 깎인 체력 (초과 피해 제외). 이미 사망했으면 0</returns>
+        public int TakeDamage(int damage, Vector3 hitDirection = default, bool isHeavyHit = false)
         {
-            if (_isDead) return;
+            if (_isDead || damage <= 0) return 0;
+
+            // 방어력 경감 → 보호막 흡수 → HP 순서. 경감 후 값이 데미지 텍스트·반환값의 기준
+            damage = CombatMath.Mitigate(damage, _monsterData != null ? _monsterData.def : 0);
 
             int remainingDamage = damage;
             bool hadShield = CurrentShield > 0;
@@ -936,6 +931,7 @@ namespace BagBack100.Monster
                 remainingDamage -= absorbed;
             }
 
+            int dealt = damage - remainingDamage + Mathf.Min(remainingDamage, Mathf.Max(0, CurrentHp));
             CurrentHp -= remainingDamage;
             string mName = _monsterData != null ? _monsterData.monsterName : name;
             Debug.Log($"[Monster] {mName} 가 {damage} 피해를 입음! 남은 HP: {CurrentHp} (Shield: {CurrentShield})");
@@ -948,7 +944,7 @@ namespace BagBack100.Monster
                 CurrentHp = 0;
                 Debug.Log($"[Monster] {mName} 처치됨!");
                 Die();
-                return;
+                return dealt;
             }
 
             if (_hitReactionCoroutine != null) StopCoroutine(_hitReactionCoroutine);
@@ -971,6 +967,7 @@ namespace BagBack100.Monster
                 _nextEscapeOnHitTime = Time.time + _monsterData.escapeOnHitCooldown;
                 TriggerInterruptRoutine(RangedEscapeOnHitRoutine());
             }
+            return dealt;
         }
 
         private IEnumerator HitReactionRoutine(Vector3 hitDirection, bool isHeavyHit)
@@ -1036,6 +1033,12 @@ namespace BagBack100.Monster
         {
             Vector3Int centerCell = GetCurrentCell();
             float fuseTime = 0.75f;
+
+            // 퓨즈 동안 시체가 길을 막지 않도록 타일 점유를 먼저 해제 (OnDestroy의 재해제는 무해)
+            if (TileSystem.Instance != null)
+            {
+                TileSystem.Instance.ReleaseTile(centerCell, gameObject);
+            }
             List<Vector3Int> blastCells = new List<Vector3Int>(9);
 
             for (int x = -1; x <= 1; x++)

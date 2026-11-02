@@ -227,7 +227,7 @@ flowchart TD
 | --- | --- |
 | `ItemDataSO` 계열 | 아이템 원본 데이터 (읽기 전용) |
 | `RuntimeItem` | 획득한 아이템 1개. 원본 SO 참조 + 고유 ID + 슬롯 위치 + 개수 |
-| `InventoryManager` | 가방 슬롯과 무게 제한. 장착한 가방(`BackpackDataSO`)에 따라 용량 증가 |
+| `InventoryManager` | 가방 슬롯 관리. 장착한 가방(`BackpackDataSO`)에 따라 칸 수 증가 |
 | `EquipmentManager` | 부위별 장착 장비 |
 | `StorageManager` | 기지 창고 |
 | `LootSystem` | 몬스터 사망·아이템 버리기 이벤트를 받아 바닥 아이템 생성 (`DropPoolSO` 기반) |

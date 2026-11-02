@@ -1,8 +1,14 @@
 using UnityEngine;
 using BagBack100.Player;
+using BagBack100.Core;
 
 namespace BagBack100.UI
 {
+    /// <summary>
+    /// Role: 던전 가방(인벤토리·장비·보상) 패널 열기/닫기. 열려 있는 동안 이동 차단과 게임 일시정지를 요청한다.
+    /// Dependencies: PlayerInput, GamePauseService
+    /// Events: 없음
+    /// </summary>
     public class DungeonUIManager : MonoBehaviour
     {
         [Header("UI Panels")]
@@ -61,32 +67,20 @@ namespace BagBack100.UI
         {
             if (_inventoryScreenRoot == null) return;
 
-            bool isActive = !_inventoryScreenRoot.activeSelf;
-            
+            bool open = !_inventoryScreenRoot.activeSelf;
+
             // 순수하게 'Tab' 키로 인벤토리를 열 때는 보상 패널을 끔
-            if (isActive && _rewardPanel != null)
+            if (open && _rewardPanel != null)
             {
                 _rewardPanel.SetActive(false);
             }
 
-            _inventoryScreenRoot.SetActive(isActive);
-
-            if (_playerInput != null)
-            {
-                _playerInput.IsMovementBlocked = isActive;
-            }
+            SetInventoryOpen(open);
         }
 
         public void CloseInventoryScreen()
         {
-            if (_inventoryScreenRoot == null) return;
-
-            _inventoryScreenRoot.SetActive(false);
-
-            if (_playerInput != null)
-            {
-                _playerInput.IsMovementBlocked = false;
-            }
+            SetInventoryOpen(false);
         }
 
         /// <summary>
@@ -95,19 +89,35 @@ namespace BagBack100.UI
         /// </summary>
         public void OpenRewardScreen()
         {
-            if (_inventoryScreenRoot == null) return;
-
             if (_rewardPanel != null)
             {
                 _rewardPanel.SetActive(true);
             }
-            
-            _inventoryScreenRoot.SetActive(true);
+            SetInventoryOpen(true);
+        }
+
+        /// <summary>
+        /// 가방 패널의 열림/닫힘을 바꾸는 유일한 경로. 여는 경로(Tab, 보상)와 닫는 경로(Tab, Esc)가 갈라지면
+        /// 어느 한쪽에서 일시정지 해제를 빠뜨려 게임이 멈춘 채 남을 수 있어 여기로 모았다.
+        /// </summary>
+        private void SetInventoryOpen(bool open)
+        {
+            if (_inventoryScreenRoot == null) return;
+
+            _inventoryScreenRoot.SetActive(open);
 
             if (_playerInput != null)
             {
-                _playerInput.IsMovementBlocked = true;
+                _playerInput.IsMovementBlocked = open;
             }
+
+            if (open) GamePauseService.Request(this);
+            else GamePauseService.Release(this);
+        }
+
+        private void OnDisable()
+        {
+            GamePauseService.Release(this);
         }
     }
 }
