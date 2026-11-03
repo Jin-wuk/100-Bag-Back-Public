@@ -7,7 +7,7 @@
 
 ## 검토 기준 문서
 @./Docs/Agent/0x_Agent_Rules.md
-@./.agy/rules/00_Agent_Integrated_Guidelines.md
+@./Docs/Agent/00_Agent_Integrated_Guidelines.md
 
 필요하면 `Docs/GDD/`(기획)와 `Docs/Architecture/`(구조, ScriptMaps)도 읽고 비교한다.
 

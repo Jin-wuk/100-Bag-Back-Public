@@ -2,7 +2,7 @@
 
 ## 기본 규칙 (먼저 따를 문서)
 @Docs/Agent/0x_Agent_Rules.md
-@.agy/rules/00_Agent_Integrated_Guidelines.md
+@Docs/Agent/00_Agent_Integrated_Guidelines.md
 
 ## 에이전트 역할 분담
 Agent Rules의 6단계 파이프라인을 Claude와 Gemini가 나눠 맡는다.
