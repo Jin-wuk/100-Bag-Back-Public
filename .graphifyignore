@@ -1,0 +1,19 @@
+# graphify 대상은 게임 코드(Assets/01_Scripts)만. 문서·이미지·Unity YAML은 의미 분석에 토큰이 들거나 노이즈가 많아 제외한다.
+Docs/
+README.md
+CLAUDE.md
+GEMINI.md
+.claude/
+Assets/05_Anim/
+Assets/Resources/
+Assets/Scenes/
+Assets/TextMesh Pro/
+Packages/
+ProjectSettings/
+UserSettings/
+*.meta
+*.asset
+*.prefab
+*.unity
+*.png
+*.json

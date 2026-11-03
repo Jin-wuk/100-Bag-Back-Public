@@ -2,7 +2,7 @@
 
 ## 기본 규칙 (먼저 따를 문서)
 @Docs/Agent/0x_Agent_Rules.md
-@.agy/rules/00_Agent_Integrated_Guidelines.md
+@Docs/Agent/00_Agent_Integrated_Guidelines.md
 
 ## 에이전트 역할 분담
 Agent Rules의 6단계 파이프라인을 Claude와 Gemini가 나눠 맡는다.
@@ -15,6 +15,15 @@ Agent Rules의 6단계 파이프라인을 Claude와 Gemini가 나눠 맡는다.
 | 4. 유니티 에디터 적용 | Claude | unityMCP로 씬/프리팹/SO 적용 |
 | 5. 테스트 | Claude + Gemini | Claude가 unityMCP로 콘솔 에러를 확인하고, `gemini-reviewer`로 구현 검증 |
 | 6. 최종 승인 | 유저 | |
+
+## 코드 그래프 (graphify)
+`graphify-out/graph.json`은 `Assets/01_Scripts`의 코드 그래프다. 로컬 git 훅이 커밋·체크아웃마다 다시 빌드한다(LLM 없음). 없거나 오래됐으면 `graphify update .`로 만든다.
+- **설계 제안(1단계)**: 바꿀 클래스를 `graphify explain "<클래스>"`, 두 시스템의 연결을 `graphify path "<A>" "<B>"`로 조회해 설계안에 "영향 범위"로 적는다. Gemini 검토도 이 범위를 근거로 한다.
+- **그래프에 없는 연결은 따로 확인한다.**
+  - `GlobalEvents` 이벤트의 구독·발행은 그래프에 잡히지 않는다. `grep "GlobalEvents.<이벤트명>"`으로 찾는다.
+  - 인스펙터·프리팹으로 연결된 참조는 코드에 없다. 프리팹 YAML grep이나 unityMCP로 확인한다.
+- **테스트(5단계)**: 구조가 바뀌었으면 커밋 후 다시 빌드된 그래프와 `Docs/Architecture/ScriptMaps/`를 대조해 문서 동기화 누락이 없는지 본다.
+- `graph.json`을 Read로 통째로 읽지 않는다(약 1.9MB). 항상 `explain`·`path`·`query`로 필요한 부분만 조회한다.
 
 ## 커밋·PR 단위
 커밋 이력을 따라가기 쉽게, 한 태스크를 한 커밋으로 몰아넣지 않는다.
