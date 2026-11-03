@@ -239,9 +239,9 @@ flowchart TD
 | --- | --- |
 | `Assets/01_Scripts/` | 코드 (폴더 구조는 [README](../README.md#폴더-구조) 참고) |
 | `Assets/Resources/Data_SO/` | ScriptableObject 데이터 에셋 |
-| `Assets/Resources/CSV/` | 기획 데이터 CSV (임포터 비활성, [기술 부채](Architecture/04_Refactoring_TODO.md) 참고) |
+| `Assets/Resources/CSV/` | 기획 데이터 CSV (임포터 비활성, [기술 부채](Architecture/Tech_Debt.md) 참고) |
 | `Assets/Resources/Shader/` | 전장의 안개 셰이더 |
 | `Docs/GDD/` | 기획 문서 (현재 구현 기준) + 로드맵 |
 | `Docs/Architecture/ScriptMaps/` | 시스템별 상세 클래스 명세 (Player, Dungeon) |
-| `Docs/Architecture/04_Refactoring_TODO.md` | 알려진 기술 부채 |
+| `Docs/Architecture/Tech_Debt.md` | 알려진 기술 부채 |
 | `Docs/Agent/` | AI 코딩 에이전트용 개발 지침 |
