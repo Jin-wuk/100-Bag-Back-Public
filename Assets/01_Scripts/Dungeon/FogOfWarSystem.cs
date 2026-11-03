@@ -590,7 +590,8 @@ namespace BagBack100.Dungeon
             if (_wallTilemap != null && _wallTilemap.HasTile(cell)) return true;
             if (_obstacleLayerMask.value != 0 && _grid != null)
             {
-                if (Pathfinder.IsObstacle(_grid, new Vector2Int(cell.x, cell.y), _obstacleLayerMask))
+                // 상자 같은 고정 점유물은 길만 막고 시야는 가리지 않는다
+                if (Pathfinder.IsObstacle(_grid, new Vector2Int(cell.x, cell.y), _obstacleLayerMask, includeStaticBlockers: false))
                     return true;
             }
             return false;

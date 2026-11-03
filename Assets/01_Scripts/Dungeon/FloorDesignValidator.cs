@@ -86,22 +86,31 @@ namespace BagBack100.Dungeon
         }
 
         private static readonly Vector3Int[] CardinalDirs = { Vector3Int.up, Vector3Int.right, Vector3Int.down, Vector3Int.left };
+        // 층 생성마다 런타임에서도 호출되므로 탐색 버퍼를 재사용한다
+        private static readonly HashSet<Vector3Int> BlockedBuffer = new HashSet<Vector3Int>();
+        private static readonly HashSet<Vector3Int> VisitedBuffer = new HashSet<Vector3Int>();
+        private static readonly Queue<Vector3Int> QueueBuffer = new Queue<Vector3Int>();
 
         /// <summary>
         /// 상자는 열린 뒤에도 칸을 막으므로, 상자 후보 칸이 전부 막힌 최악의 경우에도
-        /// 시작점에서 위층 계단·탈출구까지 걸어갈 수 있어야 한다 (1칸 통로에 상자 후보를 두면 길이 끊긴다).
+        /// 시작점에서 위층 계단·탈출구와 나머지 모든 바닥 칸에 걸어갈 수 있어야 한다
+        /// (1칸 통로에 상자 후보를 두면 길이 끊기거나, 고립 칸에 몬스터·드랍이 생겨 클리어·습득이 막힌다).
         /// </summary>
         private static void CheckReachableWithChestsBlocked(FloorLayout layout, string name, List<string> errors)
         {
             FloorMarker start = layout.GetSingleMarker(FloorMarkerType.PlayerStart);
             if (start == null) return;
 
-            var blocked = new HashSet<Vector3Int>();
+            HashSet<Vector3Int> blocked = BlockedBuffer;
+            HashSet<Vector3Int> visited = VisitedBuffer;
+            Queue<Vector3Int> queue = QueueBuffer;
+            blocked.Clear();
+            visited.Clear();
+            queue.Clear();
+
             layout.CollectMarkers(FloorMarkerType.ChestCandidate, MarkerBuffer);
             for (int i = 0; i < MarkerBuffer.Count; i++) blocked.Add(layout.GetLocalCell(MarkerBuffer[i]));
 
-            var visited = new HashSet<Vector3Int>();
-            var queue = new Queue<Vector3Int>();
             Vector3Int startCell = layout.GetLocalCell(start);
             visited.Add(startCell);
             queue.Enqueue(startCell);
@@ -119,6 +128,21 @@ namespace BagBack100.Dungeon
 
             CheckMarkerReached(layout, FloorMarkerType.UpStairs, visited, name, errors);
             CheckMarkerReached(layout, FloorMarkerType.Exit, visited, name, errors);
+
+            if (layout.FloorTilemap == null) return;
+            int isolated = 0;
+            Vector3Int firstIsolated = default;
+            foreach (Vector3Int cell in layout.FloorTilemap.cellBounds.allPositionsWithin)
+            {
+                Vector3Int c = new Vector3Int(cell.x, cell.y, 0);
+                if (blocked.Contains(c) || visited.Contains(c) || !layout.IsLocalCellWalkable(c)) continue;
+                if (isolated == 0) firstIsolated = c;
+                isolated++;
+            }
+            if (isolated > 0)
+            {
+                errors.Add($"[{name}] 상자 후보 칸이 모두 막히면 시작점에서 갈 수 없는 바닥 칸 {isolated}개 (예: {firstIsolated.x},{firstIsolated.y}).");
+            }
         }
 
         private static void CheckMarkerReached(FloorLayout layout, FloorMarkerType type, HashSet<Vector3Int> reached, string name, List<string> errors)
