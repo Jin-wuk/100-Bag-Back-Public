@@ -245,4 +245,3 @@ flowchart TD
 | `Docs/Architecture/ScriptMaps/` | 시스템별 상세 클래스 명세 (Player, Dungeon) |
 | `Docs/Architecture/04_Refactoring_TODO.md` | 알려진 기술 부채 |
 | `Docs/Agent/` | AI 코딩 에이전트용 개발 지침 |
-| `Docs/Archive/` | 초기 기획 단계의 구조 문서 (현재 구현과 다름) |

@@ -73,8 +73,7 @@ Docs/
 ├─ ARCHITECTURE.md  전체 구조 문서
 ├─ Architecture/    시스템별 상세 명세(ScriptMaps), 기술 부채 목록
 ├─ GDD/             기획 문서 (현재 구현 기준) + 로드맵
-├─ Agent/           AI 에이전트용 개발 지침
-└─ Archive/         초기 기획 단계 문서 (현재 구현과 다름)
+└─ Agent/           AI 에이전트용 개발 지침
 ```
 
 ## 개발 방식
