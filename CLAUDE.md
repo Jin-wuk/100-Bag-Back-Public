@@ -1,7 +1,7 @@
 # 100 Bags Back — Claude Code 작업 규칙
 
 ## 기본 규칙 (먼저 따를 문서)
-@Docs/0x_Agent_Rules.md
+@Docs/Agent/0x_Agent_Rules.md
 @.agy/rules/00_Agent_Integrated_Guidelines.md
 
 ## 에이전트 역할 분담
