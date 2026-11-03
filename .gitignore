@@ -43,6 +43,9 @@ crashlytics-build.properties
 .claude/review/*
 !.claude/review/pending.md
 
+# graphify 코드 그래프 (git 훅이 커밋마다 다시 빌드한다)
+graphify-out/
+
 # 재배포 금지 외부 에셋 (README의 "외부 에셋" 참고)
 /Assets/Resources/Sprites/GUI_Parts/
 /Assets/Resources/Sprites/GUI_Parts.meta
