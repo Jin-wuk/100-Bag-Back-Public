@@ -8,18 +8,21 @@ using UnityEngine.Tilemaps;
 using TMPro;
 using BagBack100.Dungeon;
 using BagBack100.Dungeon.Data;
+using BagBack100.Data.Models;
 
 namespace BagBack100.EditorTools
 {
     /// <summary>
     /// Role: 층계 던전 개발용 에디터 메뉴. 회색 박스 층 3장(일반 2 + 보스 1)과 지역 1 SO를 만들고,
-    ///       지역 설정을 검증하고, 03_DungeonScene을 층 경로(영속 Grid + RegionConfigSO)로 전환한다.
+    ///       지역 설정을 검증하고, 03_DungeonScene에 영속 Grid·RegionConfigSO·함정 풀을 연결한다.
     /// Dependencies: FloorLayout, FloorMarker, DungeonZone, FloorDesignSO, RegionConfigSO, FloorDesignValidator, DungeonGenerator
     /// Events: 없음
     /// </summary>
     public static class FloorGrayBoxBuilder
     {
-        private const string TemplateMapPath = "Assets/Resources/Prefabs/MapPrefabs/FixedMap.prefab";
+        // 렌더러 정렬·레이어·콜라이더 설정과 타일을 가져올 템플릿 (최초 회색 박스 층). 통맵 FixedMap은 T3에서 삭제됨
+        private const string TemplateMapPath = "Assets/Resources/Prefabs/MapPrefabs/Floors/Floor_GrayBox_Normal01.prefab";
+        private const string DefaultTrapPrefabPath = "Assets/Resources/Prefabs/HazardPrefabs/Hazard_Spike.prefab";
         private const string FloorPrefabFolder = "Assets/Resources/Prefabs/MapPrefabs/Floors";
         private const string FloorSOFolder = "Assets/Resources/Data_SO/FloorSO/Region1";
         private const string RegionConfigPath = FloorSOFolder + "/Region1Config.asset";
@@ -136,16 +139,35 @@ namespace BagBack100.EditorTools
             EnsureFolder(FloorPrefabFolder);
             EnsureFolder(FloorSOFolder);
 
-            GameObject template = PrefabUtility.LoadPrefabContents(TemplateMapPath);
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(TemplateMapPath) == null)
+            {
+                Debug.LogError($"[FloorGrayBoxBuilder] 템플릿 {TemplateMapPath}이 없습니다. Floor·Wall 타일맵이 있는 층 프리팹을 먼저 만드세요.");
+                return;
+            }
+
+            // 템플릿이 덮어쓸 프리팹 중 하나이므로, Floor·Wall과 타일만 임시 Grid로 복제하고 템플릿을 먼저 닫은 뒤 저장한다
+            var templateHolder = new GameObject("TempGrid_GrayBoxTemplate", typeof(Grid));
             var savedLayouts = new Dictionary<string, FloorLayout>();
             try
             {
-                Tilemap templateFloor = FindTilemap(template, "Floor");
-                Tilemap templateWall = FindTilemap(template, "Wall");
-                if (templateFloor == null || templateWall == null)
+                Tilemap templateFloor;
+                Tilemap templateWall;
+                GameObject template = PrefabUtility.LoadPrefabContents(TemplateMapPath);
+                try
                 {
-                    Debug.LogError($"[FloorGrayBoxBuilder] {TemplateMapPath}에서 Floor/Wall 타일맵을 찾지 못했습니다.");
-                    return;
+                    Tilemap sourceFloor = FindTilemap(template, "Floor");
+                    Tilemap sourceWall = FindTilemap(template, "Wall");
+                    if (sourceFloor == null || sourceWall == null)
+                    {
+                        Debug.LogError($"[FloorGrayBoxBuilder] {TemplateMapPath}에서 Floor/Wall 타일맵을 찾지 못했습니다.");
+                        return;
+                    }
+                    templateFloor = Object.Instantiate(sourceFloor.gameObject, templateHolder.transform, false).GetComponent<Tilemap>();
+                    templateWall = Object.Instantiate(sourceWall.gameObject, templateHolder.transform, false).GetComponent<Tilemap>();
+                }
+                finally
+                {
+                    PrefabUtility.UnloadPrefabContents(template);
                 }
 
                 TileBase floorTile = FindMostUsedTile(templateFloor);
@@ -160,7 +182,7 @@ namespace BagBack100.EditorTools
             }
             finally
             {
-                PrefabUtility.UnloadPrefabContents(template);
+                Object.DestroyImmediate(templateHolder);
             }
 
             FloorDesignSO normal01 = CreateOrUpdateDesign("FloorDesign_GrayBox_Normal01", savedLayouts["Floor_GrayBox_Normal01"], FloorBand.Early);
@@ -202,11 +224,18 @@ namespace BagBack100.EditorTools
             }
 
             var errors = new List<string>();
+            var warnings = new List<string>();
             foreach (string guid in guids)
             {
                 var region = AssetDatabase.LoadAssetAtPath<RegionConfigSO>(AssetDatabase.GUIDToAssetPath(guid));
                 errors.Clear();
-                if (FloorDesignValidator.ValidateRegion(region, errors))
+                warnings.Clear();
+                bool valid = FloorDesignValidator.ValidateRegion(region, errors, warnings);
+                if (warnings.Count > 0)
+                {
+                    Debug.LogWarning($"[FloorValidator] {region.name}: 경고 {warnings.Count}건\n{string.Join("\n", warnings)}", region);
+                }
+                if (valid)
                 {
                     Debug.Log($"[FloorValidator] {region.name}: 오류 0건");
                 }
@@ -244,14 +273,6 @@ namespace BagBack100.EditorTools
             Undo.SetCurrentGroupName("Setup Dungeon Scene For Floors");
             int undoGroup = Undo.GetCurrentGroup();
 
-            GameObject fixedMapRoot = FindFixedMapInstance(scene);
-            bool removedFixedMap = fixedMapRoot != null;
-            if (removedFixedMap)
-            {
-                ClearFogTilemapIfInside(fixedMapRoot.transform);
-                Undo.DestroyObjectImmediate(fixedMapRoot);
-            }
-
             if (GameObject.Find(FloorGridName) == null)
             {
                 var gridGo = new GameObject(FloorGridName, typeof(Grid));
@@ -262,14 +283,77 @@ namespace BagBack100.EditorTools
 
             var so = new SerializedObject(generator);
             so.FindProperty("_regionConfig").objectReferenceValue = region;
-            so.FindProperty("_floorTilemap").objectReferenceValue = null;
-            so.FindProperty("_wallTilemap").objectReferenceValue = null;
+
+            // 통맵 DungeonData의 기본 함정 폴백이 사라졌으므로 함정 풀이 비어 있으면 기본 함정을 넣는다
+            SerializedProperty trapPool = so.FindProperty("_trapPrefabPool");
+            var defaultTrap = AssetDatabase.LoadAssetAtPath<GameObject>(DefaultTrapPrefabPath);
+            if (trapPool.arraySize == 0 && defaultTrap != null)
+            {
+                trapPool.arraySize = 1;
+                trapPool.GetArrayElementAtIndex(0).objectReferenceValue = defaultTrap;
+            }
             so.ApplyModifiedProperties();
 
             Undo.CollapseUndoOperations(undoGroup);
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
-            Debug.Log($"[FloorGrayBoxBuilder] {DungeonSceneName}: FixedMap 제거({removedFixedMap}), {FloorGridName} 준비, Region1Config 연결 후 저장.");
+            Debug.Log($"[FloorGrayBoxBuilder] {DungeonSceneName}: {FloorGridName} 준비, Region1Config·함정 풀 연결 후 저장.");
+        }
+
+        private const string ChestDropPoolPath = "Assets/Resources/Data_SO/DropPoolSO/DropPool_Chest_Region1.asset";
+        private const string LootMaterialFolder = "Assets/Resources/Data_SO/ItemSO/LootSO";
+        // 장비·포션 그룹: 악세서리(목걸이 14, 반지 15, 귀걸이 17) + HP 포션 2, MP 포션 3. 던전 드랍 장비는 악세서리만 허용
+        private static readonly int[] ChestBonusItemIds = { 14, 15, 17, 2, 3 };
+        private const int ChestBonusTotalWeight = 30;   // 30% 장비 또는 포션
+        private const int ChestBonusEmptyWeight = 70;   // 70% 꽝(itemID 0)
+
+        /// <summary>
+        /// 기획 5절 [추천] 상자 내용 "재료 2 확정 + 30% 장비 또는 포션"을 기존 DropPoolSO 구조로 만든다.
+        /// 재료 = 몬스터 전리품 하위 등급(itemID 끝자리 1·2). 값은 데이터라 플레이 테스트로 조정한다.
+        /// </summary>
+        [MenuItem("BagBack100/Floor/Create Region1 Chest Drop Pool")]
+        public static void CreateOrUpdateChestDropPool()
+        {
+            var materialEntries = new List<DropEntry>();
+            foreach (string guid in AssetDatabase.FindAssets("t:ItemDataSO", new[] { LootMaterialFolder }))
+            {
+                var item = AssetDatabase.LoadAssetAtPath<ItemDataSO>(AssetDatabase.GUIDToAssetPath(guid));
+                if (item == null) continue;
+                int tier = item.itemID % 10;
+                if (tier != 1 && tier != 2) continue;
+                materialEntries.Add(new DropEntry { itemID = item.itemID, dropWeight = 1, minAmount = 1, maxAmount = 1 });
+            }
+            materialEntries.Sort((a, b) => a.itemID.CompareTo(b.itemID));
+            if (materialEntries.Count == 0)
+            {
+                Debug.LogError($"[FloorGrayBoxBuilder] {LootMaterialFolder}에서 하위 등급 재료를 찾지 못했습니다.");
+                return;
+            }
+
+            var bonusEntries = new List<DropEntry>();
+            int perItemWeight = ChestBonusTotalWeight / ChestBonusItemIds.Length;
+            foreach (int id in ChestBonusItemIds)
+            {
+                bonusEntries.Add(new DropEntry { itemID = id, dropWeight = perItemWeight, minAmount = 1, maxAmount = 1 });
+            }
+            bonusEntries.Add(new DropEntry { itemID = 0, dropWeight = ChestBonusEmptyWeight, minAmount = 0, maxAmount = 0 });
+
+            var pool = AssetDatabase.LoadAssetAtPath<DropPoolSO>(ChestDropPoolPath);
+            if (pool == null)
+            {
+                pool = ScriptableObject.CreateInstance<DropPoolSO>();
+                AssetDatabase.CreateAsset(pool, ChestDropPoolPath);
+            }
+            pool.dropPoolID = RegionConfigSO.DefaultChestDropPoolId;
+            pool.guaranteedDrops = new List<FixedDropEntry>();
+            pool.randomDropGroups = new List<DropGroup>
+            {
+                new DropGroup { groupName = "재료 2 확정", minRolls = 2, maxRolls = 2, entries = materialEntries },
+                new DropGroup { groupName = "30% 장비 또는 포션", minRolls = 1, maxRolls = 1, entries = bonusEntries },
+            };
+            EditorUtility.SetDirty(pool);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[FloorGrayBoxBuilder] {ChestDropPoolPath} (ID {pool.dropPoolID}): 재료 {materialEntries.Count}종, 장비·포션 {ChestBonusItemIds.Length}종.");
         }
 
         // T2: 회색 박스 위층 계단 프리팹과 층 HUD를 만들고 03_DungeonScene에 연결한다
@@ -315,6 +399,66 @@ namespace BagBack100.EditorTools
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
             Debug.Log($"[FloorGrayBoxBuilder] {DungeonSceneName}: 계단 프리팹 연결, FloorHUD 준비 후 저장.");
+        }
+
+        // T3: 회색 박스 상자 프리팹을 만들고(이미 있으면 그대로) 03_DungeonScene의 DungeonGenerator에 연결한다
+        [MenuItem("BagBack100/Floor/Setup Chest Prefab")]
+        public static void SetupChestPrefab()
+        {
+            Scene scene = SceneManager.GetActiveScene();
+            if (scene.name != DungeonSceneName)
+            {
+                Debug.LogError($"[FloorGrayBoxBuilder] {DungeonSceneName}을 연 상태에서 실행하세요. (현재: {scene.name})");
+                return;
+            }
+
+            DungeonGenerator generator = Object.FindObjectOfType<DungeonGenerator>();
+            if (generator == null)
+            {
+                Debug.LogError("[FloorGrayBoxBuilder] 씬에 DungeonGenerator가 없습니다.");
+                return;
+            }
+
+            FloorChest chestPrefab = CreateOrUpdateChestPrefab();
+            var so = new SerializedObject(generator);
+            so.FindProperty("_chestPrefab").objectReferenceValue = chestPrefab;
+            so.ApplyModifiedProperties();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[FloorGrayBoxBuilder] {DungeonSceneName}: 상자 프리팹 연결 후 저장.");
+        }
+
+        private const string ChestPrefabPath = FloorPrefabFolder + "/FloorChest_GrayBox.prefab";
+
+        private static FloorChest CreateOrUpdateChestPrefab()
+        {
+            // 이미 있으면 덮어쓰지 않는다 (유저가 넣은 상자 스프라이트 보존)
+            var existing = AssetDatabase.LoadAssetAtPath<FloorChest>(ChestPrefabPath);
+            if (existing != null) return existing;
+
+            EnsureFolder(FloorPrefabFolder);
+            var go = new GameObject("FloorChest_GrayBox");
+            try
+            {
+                var renderer = go.AddComponent<SpriteRenderer>();
+                renderer.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+                renderer.color = new Color(1f, 0.82f, 0.2f, 0.95f);
+                renderer.sortingOrder = StairsSortingOrder;
+                go.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
+
+                // 이동 차단은 TileSystem 점유로, 열기는 공격(IAttackInteractable)으로 처리하므로 콜라이더가 필요 없다
+                go.AddComponent<FloorChest>();
+                // 한 번 본 상자는 안개 아래에서도 계속 보인다 (기본 모드 RememberWhenExplored)
+                go.AddComponent<FogVisibilityObject>();
+
+                GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, ChestPrefabPath);
+                return prefab != null ? prefab.GetComponent<FloorChest>() : null;
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
         }
 
         private const string StairsPrefabPath = FloorPrefabFolder + "/FloorStairs_GrayBox.prefab";
@@ -533,11 +677,10 @@ namespace BagBack100.EditorTools
             DungeonZone zone = go.AddComponent<DungeonZone>();
 
             var so = new SerializedObject(zone);
-            so.FindProperty("_zoneType").enumValueIndex = (int)DungeonZoneType.Combat;
+            so.FindProperty("_zoneType").intValue = (int)DungeonZoneType.Combat; // enum 값이 1부터라 인덱스가 아닌 값으로 넣는다
             so.FindProperty("_size").vector2Value = new Vector2(spec.Cells.width, spec.Cells.height);
             so.FindProperty("_monsterCount").intValue = spec.MonsterCount;
             so.FindProperty("_trapCount").intValue = 0;
-            so.FindProperty("_chestCount").intValue = 0;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -571,31 +714,6 @@ namespace BagBack100.EditorTools
                 rules[floor - 1] = new FloorRule(exitChance, chestRolls, 0.4f);
             }
             return rules;
-        }
-
-        private static GameObject FindFixedMapInstance(Scene scene)
-        {
-            foreach (GameObject root in scene.GetRootGameObjects())
-            {
-                if (!PrefabUtility.IsAnyPrefabInstanceRoot(root)) continue;
-                if (PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(root) == TemplateMapPath) return root;
-            }
-            return null;
-        }
-
-        private static void ClearFogTilemapIfInside(Transform fixedMapRoot)
-        {
-            FogOfWarSystem fog = Object.FindObjectOfType<FogOfWarSystem>();
-            if (fog == null) return;
-            var so = new SerializedObject(fog);
-            SerializedProperty prop = so.FindProperty("_fogTilemap");
-            if (prop == null) return;
-            var current = prop.objectReferenceValue as Component;
-            if (current != null && current.transform.IsChildOf(fixedMapRoot))
-            {
-                prop.objectReferenceValue = null;
-                so.ApplyModifiedProperties();
-            }
         }
 
         private static Tilemap FindTilemap(GameObject root, string childName)

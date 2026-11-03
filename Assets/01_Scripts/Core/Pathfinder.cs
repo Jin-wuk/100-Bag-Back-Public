@@ -5,6 +5,11 @@ using BagBack100.Dungeon;
 
 namespace BagBack100.Core
 {
+    /// <summary>
+    /// Role: 타일 A* 경로 탐색과 칸 장애물 판정(바닥 없음·벽·물리 장애물·고정 점유물).
+    /// Dependencies: DungeonGenerator(현재 층 타일맵), TileSystem(고정 장애물·위험 칸)
+    /// Events: 없음
+    /// </summary>
     public class Pathfinder
     {
         private class Node
@@ -124,10 +129,20 @@ namespace BagBack100.Core
             return new List<Vector3>();
         }
 
-        public static bool IsObstacle(Grid grid, Vector2Int position, LayerMask layerMask)
+        /// <param name="includeStaticBlockers">
+        /// 상자 같은 고정 점유물을 막힌 칸으로 볼지. 이동·돌진·드랍 칸 계산은 true, 시야(LOS) 판정은 false
+        /// (상자는 길은 막지만 시야는 가리지 않는다).
+        /// </param>
+        public static bool IsObstacle(Grid grid, Vector2Int position, LayerMask layerMask, bool includeStaticBlockers = true)
         {
             if (grid == null) return true;
             Vector3Int cellPos = new Vector3Int(position.x, position.y, 0);
+
+            // 0. 상자처럼 칸을 영구히 막는 고정 점유물은 벽과 같이 취급 (몬스터 A*·돌진 궤적·드랍 칸 계산 공통)
+            if (includeStaticBlockers && TileSystem.Instance != null && TileSystem.Instance.IsStaticBlocker(cellPos))
+            {
+                return true;
+            }
 
             // 1. 던전 생성기 타일맵 참조를 통한 바닥/벽 타일 유효성 검사 (순환 호출 방지)
             if (DungeonGenerator.Instance != null)

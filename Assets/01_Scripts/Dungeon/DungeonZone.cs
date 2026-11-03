@@ -3,18 +3,18 @@ using UnityEngine;
 
 namespace BagBack100.Dungeon
 {
+    // 시작점·탈출구·상자 후보는 FloorMarker가 맡는다. 값은 기존 직렬화 데이터와 맞추려고 예전 번호를 유지한다
     public enum DungeonZoneType
     {
-        Start,      // 출발 지점 (플레이어 스폰 및 안전 반경 보장)
-        Combat,     // 전투 방/교차로 (몬스터 집중 스폰)
-        Chest,      // 보물방/막다른 길 (상자 + 호위 몬스터/함정 스폰)
-        Corridor,   // 수동 복도 구역 (특정 복도에 스폰 강제 시 사용)
-        Exit        // 탈출구 후보 구역 (출발점에서 미로 거리상 먼 곳 선택)
+        Combat = 1,     // 전투 방/교차로 (몬스터 집중 스폰)
+        Corridor = 3    // 수동 복도 구역 (특정 복도에 스폰 강제 시 사용)
     }
 
     /// <summary>
-    /// 통짜 미로 맵 위에 사각형 영역으로 배치하여 구역별 역할을 정의하는 컴포넌트.
-    /// 영역 내부에 벽이 포함되어 있어도 DungeonGenerator의 Flood Fill이 이동 가능 타일만 추출한다.
+    /// Role: 층 프리팹 안에 사각형 영역으로 배치해 몬스터·함정 스폰 구역을 정의한다.
+    ///       영역 내부에 벽이 있어도 DungeonGenerator의 Flood Fill이 이동 가능 타일만 추출한다.
+    /// Dependencies: 없음
+    /// Events: 없음
     /// </summary>
     public class DungeonZone : MonoBehaviour
     {
@@ -23,26 +23,20 @@ namespace BagBack100.Dungeon
         [Tooltip("BoxCollider2D가 없을 때 사용할 구역 가로/세로 크기 (타일 단위)")]
         [SerializeField] private Vector2 _size = new Vector2(6f, 6f);
 
-        [Header("Spawn Counts (Combat / Chest / Corridor)")]
+        [Header("Spawn Counts")]
         [Tooltip("이 구역 내에 랜덤 스폰할 몬스터 마리 수")]
         [SerializeField] private int _monsterCount = 2;
         [Tooltip("이 구역 내에 랜덤 스폰할 함정 개수")]
         [SerializeField] private int _trapCount = 0;
-        [Tooltip("이 구역 내에 랜덤 스폰할 보물상자 개수 (Chest 구역용)")]
-        [SerializeField] private int _chestCount = 0;
 
         [Header("Optional Zone Override Pools")]
         [Tooltip("비워두면 DungeonGenerator의 기본 몬스터 풀을 사용")]
         [SerializeField] private List<GameObject> _overrideMonsterPool = new List<GameObject>();
-        [Tooltip("비워두면 DungeonGenerator의 기본 상자 프리팹을 사용")]
-        [SerializeField] private List<GameObject> _overrideChestPool = new List<GameObject>();
 
         public DungeonZoneType ZoneType => _zoneType;
         public int MonsterCount => _monsterCount;
         public int TrapCount => _trapCount;
-        public int ChestCount => (_zoneType == DungeonZoneType.Chest && _chestCount <= 0) ? 1 : _chestCount;
         public List<GameObject> OverrideMonsterPool => _overrideMonsterPool;
-        public List<GameObject> OverrideChestPool => _overrideChestPool;
 
         private void Awake()
         {
@@ -114,11 +108,8 @@ namespace BagBack100.Dungeon
         {
             switch (type)
             {
-                case DungeonZoneType.Start:    return Color.green;
                 case DungeonZoneType.Combat:   return new Color(1f, 0.25f, 0.25f);
-                case DungeonZoneType.Chest:    return new Color(1f, 0.85f, 0.1f);
                 case DungeonZoneType.Corridor: return new Color(1f, 0.55f, 0.1f);
-                case DungeonZoneType.Exit:     return Color.cyan;
                 default:                       return Color.white;
             }
         }

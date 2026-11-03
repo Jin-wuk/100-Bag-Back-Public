@@ -10,7 +10,7 @@ namespace BagBack100.Combat
 {
     /// <summary>
     /// Role: 플레이어·몬스터 공용 공격 실행기. 근접/다중/원거리 공격, 공격 쿨다운(모션 락), 쿨다운 무관 즉시 타격.
-    /// Dependencies: MonsterController, PlayerStatManager, CombatFeedbackSystem, Projectile, GamePauseService
+    /// Dependencies: MonsterController, PlayerStatManager, IAttackInteractable, CombatFeedbackSystem, Projectile, GamePauseService
     /// Events: OnMeleeAttack, OnRangedAttack, OnAttackFinished, GlobalEvents.OnCombatImpact
     /// </summary>
     public class EntityCombat : MonoBehaviour
@@ -152,6 +152,13 @@ namespace BagBack100.Combat
         private int ApplyDamageToTargetAndGetDealt(GameObject target, int damage, Vector3 hitDir, bool isHeavyHit)
         {
             if (target == null) return 0;
+
+            // 상자처럼 피해 대신 반응하는 오브젝트 (피해 0 → 타격감 연출도 없음)
+            if (target.TryGetComponent<IAttackInteractable>(out var interactable))
+            {
+                interactable.OnAttacked(gameObject);
+                return 0;
+            }
 
             if (target.TryGetComponent<MonsterController>(out var targetMonster))
             {

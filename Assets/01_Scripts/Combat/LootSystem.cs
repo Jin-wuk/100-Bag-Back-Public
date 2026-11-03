@@ -5,14 +5,13 @@ using BagBack100.Data.Models;
 using BagBack100.Data.Core;
 using BagBack100.Map;
 using BagBack100.Dungeon; // [추가] FogOfWar 연동을 위한 네임스페이스
-using System.Linq;
 
 namespace BagBack100.Combat
 {
     /// <summary>
-    /// Role: 몬스터 사망 시 드랍 풀 추첨과 필드 아이템 스폰, 바닥 드랍 요청 처리. 드랍 풀 데이터 검증 경고.
+    /// Role: 몬스터 사망·상자 열림 시 드랍 풀 추첨과 필드 아이템 스폰, 바닥 드랍 요청 처리. 드랍 풀 데이터 검증 경고.
     /// Dependencies: DropPoolSO, ItemDataSO, TileSystem, Pathfinder, FogVisibilityObject, LootableItem
-    /// Events: 없음 (구독: GlobalEvents.OnMonsterDied, GlobalEvents.OnItemDroppedOnGround, GlobalEvents.OnItemDiscardRequested)
+    /// Events: 없음 (구독: GlobalEvents.OnMonsterDied, GlobalEvents.OnChestOpened, GlobalEvents.OnItemDroppedOnGround, GlobalEvents.OnItemDiscardRequested)
     /// </summary>
     public class LootSystem : MonoBehaviour
     {
@@ -93,6 +92,7 @@ namespace BagBack100.Combat
         private void OnEnable()
         {
             GlobalEvents.OnMonsterDied += HandleMonsterDeath;
+            GlobalEvents.OnChestOpened += HandleChestOpened;
             GlobalEvents.OnItemDroppedOnGround += HandleItemDroppedOnGround;
             GlobalEvents.OnItemDiscardRequested += HandleItemDiscardRequested;
         }
@@ -100,11 +100,18 @@ namespace BagBack100.Combat
         private void OnDisable()
         {
             GlobalEvents.OnMonsterDied -= HandleMonsterDeath;
+            GlobalEvents.OnChestOpened -= HandleChestOpened;
             GlobalEvents.OnItemDroppedOnGround -= HandleItemDroppedOnGround;
             GlobalEvents.OnItemDiscardRequested -= HandleItemDiscardRequested;
         }
 
-        private void HandleMonsterDeath(Vector3 position, int dropPoolID)
+        private void HandleMonsterDeath(Vector3 position, int dropPoolID) => DropFromPool(position, dropPoolID, false);
+
+        // 상자 칸은 플레이어가 막 밟은 칸이고 열린 상자 스프라이트가 남아 있으므로 아이템은 주변 칸부터 놓는다
+        private void HandleChestOpened(Vector3 position, int dropPoolID) => DropFromPool(position, dropPoolID, true);
+
+        // 몬스터와 상자가 같은 드랍 풀 구조(확정 + 가중치 그룹)를 공유한다
+        private void DropFromPool(Vector3 position, int dropPoolID, bool avoidOriginCell)
         {
             if (!_dropPools.TryGetValue(dropPoolID, out var pool))
             {
@@ -123,7 +130,7 @@ namespace BagBack100.Combat
                     int maxAmt = fixedDrop.maxAmount >= minAmt ? fixedDrop.maxAmount : minAmt;
                     int amount = Random.Range(minAmt, maxAmt + 1);
 
-                    if (amount > 0) SpawnLootableItem(fixedDrop.itemID, amount, position);
+                    if (amount > 0) SpawnLootableItem(fixedDrop.itemID, amount, position, avoidOriginCell);
                 }
             }
 
@@ -150,7 +157,8 @@ namespace BagBack100.Combat
 
                     if (rolls <= 0) continue;
 
-                    int totalWeight = group.entries.Sum(e => e.dropWeight);
+                    int totalWeight = 0;
+                    for (int w = 0; w < group.entries.Count; w++) totalWeight += group.entries[w].dropWeight;
                     if (totalWeight <= 0)
                     {
                         Debug.LogWarning($"[LootSystem] '{group.groupName}' 그룹의 총 가중치 합이 0입니다. 가중치를 확인해주세요.");
@@ -174,7 +182,7 @@ namespace BagBack100.Combat
                                     int amount = Random.Range(minAmt, maxAmt + 1);
 
                                     Debug.Log($"[LootSystem] '{group.groupName}' 확률 롤: 총 가중치 {totalWeight} 중 주사위 {randomValue} 나옴 👉 ItemID {entry.itemID} ({amount}개) 당첨!");
-                                    SpawnLootableItem(entry.itemID, amount, position);
+                                    SpawnLootableItem(entry.itemID, amount, position, avoidOriginCell);
                                 }
                                 else
                                 {
@@ -190,10 +198,10 @@ namespace BagBack100.Combat
 
         private void HandleItemDroppedOnGround(RuntimeItem item, Vector3 position)
         {
-            SpawnLootableItem(item, position);
+            SpawnLootableItem(item, position, false);
         }
 
-        private void SpawnLootableItem(int itemID, int amount, Vector3 position, bool spawnAsBundle = false)
+        private void SpawnLootableItem(int itemID, int amount, Vector3 position, bool avoidOriginCell, bool spawnAsBundle = false)
         {
             if (!_itemDataCache.TryGetValue(itemID, out var itemData))
             {
@@ -205,7 +213,7 @@ namespace BagBack100.Combat
             {
                 RuntimeItem newItem = new RuntimeItem(itemData);
                 newItem.Count = amount;
-                SpawnLootableItem(newItem, position);
+                SpawnLootableItem(newItem, position, avoidOriginCell);
             }
             else
             {
@@ -213,7 +221,7 @@ namespace BagBack100.Combat
                 {
                     RuntimeItem newItem = new RuntimeItem(itemData);
                     newItem.Count = 1;
-                    SpawnLootableItem(newItem, position);
+                    SpawnLootableItem(newItem, position, avoidOriginCell);
                 }
             }
         }
@@ -290,7 +298,7 @@ namespace BagBack100.Combat
 
         private bool IsBlocked(Vector3Int cell) => Pathfinder.IsObstacle(_grid, new Vector2Int(cell.x, cell.y), _obstacleLayerMask);
 
-        private void SpawnLootableItem(RuntimeItem item, Vector3 position)
+        private void SpawnLootableItem(RuntimeItem item, Vector3 position, bool avoidOriginCell)
         {
             if (_grid == null || TileSystem.Instance == null)
             {
@@ -300,7 +308,7 @@ namespace BagBack100.Combat
 
             Vector3Int startCell = _grid.WorldToCell(position);
             startCell.z = 0;
-            SpawnLootableItemAtCell(item, GetNearestEmptyItemTile(startCell));
+            SpawnLootableItemAtCell(item, GetNearestEmptyItemTile(startCell, avoidOriginCell));
         }
 
         private void SpawnLootableItemAtCell(RuntimeItem item, Vector3Int cellPos)
@@ -329,41 +337,42 @@ namespace BagBack100.Combat
             }
         }
 
-        private Vector3Int GetNearestEmptyItemTile(Vector3Int startCell)
+        /// <summary>
+        /// 시작 칸에서 가장 가까운 빈 아이템 칸(BFS). 벽은 통과하지 않고, 대각선은 양옆 직교 칸이 열려 있을 때만 확장해
+        /// 벽 모서리 너머 방으로 넘어가지 않는다. avoidOriginCell이면 시작 칸에는 놓지 않는다(상자 칸).
+        /// 시작 칸 자체가 막혀 있어도(벽에 붙은 몬스터 위치 등) 주변 탐색은 진행한다.
+        /// </summary>
+        private Vector3Int GetNearestEmptyItemTile(Vector3Int startCell, bool avoidOriginCell)
         {
-            Queue<Vector3Int> queue = new Queue<Vector3Int>();
-            HashSet<Vector3Int> visited = new HashSet<Vector3Int>();
-            queue.Enqueue(startCell);
-            visited.Add(startCell);
+            _discardQueue.Clear();
+            _discardVisited.Clear();
+            _discardQueue.Enqueue(startCell);
+            _discardVisited.Add(startCell);
 
-            Vector3Int[] dirs = { Vector3Int.up, Vector3Int.right, Vector3Int.down, Vector3Int.left,
-                                  new Vector3Int(1, 1, 0), new Vector3Int(1, -1, 0), new Vector3Int(-1, -1, 0), new Vector3Int(-1, 1, 0) };
-
-            while (queue.Count > 0)
+            while (_discardQueue.Count > 0)
             {
-                Vector3Int curr = queue.Dequeue();
+                Vector3Int curr = _discardQueue.Dequeue();
+                bool isObstacle = IsBlocked(curr);
 
-                Vector2Int currPos2D = new Vector2Int(curr.x, curr.y);
-                bool isObstacle = Pathfinder.IsObstacle(_grid, currPos2D, _obstacleLayerMask);
-
-                if (!isObstacle && TileSystem.Instance.GetItemAtTile(curr) == null)
+                bool canPlaceHere = !(avoidOriginCell && curr == startCell);
+                if (canPlaceHere && !isObstacle && TileSystem.Instance.GetItemAtTile(curr) == null)
                 {
                     return curr;
                 }
 
-                if (isObstacle && curr != startCell)
-                {
-                    continue;
-                }
+                if (isObstacle && curr != startCell) continue;
 
-                foreach (var dir in dirs)
+                for (int i = 0; i < DiscardDirs.Length; i++)
                 {
+                    Vector3Int dir = DiscardDirs[i];
                     Vector3Int next = curr + dir;
-                    if (!visited.Contains(next))
-                    {
-                        visited.Add(next);
-                        queue.Enqueue(next);
-                    }
+                    if (_discardVisited.Contains(next)) continue;
+
+                    bool isDiagonal = dir.x != 0 && dir.y != 0;
+                    if (isDiagonal && (IsBlocked(new Vector3Int(curr.x + dir.x, curr.y, 0)) || IsBlocked(new Vector3Int(curr.x, curr.y + dir.y, 0)))) continue;
+
+                    _discardVisited.Add(next);
+                    _discardQueue.Enqueue(next);
                 }
             }
 

@@ -1,0 +1,185 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39e76101ba7605c4a9f666fead92d810, type: 3}
+  m_Name: DropPool_Chest_Region1
+  m_EditorClassIdentifier: 
+  dropPoolID: 1000
+  guaranteedDrops: []
+  randomDropGroups:
+  - groupName: "\uC7AC\uB8CC 2 \uD655\uC815"
+    minRolls: 2
+    maxRolls: 2
+    rollProbabilityCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    entries:
+    - itemID: 101
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 102
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 111
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 112
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 121
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 122
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 131
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 132
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 141
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 142
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 151
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 152
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 161
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 162
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 171
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 172
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 181
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 182
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 191
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 192
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 201
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 202
+      dropWeight: 1
+      minAmount: 1
+      maxAmount: 1
+  - groupName: "30% \uC7A5\uBE44 \uB610\uB294 \uD3EC\uC158"
+    minRolls: 1
+    maxRolls: 1
+    rollProbabilityCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    entries:
+    - itemID: 14
+      dropWeight: 6
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 15
+      dropWeight: 6
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 17
+      dropWeight: 6
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 2
+      dropWeight: 6
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 3
+      dropWeight: 6
+      minAmount: 1
+      maxAmount: 1
+    - itemID: 0
+      dropWeight: 70
+      minAmount: 0
+      maxAmount: 0

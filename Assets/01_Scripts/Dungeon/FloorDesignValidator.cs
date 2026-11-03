@@ -11,7 +11,7 @@ namespace BagBack100.Dungeon
     }
 
     /// <summary>
-    /// Role: 층 프리팹 규격 검증 (마커 개수·위치, 계단–탈출구 거리, 상자 후보 수, 지역 풀 구성).
+    /// Role: 층 프리팹 규격 검증 (마커 개수·위치, 계단–탈출구 거리, 상자 후보 수, 상자로 막혀도 계단·탈출구 도달 가능, 지역 풀 구성).
     ///       에디터 메뉴와 런타임 생성기가 함께 쓰므로 UnityEditor API를 쓰지 않는다.
     /// Dependencies: FloorLayout, FloorMarker, RegionConfigSO, FloorDesignSO
     /// Events: 없음
@@ -81,7 +81,79 @@ namespace BagBack100.Dungeon
                 }
             }
 
+            CheckReachableWithChestsBlocked(layout, name, errors);
             return errors.Count == errorCountBefore;
+        }
+
+        private static readonly Vector3Int[] CardinalDirs = { Vector3Int.up, Vector3Int.right, Vector3Int.down, Vector3Int.left };
+        // 층 생성마다 런타임에서도 호출되므로 탐색 버퍼를 재사용한다
+        private static readonly HashSet<Vector3Int> BlockedBuffer = new HashSet<Vector3Int>();
+        private static readonly HashSet<Vector3Int> VisitedBuffer = new HashSet<Vector3Int>();
+        private static readonly Queue<Vector3Int> QueueBuffer = new Queue<Vector3Int>();
+
+        /// <summary>
+        /// 상자는 열린 뒤에도 칸을 막으므로, 상자 후보 칸이 전부 막힌 최악의 경우에도
+        /// 시작점에서 위층 계단·탈출구와 나머지 모든 바닥 칸에 걸어갈 수 있어야 한다
+        /// (1칸 통로에 상자 후보를 두면 길이 끊기거나, 고립 칸에 몬스터·드랍이 생겨 클리어·습득이 막힌다).
+        /// </summary>
+        private static void CheckReachableWithChestsBlocked(FloorLayout layout, string name, List<string> errors)
+        {
+            FloorMarker start = layout.GetSingleMarker(FloorMarkerType.PlayerStart);
+            if (start == null) return;
+
+            HashSet<Vector3Int> blocked = BlockedBuffer;
+            HashSet<Vector3Int> visited = VisitedBuffer;
+            Queue<Vector3Int> queue = QueueBuffer;
+            blocked.Clear();
+            visited.Clear();
+            queue.Clear();
+
+            layout.CollectMarkers(FloorMarkerType.ChestCandidate, MarkerBuffer);
+            for (int i = 0; i < MarkerBuffer.Count; i++) blocked.Add(layout.GetLocalCell(MarkerBuffer[i]));
+
+            Vector3Int startCell = layout.GetLocalCell(start);
+            visited.Add(startCell);
+            queue.Enqueue(startCell);
+            while (queue.Count > 0)
+            {
+                Vector3Int curr = queue.Dequeue();
+                for (int i = 0; i < CardinalDirs.Length; i++)
+                {
+                    Vector3Int next = curr + CardinalDirs[i];
+                    if (visited.Contains(next) || blocked.Contains(next) || !layout.IsLocalCellWalkable(next)) continue;
+                    visited.Add(next);
+                    queue.Enqueue(next);
+                }
+            }
+
+            CheckMarkerReached(layout, FloorMarkerType.UpStairs, visited, name, errors);
+            CheckMarkerReached(layout, FloorMarkerType.Exit, visited, name, errors);
+
+            if (layout.FloorTilemap == null) return;
+            int isolated = 0;
+            Vector3Int firstIsolated = default;
+            foreach (Vector3Int cell in layout.FloorTilemap.cellBounds.allPositionsWithin)
+            {
+                Vector3Int c = new Vector3Int(cell.x, cell.y, 0);
+                if (blocked.Contains(c) || visited.Contains(c) || !layout.IsLocalCellWalkable(c)) continue;
+                if (isolated == 0) firstIsolated = c;
+                isolated++;
+            }
+            if (isolated > 0)
+            {
+                errors.Add($"[{name}] 상자 후보 칸이 모두 막히면 시작점에서 갈 수 없는 바닥 칸 {isolated}개 (예: {firstIsolated.x},{firstIsolated.y}).");
+            }
+        }
+
+        private static void CheckMarkerReached(FloorLayout layout, FloorMarkerType type, HashSet<Vector3Int> reached, string name, List<string> errors)
+        {
+            FloorMarker marker = layout.GetSingleMarker(type);
+            if (marker == null) return;
+            Vector3Int cell = layout.GetLocalCell(marker);
+            if (!reached.Contains(cell))
+            {
+                errors.Add($"[{name}] 상자 후보 칸이 모두 막히면 시작점에서 {type}({cell.x},{cell.y})에 갈 수 없습니다 (상자는 열린 뒤에도 길을 막음).");
+            }
         }
 
         public static bool ValidateDesign(FloorDesignSO design, FloorBand expectedBand, StairsRequirement stairs,
@@ -104,9 +176,10 @@ namespace BagBack100.Dungeon
 
         /// <summary>
         /// 지역 전체 검증. 프리팹 에셋을 직접 읽으므로 에디터에서 호출해도 프리뷰 씬을 만들지 않는다.
-        /// 풀 장수(한 판 중복 금지) 검증은 T3에서 추가한다.
+        /// 풀 장수는 한 판 중복 금지(Q13)를 채울 수 있는지 본다: 고유 프리팹 수가 구간 층 수보다 적으면 오류,
+        /// 같으면 경고(추천 6장 이상). 디버그 중복 허용이 켜져 있으면 부족해도 경고로 낮춘다.
         /// </summary>
-        public static bool ValidateRegion(RegionConfigSO region, List<string> errors)
+        public static bool ValidateRegion(RegionConfigSO region, List<string> errors, List<string> warnings)
         {
             int errorCountBefore = errors.Count;
             if (region == null)
@@ -117,6 +190,9 @@ namespace BagBack100.Dungeon
 
             ValidatePool(region.EarlyPool, FloorBand.Early, region, errors);
             ValidatePool(region.LatePool, FloorBand.Late, region, errors);
+            ValidatePoolSize(region.EarlyPool, FloorBand.Early, RegionConfigSO.MidBossFloor - 1, region, errors, warnings);
+            ValidatePoolSize(region.LatePool, FloorBand.Late, RegionConfigSO.RuleFloorCount - RegionConfigSO.MidBossFloor, region, errors, warnings);
+            CheckSharedLayouts(region, errors, warnings);
             ValidateDesign(region.MidBossFloorDesign, FloorBand.Boss, StairsRequirement.Required, region, errors);
             ValidateDesign(region.BossFloorDesign, FloorBand.Boss, StairsRequirement.Optional, region, errors);
             return errors.Count == errorCountBefore;
@@ -132,6 +208,57 @@ namespace BagBack100.Dungeon
             for (int i = 0; i < pool.Count; i++)
             {
                 ValidateDesign(pool[i], band, StairsRequirement.Required, region, errors);
+            }
+        }
+
+        public const int RecommendedPoolSize = 6;
+
+        private static void ValidatePoolSize(IReadOnlyList<FloorDesignSO> pool, FloorBand band, int floorCount,
+            RegionConfigSO region, List<string> errors, List<string> warnings)
+        {
+            int unique = CountUniqueLayouts(pool);
+            if (unique < floorCount)
+            {
+                string message = $"[{region.name}] {band} 풀 고유 디자인 {unique}장 < 구간 층 수 {floorCount}장 (한 판 중복 금지를 채울 수 없음).";
+                if (region.DebugAllowDuplicateDesigns) warnings.Add(message + " 디버그 중복 허용이 켜져 있어 경고로 처리.");
+                else errors.Add(message);
+            }
+            else if (unique == floorCount)
+            {
+                warnings.Add($"[{region.name}] {band} 풀 고유 디자인 {unique}장 = 구간 층 수. 매 판 같은 구성이 됩니다 (추천 {RecommendedPoolSize}장 이상).");
+            }
+        }
+
+        // Early와 Late가 같은 프리팹을 쓰면 한 판 중복 금지 때문에 1~4층이 그 프리팹을 먼저 써 버려
+        // 6~9층 후보가 모자랄 수 있다(런타임 후보 0장). 두 구간은 서로 다른 프리팹으로 채워야 한다.
+        private static void CheckSharedLayouts(RegionConfigSO region, List<string> errors, List<string> warnings)
+        {
+            var early = new HashSet<FloorLayout>();
+            AddLayouts(region.EarlyPool, early);
+            var late = new HashSet<FloorLayout>();
+            AddLayouts(region.LatePool, late);
+            foreach (FloorLayout layout in late)
+            {
+                if (!early.Contains(layout)) continue;
+                string message = $"[{region.name}] {layout.name}이 1~5 풀과 6~9 풀에 모두 있습니다 (6~9층 후보가 모자랄 수 있음).";
+                if (region.DebugAllowDuplicateDesigns) warnings.Add(message + " 디버그 중복 허용이 켜져 있어 경고로 처리.");
+                else errors.Add(message);
+            }
+        }
+
+        private static int CountUniqueLayouts(IReadOnlyList<FloorDesignSO> pool)
+        {
+            var set = new HashSet<FloorLayout>();
+            AddLayouts(pool, set);
+            return set.Count;
+        }
+
+        private static void AddLayouts(IReadOnlyList<FloorDesignSO> pool, HashSet<FloorLayout> set)
+        {
+            if (pool == null) return;
+            for (int i = 0; i < pool.Count; i++)
+            {
+                if (pool[i] != null && pool[i].LayoutPrefab != null) set.Add(pool[i].LayoutPrefab);
             }
         }
 

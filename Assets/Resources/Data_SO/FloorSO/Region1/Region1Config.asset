@@ -50,4 +50,5 @@ MonoBehaviour:
   - _exitChance: 0.5
     _chestRolls: 2
     _chestChance: 0.4
+  _chestDropPoolId: 1000
   _debugAllowDuplicateDesigns: 1
