@@ -106,32 +106,29 @@ graph TD
 *   몬스터 사망 이벤트와 분리한 이유: 층 클리어 카운터(T4)가 `OnMonsterDied`만 세야 한다.
 *   내용물 `DropPool_Chest_Region1`(ID 1000): 재료(전리품 하위 등급) 2회 + 장비(악세서리)·포션 30% / 꽝 70%. 기획 5절 [추천] 값, 플레이 테스트로 조정.
 
-### 2.8. (삭제됨) `DungeonChunk` / `DungeonData`
-*   T3(Q11)에서 청크 조립·통맵(FixedMap) 코드와 에셋을 삭제했다.
-
-### 2.9. `DungeonExit` (`MonoBehaviour`)
+### 2.8. `DungeonExit` (`MonoBehaviour`)
 *   **역할**: 탈출구(포탈)의 상호작용 및 씬 전환 처리 (`LoadSceneMode.Single`).
 
-### 2.10. `FloorLayout` / `FloorMarker` (`MonoBehaviour`)
+### 2.9. `FloorLayout` / `FloorMarker` (`MonoBehaviour`)
 *   **`FloorLayout`**: 층 프리팹 루트. `Floor`·`Wall` 타일맵 참조, 마커·구역 수집(지연 캐싱, Edit Mode에서는 매번 재수집), 루트 기준 칸 좌표(`GetLocalCell`, 셀 크기 1).
 *   **`FloorMarker`**: `PlayerStart` / `UpStairs` / `Exit` / `ChestCandidate`. 칸 중앙(+0.5)에 둔다.
 *   **층 프리팹 규격**: 루트(`FloorLayout`, Grid 없음) 아래 `Floor`, `Wall`(레이어 Wall, `TilemapCollider2D`), `Markers`, `Zones`. 타일맵은 루트 기준 위치·회전 0, 스케일 1.
 
-### 2.11. `FloorDesignSO` / `RegionConfigSO` (`ScriptableObject`)
+### 2.10. `FloorDesignSO` / `RegionConfigSO` (`ScriptableObject`)
 *   **`FloorDesignSO`**: 층 프리팹, 구간(`Early` 1~5 / `Late` 6~9 / `Boss`), 가중치.
 *   **`RegionConfigSO`**: 지역 번호·이름, 1~5 풀, 6~9 풀, 5층·10층 보스 디자인, 1~9층 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 상자 드랍 풀 ID, 디버그 "디자인 중복 허용".
 
-### 2.12. `FloorDesignValidator` (static)
+### 2.11. `FloorDesignValidator` (static)
 *   **역할**: 런타임·에디터 공용 규격 검증. 시작점 1, 탈출구 1, 계단 1(10층 보스층은 0~1), 마커 칸 보행 가능·중복 없음, 계단–탈출구 체비쇼프 거리 ≥ 3, 상자 후보 ≥ 구간 최대 굴림 횟수, 풀 구간 일치.
 *   **풀 장수(T3)**: 구간 고유 프리팹 수 < 구간 층 수(4) → 오류, = 4 → 경고(추천 6장 이상). 1~5 풀과 6~9 풀이 같은 프리팹을 쓰면 오류(6~9층 후보 부족 방지). 디버그 중복 허용이면 오류 대신 경고. 경고는 별도 목록으로 에디터 메뉴가 LogWarning.
 
-### 2.12b. `FloorStairs` (`MonoBehaviour`, Controller)
+### 2.12. `FloorStairs` (`MonoBehaviour`, Controller)
 *   **역할**: 위층 계단 트리거. 플레이어가 밟으면 정적 지역 이벤트 `OnStairsEntered`만 던지고 1회 후 비활성. T2는 항상 열림, 잠금·겹침 가드는 T4.
 
-### 2.12c. `FloorHUD` (`MonoBehaviour`, UI)
+### 2.13. `FloorHUD` (`MonoBehaviour`, UI)
 *   **역할**: 현재 층 상시 표시(우측 상단), 층 진입 배너(상단 중앙), 층 전환 암전. `GlobalEvents.OnFloorTransitionStarted`/`OnFloorEntered`만 구독(OnEnable/OnDisable), 연출은 unscaled time. 서식 `{0}` 지역 번호, `{1}` 층, `{2}` 지역 이름.
 
-### 2.13. `FloorGrayBoxBuilder` (Editor)
+### 2.14. `FloorGrayBoxBuilder` (Editor)
 *   메뉴 `BagBack100/Floor/Create Gray Box Floors`: 회색 박스 층 3장(일반 2 + 보스 1)과 `Region1Config`·`FloorDesignSO` 생성 후 검증. 템플릿은 `Floor_GrayBox_Normal01.prefab`의 Floor·Wall(먼저 복제 후 템플릿을 닫고 저장).
 *   메뉴 `BagBack100/Floor/Create Region1 Chest Drop Pool`: 상자 드랍 풀(`DropPool_Chest_Region1`) 생성.
 *   메뉴 `BagBack100/Floor/Setup Chest Prefab`: 회색 박스 상자 프리팹(`FloorChest_GrayBox`) 생성·`DungeonGenerator._chestPrefab` 연결.
