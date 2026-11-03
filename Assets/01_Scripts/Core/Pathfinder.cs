@@ -129,6 +129,12 @@ namespace BagBack100.Core
             if (grid == null) return true;
             Vector3Int cellPos = new Vector3Int(position.x, position.y, 0);
 
+            // 0. 상자처럼 칸을 영구히 막는 고정 점유물은 벽과 같이 취급 (몬스터 A*·돌진 궤적·드랍 칸 계산 공통)
+            if (TileSystem.Instance != null && TileSystem.Instance.IsStaticBlocker(cellPos))
+            {
+                return true;
+            }
+
             // 1. 던전 생성기 타일맵 참조를 통한 바닥/벽 타일 유효성 검사 (순환 호출 방지)
             if (DungeonGenerator.Instance != null)
             {

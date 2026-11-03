@@ -11,7 +11,7 @@ namespace BagBack100.Dungeon
     }
 
     /// <summary>
-    /// Role: 층 프리팹 규격 검증 (마커 개수·위치, 계단–탈출구 거리, 상자 후보 수, 지역 풀 구성).
+    /// Role: 층 프리팹 규격 검증 (마커 개수·위치, 계단–탈출구 거리, 상자 후보 수, 상자로 막혀도 계단·탈출구 도달 가능, 지역 풀 구성).
     ///       에디터 메뉴와 런타임 생성기가 함께 쓰므로 UnityEditor API를 쓰지 않는다.
     /// Dependencies: FloorLayout, FloorMarker, RegionConfigSO, FloorDesignSO
     /// Events: 없음
@@ -81,7 +81,55 @@ namespace BagBack100.Dungeon
                 }
             }
 
+            CheckReachableWithChestsBlocked(layout, name, errors);
             return errors.Count == errorCountBefore;
+        }
+
+        private static readonly Vector3Int[] CardinalDirs = { Vector3Int.up, Vector3Int.right, Vector3Int.down, Vector3Int.left };
+
+        /// <summary>
+        /// 상자는 열린 뒤에도 칸을 막으므로, 상자 후보 칸이 전부 막힌 최악의 경우에도
+        /// 시작점에서 위층 계단·탈출구까지 걸어갈 수 있어야 한다 (1칸 통로에 상자 후보를 두면 길이 끊긴다).
+        /// </summary>
+        private static void CheckReachableWithChestsBlocked(FloorLayout layout, string name, List<string> errors)
+        {
+            FloorMarker start = layout.GetSingleMarker(FloorMarkerType.PlayerStart);
+            if (start == null) return;
+
+            var blocked = new HashSet<Vector3Int>();
+            layout.CollectMarkers(FloorMarkerType.ChestCandidate, MarkerBuffer);
+            for (int i = 0; i < MarkerBuffer.Count; i++) blocked.Add(layout.GetLocalCell(MarkerBuffer[i]));
+
+            var visited = new HashSet<Vector3Int>();
+            var queue = new Queue<Vector3Int>();
+            Vector3Int startCell = layout.GetLocalCell(start);
+            visited.Add(startCell);
+            queue.Enqueue(startCell);
+            while (queue.Count > 0)
+            {
+                Vector3Int curr = queue.Dequeue();
+                for (int i = 0; i < CardinalDirs.Length; i++)
+                {
+                    Vector3Int next = curr + CardinalDirs[i];
+                    if (visited.Contains(next) || blocked.Contains(next) || !layout.IsLocalCellWalkable(next)) continue;
+                    visited.Add(next);
+                    queue.Enqueue(next);
+                }
+            }
+
+            CheckMarkerReached(layout, FloorMarkerType.UpStairs, visited, name, errors);
+            CheckMarkerReached(layout, FloorMarkerType.Exit, visited, name, errors);
+        }
+
+        private static void CheckMarkerReached(FloorLayout layout, FloorMarkerType type, HashSet<Vector3Int> reached, string name, List<string> errors)
+        {
+            FloorMarker marker = layout.GetSingleMarker(type);
+            if (marker == null) return;
+            Vector3Int cell = layout.GetLocalCell(marker);
+            if (!reached.Contains(cell))
+            {
+                errors.Add($"[{name}] 상자 후보 칸이 모두 막히면 시작점에서 {type}({cell.x},{cell.y})에 갈 수 없습니다 (상자는 열린 뒤에도 길을 막음).");
+            }
         }
 
         public static bool ValidateDesign(FloorDesignSO design, FloorBand expectedBand, StairsRequirement stairs,

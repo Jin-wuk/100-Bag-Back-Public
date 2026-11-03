@@ -4,7 +4,7 @@ using UnityEngine;
 namespace BagBack100.Core
 {
     /// <summary>
-    /// Role: 타일 단위 점유(엔티티), 바닥 아이템 칸, 위험 칸(장판 경로 비용) 관리. 층 전환 시 ClearAll로 전부 비운다.
+    /// Role: 타일 단위 점유(엔티티), 고정 장애물 칸(상자 등), 바닥 아이템 칸, 위험 칸(장판 경로 비용) 관리. 층 전환 시 ClearAll로 전부 비운다.
     /// Dependencies: LootableItem
     /// Events: 없음
     /// </summary>
@@ -14,6 +14,8 @@ namespace BagBack100.Core
 
         private Dictionary<Vector3Int, GameObject> _occupiedTiles = new Dictionary<Vector3Int, GameObject>();
         private Dictionary<Vector3Int, float> _dangerExpirations = new Dictionary<Vector3Int, float>();
+        // 움직이지 않는 점유물(상자). Pathfinder가 벽처럼 취급해 경로·돌진·드랍 칸 계산에서 제외한다
+        private readonly HashSet<Vector3Int> _staticBlockers = new HashSet<Vector3Int>();
 
         private void Awake()
         {
@@ -122,6 +124,15 @@ namespace BagBack100.Core
             _itemTiles.Remove(cellPos);
         }
 
+        /// <summary>칸을 점유하고 고정 장애물로도 등록한다 (상자처럼 영구히 길을 막는 오브젝트).</summary>
+        public void RegisterStaticBlocker(Vector3Int cellPos, GameObject entity)
+        {
+            RegisterInitialTile(cellPos, entity);
+            _staticBlockers.Add(cellPos);
+        }
+
+        public bool IsStaticBlocker(Vector3Int cellPos) => _staticBlockers.Contains(cellPos);
+
         /// <summary>
         /// 층 전환 시 점유·위험 칸을 비우고 바닥 아이템을 파괴한다.
         /// 바닥 아이템은 모두 RegisterItemTile로 등록되므로 씬 탐색 없이 여기서 정리한다.
@@ -135,6 +146,7 @@ namespace BagBack100.Core
             _itemTiles.Clear();
             _occupiedTiles.Clear();
             _dangerExpirations.Clear();
+            _staticBlockers.Clear();
         }
     }
 }

@@ -5,7 +5,7 @@ using BagBack100.Player;
 namespace BagBack100.Dungeon
 {
     /// <summary>
-    /// Role: 층 상자. 자기 칸을 TileSystem에 점유로 등록해 플레이어·몬스터 이동을 막고,
+    /// Role: 층 상자. 자기 칸을 TileSystem에 고정 장애물로 등록해 플레이어·몬스터 이동과 경로 탐색을 막고,
     ///       플레이어의 근접·차지 공격을 받으면 한 번 열려 상자 열림 이벤트만 던진다 (내용물 드랍은 LootSystem).
     ///       열린 뒤에도 그 칸을 계속 막는다(유저 결정).
     /// Dependencies: TileSystem, PlayerController, IAttackInteractable
@@ -31,7 +31,7 @@ namespace BagBack100.Dungeon
             _dropPoolId = dropPoolId;
             if (TileSystem.Instance != null)
             {
-                TileSystem.Instance.RegisterInitialTile(cell, gameObject);
+                TileSystem.Instance.RegisterStaticBlocker(cell, gameObject);
             }
         }
 
