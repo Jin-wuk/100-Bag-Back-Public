@@ -243,5 +243,50 @@ namespace BagBack100.Player
             NotifyInventoryChanged();
             return true;
         }
+
+        /// <summary>
+        /// source의 item에서 떼어 가방 빈칸으로 나눌 수 있는 최대 수량. 가방 안에서 나눌 때는 원본에 1개 이상 남긴다
+        /// (전부 옮기면 나누기가 아니라 이동이라서).
+        /// </summary>
+        public int GetSplitMaxAmount(ISlotItemContainer source, RuntimeItem item)
+        {
+            if (_container == null || source == null || item == null || item.ItemData == null || !ContainsInSource(source, item)) return 0;
+            int max = ReferenceEquals(source, this) ? item.Count - 1 : item.Count;
+            return Mathf.Max(0, Mathf.Min(max, _container.GetEmptySlotCapacity(item.ItemData)));
+        }
+
+        /// <summary>
+        /// source의 item에서 amount개를 떼어 가방 앞쪽 빈칸에 넣는다(같은 묶음과 합치지 않음).
+        /// 수량 창이 떠 있는 동안 상태가 바뀔 수 있어 확정 시점에 최대치를 다시 계산한다.
+        /// </summary>
+        public bool TrySplitFrom(ISlotItemContainer source, RuntimeItem item, int amount)
+        {
+            if (amount <= 0 || amount > GetSplitMaxAmount(source, item)) return false;
+
+            var piece = new RuntimeItem(item.ItemData) { Count = amount };
+            if (!_container.TryAddToEmptySlots(piece)) return false;
+
+            // 가방 → 가방이면 원본에 1개 이상 남으므로 RemoveAmount가 원본 개체를 지우지 않는다
+            if (!ReferenceEquals(source, this))
+            {
+                NotifyInventoryChanged();
+                source.RemoveAmount(item, amount);
+            }
+            else
+            {
+                RemoveAmount(item, amount);
+            }
+            return true;
+        }
+
+        private static bool ContainsInSource(ISlotItemContainer source, RuntimeItem item)
+        {
+            var items = source.GetAllItems();
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i] == item) return true;
+            }
+            return false;
+        }
     }
 }

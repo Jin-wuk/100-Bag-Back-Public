@@ -272,6 +272,37 @@ namespace BagBack100.Data.Core
             return last >= 0 && AddAt(item, last);
         }
 
+        /// <summary>빈칸에만 넣을 때 받을 수 있는 수량 (빈칸 수 × 겹침 한도). 같은 아이템 묶음의 여유는 세지 않는다.</summary>
+        public int GetEmptySlotCapacity(ItemDataSO data)
+        {
+            if (data == null) return 0;
+            int empty = 0;
+            for (int i = 0; i < _slots.Length; i++)
+            {
+                if (_slots[i] == null) empty++;
+            }
+            return empty * StackLimitOf(data);
+        }
+
+        /// <summary>
+        /// 외부 아이템을 같은 아이템 묶음과 합치지 않고 앞쪽 빈칸부터 한도만큼씩 나눠 넣는다 (아이템 나누기용).
+        /// 전량이 빈칸에 들어갈 때만 실행한다.
+        /// </summary>
+        public bool TryAddToEmptySlots(RuntimeItem item)
+        {
+            if (item == null || item.ItemData == null || item.Count <= 0 || Contains(item)) return false;
+            if (GetEmptySlotCapacity(item.ItemData) < item.Count) return false;
+
+            int limit = StackLimitOf(item.ItemData);
+            while (item.Count > limit)
+            {
+                var piece = new RuntimeItem(item.ItemData) { Count = limit };
+                item.Count -= limit;
+                AddAt(piece, FindFirstEmptySlot());
+            }
+            return AddAt(item, FindFirstEmptySlot());
+        }
+
         public bool Remove(RuntimeItem item)
         {
             if (item == null || !_items.Contains(item)) return false;
