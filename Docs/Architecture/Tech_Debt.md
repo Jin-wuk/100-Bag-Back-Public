@@ -10,7 +10,7 @@
 | 항목 | 현재 상태 | 개선 방향 | 트리거 시점 |
 | --- | --- | --- | --- |
 | **UI가 씬을 직접 전환** | `DungeonEntranceUI`가 `SceneManager.LoadScene`을 직접 호출. `DungeonExit`, `PlayerStatManager`(사망)도 각자 씬을 바꿈 | UI는 `GlobalEvents.OnDungeonLoadRequested` 같은 커맨드 이벤트만 던지고, 씬 전환 담당(예: `SceneLoadManager`)이 트랜지션 → 비동기 로드 → 던전 생성을 순서대로 처리 | 던전 진입 연출이나 비동기 로드 작업 시작 시 |
-| **`FindObjectOfType` 런타임 탐색** | `HubSystem`, `HubTradeSystem`, 인벤토리·창고·파우치·퀵슬롯 UI, `MonsterController`, `PlayerInput` 등이 초기화 때 씬 전체를 탐색 (대부분 `Awake`/`Start`, 일부는 `InventoryUIController`의 우클릭 처리처럼 입력 시점) | 인스펙터 참조나 매니저 생성 이벤트(`OnManagerCreated`)로 주입. 입력 시점 탐색부터 우선 제거 | 씬 오브젝트가 늘어 초기화가 느려지거나, 같은 타입이 둘 이상 생길 때 |
+| **`FindObjectOfType` 런타임 탐색** | `HubSystem`, `HubTradeSystem`, 인벤토리·창고·파우치·퀵슬롯 UI, `MonsterController`, `PlayerInput` 등이 초기화 때 씬 전체를 탐색 (대부분 `Awake`/`Start`, 일부는 `InventoryUIController`의 우클릭 처리, 창고·파우치 UI가 우클릭·창고 닫힘 때 가방 UI를 찾는 것처럼 입력 시점) | 인스펙터 참조나 매니저 생성 이벤트(`OnManagerCreated`)로 주입. 입력 시점 탐색부터 우선 제거 | 씬 오브젝트가 늘어 초기화가 느려지거나, 같은 타입이 둘 이상 생길 때 |
 | **몬스터 특성을 문자열로 비교** | `MonsterDataSO.HasTrait("FAST")` 등 매직 스트링 | `MonsterTrait` enum(또는 플래그)으로 전환. 에셋의 `traits` 값 마이그레이션 필요 | 특성 AI 반응([Roadmap](../GDD/Roadmap.md) 3절) 작업 시 |
 
 ## 2. 성능
