@@ -36,18 +36,12 @@ namespace BagBack100.Dungeon
         [Tooltip("몬스터끼리 뭉치거나 공격 범위가 겹치지 않도록 보장할 최소 타일 간격 (맨해튼 거리)")]
         [SerializeField] private int _minMonsterSpacing = 3;
 
-        [Header("Auto-Corridor Spawn (박스 미지정 복도 전체)")]
-        [Tooltip("Zone 박스가 안 쳐진 나머지 미로 복도 전체에 랜덤 배치할 몬스터 수")]
-        [SerializeField] private int _corridorMonsterCount = 4;
-        [Tooltip("Zone 박스가 안 쳐진 나머지 미로 복도 전체에 랜덤 배치할 함정 수")]
-        [SerializeField] private int _corridorTrapCount = 2;
-
         [Header("Prefabs & Pools")]
         [Tooltip("던전 진입 시 스폰할 플레이어 프리팹")]
         [SerializeField] private GameObject _playerPrefab;
         [Tooltip("기본 몬스터 프리팹 풀")]
         [SerializeField] private List<GameObject> _monsterPrefabPool = new List<GameObject>();
-        [Tooltip("함정 프리팹 풀")]
+        [Tooltip("함정 프리팹 풀 (함정은 피해 효과 구현 전까지 배치하지 않는다)")]
         [SerializeField] private List<GameObject> _trapPrefabPool = new List<GameObject>();
         [Tooltip("탈출 포탈 프리팹 (DungeonExit). 층 클리어 시 층별 확률 굴림에 성공하면 탈출구 마커에 생성 (보스층은 100%)")]
         [SerializeField] private GameObject _fixedExitPrefab;
@@ -552,51 +546,81 @@ namespace BagBack100.Dungeon
         {
             List<Vector3Int> spawnedMonsterCells = new List<Vector3Int>();
 
-            // 4. 전투방(Combat)·수동 복도(Corridor) 구역 내부 엔티티 스폰
+            // 층계 던전: 몬스터 수는 지역의 층별 규칙(FloorRule.MonsterCount)이 정하고, 층 디자인의 구역은 배치 가능 영역으로만 쓴다.
+            // 같은 디자인이 다른 층에 나와도 층에 맞는 수가 나오게 하기 위함. 예전 통맵의 "구역 밖 복도 추가 스폰"은 쓰지 않는다.
+            // 규칙 표가 없는 10층(보스층)은 F6 전까지 구역에 적힌 수를 그대로 쓴다.
+            // 함정은 피해 효과가 구현되기 전까지 배치하지 않는다 (효과 없는 함정이 바닥에 놓여 혼란만 준다).
+            bool useFloorRule = _currentFloorNumber >= 1 && _currentFloorNumber <= RegionConfigSO.RuleFloorCount;
+            if (!useFloorRule)
+            {
+                foreach (var zone in zones)
+                {
+                    List<Vector3Int> candidates = zoneValidCells[zone];
+                    if (candidates.Count == 0 || zone.MonsterCount <= 0) continue;
+                    SpawnEntitiesInCells(candidates, zone.MonsterCount, GetZoneMonsterPool(zone), reachableSteps, occupiedCells, spawnedMonsterCells, true, parent);
+                }
+                return;
+            }
+
+            int total = _regionConfig.GetRule(_currentFloorNumber).MonsterCount;
+            if (total <= 0) return;
+
+            // 유효 칸 수 비율로 나누고(최대 나머지 방식), 반올림으로 남는 마릿수는 나머지가 큰 구역부터 1마리씩 준다
+            _zoneSpawnBuffer.Clear();
+            int totalCells = 0;
             foreach (var zone in zones)
             {
-                List<Vector3Int> candidates = zoneValidCells[zone];
-                if (candidates.Count == 0) continue;
-
-                // 구역 함정 스폰
-                if (zone.TrapCount > 0)
-                {
-                    SpawnEntitiesInCells(candidates, zone.TrapCount, _trapPrefabPool, reachableSteps, occupiedCells, null, true, parent);
-                }
-
-                // 구역 몬스터 스폰 (최소 간격 유지)
-                if (zone.MonsterCount > 0)
-                {
-                    List<GameObject> monsterPool = (zone.OverrideMonsterPool != null && zone.OverrideMonsterPool.Count > 0)
-                        ? zone.OverrideMonsterPool
-                        : _monsterPrefabPool;
-                    SpawnEntitiesInCells(candidates, zone.MonsterCount, monsterPool, reachableSteps, occupiedCells, spawnedMonsterCells, true, parent);
-                }
+                int cells = zoneValidCells[zone].Count;
+                if (cells <= 0) continue;
+                _zoneSpawnBuffer.Add(new ZoneShare { Zone = zone, Cells = cells });
+                totalCells += cells;
             }
-
-            // 5. B안: 구역 박스가 쳐지지 않은 나머지 모든 미로 복도 타일에 몬스터/함정 분산 스폰
-            List<Vector3Int> unzonedCorridorCells = new List<Vector3Int>();
-            foreach (var kvp in reachableSteps)
+            if (totalCells == 0)
             {
-                if (!allZonedCells.Contains(kvp.Key) && kvp.Value > _startSafeStepRadius)
-                {
-                    unzonedCorridorCells.Add(kvp.Key);
-                }
+                Debug.LogWarning($"[DungeonGenerator] {_currentFloorNumber}층 디자인에 몬스터를 놓을 구역 칸이 없습니다.");
+                return;
             }
 
-            if (unzonedCorridorCells.Count > 0)
+            int assigned = 0;
+            for (int i = 0; i < _zoneSpawnBuffer.Count; i++)
             {
-                if (_corridorTrapCount > 0)
-                {
-                    SpawnEntitiesInCells(unzonedCorridorCells, _corridorTrapCount, _trapPrefabPool, reachableSteps, occupiedCells, null, true, parent);
-                }
-
-                if (_corridorMonsterCount > 0)
-                {
-                    SpawnEntitiesInCells(unzonedCorridorCells, _corridorMonsterCount, _monsterPrefabPool, reachableSteps, occupiedCells, spawnedMonsterCells, true, parent);
-                }
+                ZoneShare share = _zoneSpawnBuffer[i];
+                float exact = (float)total * share.Cells / totalCells;
+                share.Count = Mathf.FloorToInt(exact);
+                share.Remainder = exact - share.Count;
+                assigned += share.Count;
+                _zoneSpawnBuffer[i] = share;
+            }
+            _zoneSpawnBuffer.Sort((a, b) => b.Remainder.CompareTo(a.Remainder));
+            for (int i = 0; assigned < total; i = (i + 1) % _zoneSpawnBuffer.Count)
+            {
+                ZoneShare share = _zoneSpawnBuffer[i];
+                share.Count++;
+                _zoneSpawnBuffer[i] = share;
+                assigned++;
             }
 
+            for (int i = 0; i < _zoneSpawnBuffer.Count; i++)
+            {
+                ZoneShare share = _zoneSpawnBuffer[i];
+                if (share.Count <= 0) continue;
+                SpawnEntitiesInCells(zoneValidCells[share.Zone], share.Count, GetZoneMonsterPool(share.Zone), reachableSteps, occupiedCells, spawnedMonsterCells, true, parent);
+            }
+        }
+
+        private struct ZoneShare
+        {
+            public DungeonZone Zone;
+            public int Cells;
+            public int Count;
+            public float Remainder;
+        }
+
+        private readonly List<ZoneShare> _zoneSpawnBuffer = new List<ZoneShare>();
+
+        private List<GameObject> GetZoneMonsterPool(DungeonZone zone)
+        {
+            return zone.OverrideMonsterPool != null && zone.OverrideMonsterPool.Count > 0 ? zone.OverrideMonsterPool : _monsterPrefabPool;
         }
 
         private void InitializeFogOfWar(Vector3Int playerStartCell)

@@ -5,7 +5,7 @@ using UnityEngine;
 namespace BagBack100.Dungeon.Data
 {
     /// <summary>
-    /// 1~9층 중 한 층의 규칙 한 줄. 5층은 보스층 규칙을 따르므로 값을 쓰지 않는다.
+    /// 1~9층 중 한 층의 규칙 한 줄. 5층은 보스층이라 탈출구(100%)·상자(없음) 값은 쓰지 않고 몬스터 수(잡몹)만 쓴다.
     /// </summary>
     [Serializable]
     public struct FloorRule
@@ -16,16 +16,20 @@ namespace BagBack100.Dungeon.Data
         [SerializeField, Min(0)] private int _chestRolls;
         [Tooltip("상자 굴림 1회의 당첨 확률 (0~1)")]
         [SerializeField, Range(0f, 1f)] private float _chestChance;
+        [Tooltip("이 층에 놓을 몬스터 수. 층 디자인의 몬스터 구역(DungeonZone)에 유효 칸 수 비율로 나눠 놓는다. 간격 규칙 때문에 덜 놓일 수 있다")]
+        [SerializeField, Min(0)] private int _monsterCount;
 
         public float ExitChance => _exitChance;
         public int ChestRolls => _chestRolls;
         public float ChestChance => _chestChance;
+        public int MonsterCount => _monsterCount;
 
-        public FloorRule(float exitChance, int chestRolls, float chestChance)
+        public FloorRule(float exitChance, int chestRolls, float chestChance, int monsterCount)
         {
             _exitChance = Mathf.Clamp01(exitChance);
             _chestRolls = Mathf.Max(0, chestRolls);
             _chestChance = Mathf.Clamp01(chestChance);
+            _monsterCount = Mathf.Max(0, monsterCount);
         }
     }
 

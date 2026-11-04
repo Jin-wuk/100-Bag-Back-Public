@@ -24,9 +24,9 @@ namespace BagBack100.Dungeon
         [SerializeField] private Vector2 _size = new Vector2(6f, 6f);
 
         [Header("Spawn Counts")]
-        [Tooltip("이 구역 내에 랜덤 스폰할 몬스터 마리 수")]
+        [Tooltip("이 구역 몬스터 수. 1~9층은 지역 층별 규칙(FloorRule.MonsterCount)이 정하고 구역은 배치 영역으로만 쓰므로, 이 값은 규칙 표가 없는 10층(보스층, F6 전)에서만 쓴다")]
         [SerializeField] private int _monsterCount = 2;
-        [Tooltip("이 구역 내에 랜덤 스폰할 함정 개수")]
+        [Tooltip("이 구역 함정 수. 함정 피해 효과 구현 전까지 쓰지 않는다")]
         [SerializeField] private int _trapCount = 0;
 
         [Header("Optional Zone Override Pools")]

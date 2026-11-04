@@ -26,29 +26,38 @@ MonoBehaviour:
   - _exitChance: 0.1
     _chestRolls: 1
     _chestChance: 0.4
+    _monsterCount: 4
   - _exitChance: 0.2
     _chestRolls: 1
     _chestChance: 0.4
+    _monsterCount: 4
   - _exitChance: 0.3
     _chestRolls: 1
     _chestChance: 0.4
+    _monsterCount: 5
   - _exitChance: 0.4
     _chestRolls: 1
     _chestChance: 0.4
+    _monsterCount: 5
   - _exitChance: 0
     _chestRolls: 0
     _chestChance: 0
+    _monsterCount: 3
   - _exitChance: 0.5
     _chestRolls: 2
     _chestChance: 0.4
+    _monsterCount: 6
   - _exitChance: 0.5
     _chestRolls: 2
     _chestChance: 0.4
+    _monsterCount: 6
   - _exitChance: 0.5
     _chestRolls: 2
     _chestChance: 0.4
+    _monsterCount: 7
   - _exitChance: 0.5
     _chestRolls: 2
     _chestChance: 0.4
+    _monsterCount: 7
   _chestDropPoolId: 1000
   _debugAllowDuplicateDesigns: 1

@@ -741,20 +741,24 @@ namespace BagBack100.EditorTools
             return design;
         }
 
-        // 기획 v7 초기값: 탈출구 층 x 10% (상한 50%), 상자 1~4층 1회·6~9층 2회·확률 40%. 5층은 보스층 규칙이라 0.
+        // 기획 v7 초기값: 탈출구 층 x 10% (상한 50%), 상자 1~4층 1회·6~9층 2회·확률 40%. 5층은 보스층 규칙이라 탈출구·상자 0.
+        // 몬스터 수: 07 문서 2절 층 규모 추천(1층 4 → 9층 7). 5층은 중간 보스 옆 잡몹 수(보스 배치는 F6).
+        private static readonly int[] DefaultMonsterCounts = { 4, 4, 5, 5, 3, 6, 6, 7, 7 };
+
         private static FloorRule[] CreateDefaultRules()
         {
             var rules = new FloorRule[RegionConfigSO.RuleFloorCount];
             for (int floor = 1; floor <= RegionConfigSO.RuleFloorCount; floor++)
             {
+                int monsterCount = DefaultMonsterCounts[floor - 1];
                 if (floor == RegionConfigSO.MidBossFloor)
                 {
-                    rules[floor - 1] = new FloorRule(0f, 0, 0f);
+                    rules[floor - 1] = new FloorRule(0f, 0, 0f, monsterCount);
                     continue;
                 }
                 float exitChance = Mathf.Min(floor * 0.1f, 0.5f);
                 int chestRolls = floor < RegionConfigSO.MidBossFloor ? 1 : 2;
-                rules[floor - 1] = new FloorRule(exitChance, chestRolls, 0.4f);
+                rules[floor - 1] = new FloorRule(exitChance, chestRolls, 0.4f, monsterCount);
             }
             return rules;
         }
