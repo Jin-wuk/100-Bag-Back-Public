@@ -23,7 +23,7 @@ namespace BagBack100.Monster
     /// <summary>
     /// Role: 몬스터 1마리의 생명주기, 행동 루프(어그로 판정 → 가중치 랜덤 패턴 시전 → 이동), 반응형 회피/기절 인터럽트, 피격·사망 처리.
     /// Dependencies: MonsterDataSO, MonsterPatternSO, MonsterLocomotion, EntityCombat, TileSystem, FogOfWarSystem, CombatFeedbackSystem, PlayerController
-    /// Events: GlobalEvents.OnEntityDamaged, GlobalEvents.OnMonsterDied (지역 이벤트: OnDamaged)
+    /// Events: GlobalEvents.OnEntityDamaged, GlobalEvents.OnMonsterDied (지역 이벤트: OnDamaged, static OnSpawned / OnRemoved)
     /// </summary>
     [RequireComponent(typeof(EntityCombat))]
     public class MonsterController : MonoBehaviour
@@ -55,6 +55,15 @@ namespace BagBack100.Monster
 
         public event Action OnDamaged;
 
+        // 층 클리어 등록부(FloorClearTracker)용 지역 이벤트. 사망 전리품 이벤트(OnMonsterDied)와 분리해
+        // 소환수·강제 제거·층 정리 파괴까지 "살아 있는 몬스터 수"를 정확히 맞춘다.
+        // OnSpawned는 Awake에서 발행되므로 구독자는 이 시점에 Data·IsSummon을 읽으면 안 된다(아직 주입 전).
+        public static event Action<MonsterController> OnSpawned;
+        public static event Action<MonsterController> OnRemoved;
+
+        public bool IsSummon { get; private set; }
+        public bool IsBoss => _monsterData != null && _monsterData.type == MonsterType.Boss;
+
         // 런타임 상태 플래그
         public bool IsExecutingPattern => _isExecutingPattern;
         public bool IsInRecoveryWindow => _isInRecoveryWindow;
@@ -67,6 +76,7 @@ namespace BagBack100.Monster
         private bool _isStunned;
         private bool _isEvading;
         private bool _isDead;
+        private bool _isRemovedRaised;
 
         // 쿨타임 타이머 (GC Zero를 위해 사전 할당)
         private float _nextGlobalPatternTime;
@@ -95,10 +105,28 @@ namespace BagBack100.Monster
         private readonly List<LineRenderer> _aimLinePool = new List<LineRenderer>(4);
         private static Material _sharedAimLineMaterial;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            OnSpawned = null;
+            OnRemoved = null;
+        }
+
         private void Awake()
         {
             Combat = GetComponent<EntityCombat>();
             _renderers = GetComponentsInChildren<SpriteRenderer>(true);
+            OnSpawned?.Invoke(this);
+        }
+
+        /// <summary>
+        /// 소환 패턴이 소환체를 만든 직후 호출한다. 소환수는 전리품을 떨어뜨리지 않는다.
+        /// 사망 시 소환체를 낳는 패턴은 소환체 생성(OnSpawned)을 소환자 제거(OnRemoved)보다 먼저 해야
+        /// 등록부가 잠깐 비어 층 클리어가 잘못 뜨지 않는다.
+        /// </summary>
+        public void MarkAsSummon()
+        {
+            IsSummon = true;
         }
 
         public void Initialize(MonsterDataSO data)
@@ -139,6 +167,8 @@ namespace BagBack100.Monster
 
         private void OnDestroy()
         {
+            // 층 정리·씬 종료로 파괴될 때의 안전망 (사망·강제 제거에서 이미 발행했으면 무시된다)
+            RaiseRemoved();
             UnsubscribePlayerEvents();
             ClearActiveWarnings();
             HideAimLines();
@@ -1060,9 +1090,44 @@ namespace BagBack100.Monster
 
         private void FinalizeDeath()
         {
-            int dropPoolId = _monsterData != null ? _monsterData.dropPoolID : 0;
-            GlobalEvents.OnMonsterDied?.Invoke(transform.position, dropPoolId);
+            if (!IsSummon)
+            {
+                int dropPoolId = _monsterData != null ? _monsterData.dropPoolID : 0;
+                GlobalEvents.OnMonsterDied?.Invoke(transform.position, dropPoolId);
+            }
+            RaiseRemoved();
             Destroy(gameObject);
+        }
+
+        /// <summary>
+        /// 보스 처치 정리용 강제 제거. 전리품(OnMonsterDied)과 자폭 없이 즉시 사라진다.
+        /// HP 0으로 자폭 퓨즈 중인 개체도 아직 등록부에 남아 있으므로 _isDead가 아니라 제거 발행 여부로 중복을 막고,
+        /// 퓨즈 코루틴은 행동 코루틴 목록 밖에서 돌기 때문에 StopAllCoroutines로 함께 멈춘다.
+        /// </summary>
+        public void DespawnWithoutLoot()
+        {
+            if (_isRemovedRaised) return;
+            _isDead = true;
+            CurrentState = MonsterAIState.Dead;
+
+            StopAllCoroutines();
+            ClearActiveWarnings();
+            HideAimLines();
+
+            if (Grid != null && TileSystem.Instance != null)
+            {
+                TileSystem.Instance.ReleaseTile(GetCurrentCell(), gameObject);
+            }
+
+            RaiseRemoved();
+            Destroy(gameObject);
+        }
+
+        private void RaiseRemoved()
+        {
+            if (_isRemovedRaised) return;
+            _isRemovedRaised = true;
+            OnRemoved?.Invoke(this);
         }
 
         public void Heal(int amount)
