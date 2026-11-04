@@ -151,6 +151,8 @@ stateDiagram-v2
 | `OnItemDiscardRequested` | `InventoryManager` (버리기, 성공 여부 콜백) | `LootSystem` (반경 안 빈 칸 탐색) |
 | `OnItemPickedUpByPlayer` | `LootableItem` | `InventoryManager` (획득 성공 여부 콜백) |
 | `OnFloorTransitionStarted` / `OnFloorEntered` | `DungeonGenerator` | `FloorHUD` (층 표시·배너) |
+| `OnFloorCleared` | `DungeonGenerator` (층 번호, 탈출구 열림 여부) | `FloorHUD` (클리어 알림) |
+| `OnPlayerCellChanged` (추가 구독) | `PlayerController` | `DungeonGenerator` (마지막 도착 칸), `FloorStairs`, `DungeonExit` (칸 진입 판정) |
 | `OnHubObjectClicked` | `InteractableController` | `HubSystem` |
 
 - 정적 이벤트의 구독·발행은 코드 그래프(graphify)에 잡히지 않습니다. 영향 범위를 볼 때는 이 표와 `grep "GlobalEvents.<이벤트>"`를 씁니다.
@@ -255,21 +257,23 @@ flowchart TD
 
 | 클래스 | 책임 |
 | --- | --- |
-| `RegionConfigSO` | 지역 하나의 설정: 초반(1~4층)·후반(6~9층) 디자인 풀, 5층·10층 고정 디자인, 층별 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 상자 드랍 풀 ID |
+| `RegionConfigSO` | 지역 하나의 설정: 초반(1~4층)·후반(6~9층) 디자인 풀, 5층·10층 고정 디자인, 층별 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률, 몬스터 수), 상자 드랍 풀 ID |
 | `FloorDesignSO` | 층 디자인 하나: 층 프리팹, 가중치 |
 | `FloorLayout` / `FloorMarker` | 층 프리팹 루트(바닥·벽 타일맵, 마커, 구역)와 칸 역할 마커(시작점·위층 계단·탈출구·상자 후보) |
-| `DungeonZone` | 몬스터·함정 스폰 구역 |
-| `DungeonGenerator` | 층 추첨·생성·교체, 마커와 구역 배치, 같은 씬 층 전환 |
+| `DungeonZone` | 몬스터 배치 영역. 1~9층은 층별 규칙의 몬스터 수를 구역 칸 수 비율로 나눠 놓음 (구역 자체 수는 10층만, 함정은 미배치) |
+| `DungeonGenerator` | 층 추첨·생성·교체, 마커와 구역 배치, 같은 씬 층 전환, 층 클리어 처리(보스층 정리·안개 해제·계단 열기·탈출구 굴림) |
+| `FloorClearTracker` | 현재 층의 살아 있는 몬스터 등록부와 클리어 판정 (POCO, `DungeonGenerator` 소유) |
 | `FloorDesignValidator` | 층 규격 검증. 에디터 메뉴(`FloorGrayBoxBuilder`)와 런타임이 함께 씀 |
-| `FloorStairs` | 위층 계단. 밟으면 지역 이벤트만 던짐 |
+| `FloorStairs` | 위층 계단. 잠긴 채 생성, 클리어 시 열림. 칸 도착으로 지역 이벤트만 던짐 |
 | `FloorChest` | 칸을 막는 상자. 공격(`IAttackInteractable`)을 받으면 열리고 `OnChestOpened` 발행 |
-| `DungeonExit` | 탈출 포탈. 결과 기록 후 기지로 전환 |
+| `DungeonExit` | 탈출 포탈. 클리어 시 확률 생성, 칸 도착 시 탈출 요청 이벤트, 확인되면 결과 기록 후 기지로 전환 |
 | `DungeonEntranceUI` | 기지의 던전 입장 버튼 |
 | `FloorHUD` | 현재 층 상시 표시와 층 진입 배너 |
 | `FogOfWarSystem` / `FogVisibilityObject` / `FogVisionSource` | 전장의 안개, 엔티티 가시성, 보조 광원 |
 
 - 시야 계산은 매 프레임이 아니라 플레이어가 다른 칸으로 이동했을 때만 수행합니다.
-- 층 클리어·계단 잠금·탈출구 확률 등장은 아직 없습니다([Dungeon.md](GDD/Dungeon.md) 6절).
+- 층 클리어는 살아 있는 몬스터 등록부(`FloorClearTracker`)로 판정합니다. 전리품 이벤트 `OnMonsterDied`에 기대지 않으므로 소환수·보스층 강제 정리·층 전환 파괴를 정확히 셉니다.
+- 계단과 탈출구의 진입은 물리 트리거가 아니라 `OnPlayerCellChanged`(타일 도착)의 칸 비교로 판정합니다.
 
 ### 5.4 아이템 · 인벤토리
 
@@ -300,6 +304,7 @@ flowchart TD
 | `QuickSlotBarUI` / `QuickSlotSlotUI` | 퀵슬롯 HUD (수량, 쿨타임) |
 | `ShopPanelUI` / `GoldDisplayUI` / `RunResultUI` / `UIToast` | 잡화상 목록, 지갑 골드, 결과 화면, 알림 |
 | `DungeonUIManager` | 던전 가방 패널 열기·닫기와 일시정지 요청 |
+| `ExitConfirmUI` | 탈출 확인창. `DungeonExit.OnExitRequested`를 받아 일시정지·입력 잠금 후 확인/취소를 포탈에 전달 |
 | `PlayerStatsUIController` | HP·MP·스탯 텍스트 |
 | `UISortingOverride` | UI 정렬 순서 보정 |
 

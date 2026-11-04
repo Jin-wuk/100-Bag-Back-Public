@@ -46,6 +46,16 @@ namespace BagBack100.Player
             }
         }
 
+        /// <summary>
+        /// 층 클리어 순간 즉시 비전투로 되돌린다. 마지막 몬스터를 잡은 직후 5초 동안 전투 판정이 남아
+        /// 가방 열기·포션 즉시 회복이 막히지 않게 한다 (기획 07 3절).
+        /// </summary>
+        public void ExitCombat()
+        {
+            _combatEndTime = 0f;
+            SetInCombat(false);
+        }
+
         private void SetInCombat(bool inCombat)
         {
             if (IsInCombat == inCombat) return;

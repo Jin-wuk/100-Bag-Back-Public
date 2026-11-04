@@ -394,6 +394,7 @@ namespace BagBack100.EditorTools
             {
                 CreateFloorHud(canvas.transform);
             }
+            EnsureExitConfirmUI(canvas.transform);
 
             Undo.CollapseUndoOperations(undoGroup);
             EditorSceneManager.MarkSceneDirty(scene);
@@ -476,9 +477,7 @@ namespace BagBack100.EditorTools
                 renderer.sortingOrder = StairsSortingOrder;
                 go.transform.localScale = new Vector3(0.8f, 0.8f, 1f);
 
-                var col = go.AddComponent<BoxCollider2D>();
-                col.isTrigger = true;
-                col.size = Vector2.one;
+                // 진입은 칸 도착(OnPlayerCellChanged)으로 판정하므로 콜라이더를 두지 않는다
                 go.AddComponent<FloorStairs>();
 
                 GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, StairsPrefabPath);
@@ -498,6 +497,50 @@ namespace BagBack100.EditorTools
                 if (c.isRootCanvas && c.renderMode == RenderMode.ScreenSpaceOverlay) return c;
             }
             return null;
+        }
+
+        /// <summary>
+        /// 탈출 확인창(ExitConfirmUI)과 층 알림 토스트를 HUD 캔버스에 만든다 (T4).
+        /// 가방 패널 안의 대화상자·토스트는 가방이 닫히면 비활성화되므로, 같은 UI를 복제해 캔버스 바로 아래에 둔다.
+        /// </summary>
+        private static void EnsureExitConfirmUI(Transform canvas)
+        {
+            if (canvas.Find("ExitConfirm") != null) return;
+
+            BagBack100.UI.ItemQuantityDialogUI srcDialog = null;
+            BagBack100.UI.UIToast srcToast = null;
+            foreach (var d in canvas.GetComponentsInChildren<BagBack100.UI.ItemQuantityDialogUI>(true)) { srcDialog = d; break; }
+            foreach (var t in canvas.GetComponentsInChildren<BagBack100.UI.UIToast>(true)) { srcToast = t; break; }
+            if (srcDialog == null || srcToast == null)
+            {
+                Debug.LogWarning("[FloorGrayBoxBuilder] 캔버스에 ItemQuantityDialogUI·UIToast가 없어 탈출 확인창을 만들지 못했습니다 (가방 패널을 먼저 배치하세요).");
+                return;
+            }
+
+            var holder = new GameObject("ExitConfirm", typeof(RectTransform));
+            Undo.RegisterCreatedObjectUndo(holder, "Create ExitConfirm");
+            var holderRect = (RectTransform)holder.transform;
+            holderRect.SetParent(canvas, false);
+            Stretch(holderRect);
+
+            GameObject dialogGo = Object.Instantiate(srcDialog.gameObject, holderRect, false);
+            dialogGo.name = "ExitConfirmDialog";
+            GameObject toastGo = Object.Instantiate(srcToast.gameObject, holderRect, false);
+            toastGo.name = "FloorToast";
+
+            var ui = holder.AddComponent<BagBack100.UI.ExitConfirmUI>();
+            var so = new SerializedObject(ui);
+            so.FindProperty("_dialog").objectReferenceValue = dialogGo.GetComponent<BagBack100.UI.ItemQuantityDialogUI>();
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            var hud = canvas.GetComponentInChildren<BagBack100.UI.FloorHUD>(true);
+            if (hud != null)
+            {
+                var hudSo = new SerializedObject(hud);
+                hudSo.FindProperty("_toast").objectReferenceValue = toastGo.GetComponent<BagBack100.UI.UIToast>();
+                hudSo.ApplyModifiedProperties();
+            }
+            holderRect.SetAsLastSibling(); // 확인창이 층 전환 암전 위에 보이도록
         }
 
         private static void CreateFloorHud(Transform canvas)
@@ -698,20 +741,24 @@ namespace BagBack100.EditorTools
             return design;
         }
 
-        // 기획 v7 초기값: 탈출구 층 x 10% (상한 50%), 상자 1~4층 1회·6~9층 2회·확률 40%. 5층은 보스층 규칙이라 0.
+        // 기획 v7 초기값: 탈출구 층 x 10% (상한 50%), 상자 1~4층 1회·6~9층 2회·확률 40%. 5층은 보스층 규칙이라 탈출구·상자 0.
+        // 몬스터 수: 07 문서 2절 층 규모 추천(1층 4 → 9층 7). 5층은 중간 보스 옆 잡몹 수(보스 배치는 F6).
+        private static readonly int[] DefaultMonsterCounts = { 4, 4, 5, 5, 3, 6, 6, 7, 7 };
+
         private static FloorRule[] CreateDefaultRules()
         {
             var rules = new FloorRule[RegionConfigSO.RuleFloorCount];
             for (int floor = 1; floor <= RegionConfigSO.RuleFloorCount; floor++)
             {
+                int monsterCount = DefaultMonsterCounts[floor - 1];
                 if (floor == RegionConfigSO.MidBossFloor)
                 {
-                    rules[floor - 1] = new FloorRule(0f, 0, 0f);
+                    rules[floor - 1] = new FloorRule(0f, 0, 0f, monsterCount);
                     continue;
                 }
                 float exitChance = Mathf.Min(floor * 0.1f, 0.5f);
                 int chestRolls = floor < RegionConfigSO.MidBossFloor ? 1 : 2;
-                rules[floor - 1] = new FloorRule(exitChance, chestRolls, 0.4f);
+                rules[floor - 1] = new FloorRule(exitChance, chestRolls, 0.4f, monsterCount);
             }
             return rules;
         }

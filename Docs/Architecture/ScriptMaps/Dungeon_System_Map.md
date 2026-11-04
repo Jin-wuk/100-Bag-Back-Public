@@ -27,7 +27,7 @@ graph TD
         FM["FloorMarker.cs<br>- PlayerStart / UpStairs / Exit / ChestCandidate"]
         DZ["DungeonZone.cs<br>- Floor Path: Combat / Corridor<br>- Box Bounds & Gizmos"]
         FC["FloorChest.cs<br>- Blocks Tile (TileSystem)<br>- Open by Player Attack<br>- OnChestOpened"]
-        DE["DungeonExit.cs<br>- Trigger Detection<br>- Scene Transition"]
+        DE["DungeonExit.cs<br>- Cell Arrival Detection<br>- Exit Request / Scene Transition"]
         UI["DungeonEntranceUI.cs<br>- Enter Dungeon"]
         FVO["FogVisibilityObject.cs<br>- VisibleOnly / RememberWhenExplored<br>- Renderer Culling Sync"]
         FVS["FogVisionSource.cs<br>- Torch / Shrine Light Source<br>- RequireDiscovered Option"]
@@ -62,12 +62,14 @@ graph TD
 *   **역할**: 던전 씬 진입 시 맵 생성 및 엔티티 스폰을 전담하는 메인 매니저. 층계 던전 전용(`_regionConfig` 필수, 통맵·청크 경로는 T3에서 삭제).
 *   **층 경로**: 기획 `07_Floor_Based_Dungeon_Design.md`.
     *   `Awake`: 씬의 영속 `FloorGrid`(Grid) 아래 원점에 층 프리팹(`FloorLayout`)을 생성하고 `_floorTilemap`/`_wallTilemap`을 층 타일맵으로 바인딩, `Physics2D.SyncTransforms()` 후 `FloorDesignValidator`로 인스턴스 검증. Grid를 층 프리팹에 두지 않는 이유: 플레이어·몬스터가 `FindObjectOfType<Grid>()`로 Grid를 캐싱하므로 층 교체(T2) 때 Grid가 바뀌면 안 된다.
-    *   `Start`: `PlayerStart` 마커에 플레이어 스폰 → BFS → `Exit`·`UpStairs` 마커 반경 `_markerSafeRadius`(체비쇼프) 및 `ChestCandidate` 칸을 스폰 금지로 예약 → 상자 B안(`SpawnChests`) → `Exit` 마커에 탈출 포탈(F3 전까지 항상) → `Combat`/`Corridor` 구역과 구역 밖 복도에 몬스터·함정 → 안개 초기화. 스폰물은 층 루트 아래 `Spawned`에 모은다.
+    *   `Start`: `PlayerStart` 마커에 플레이어 스폰 → BFS → `Exit`·`UpStairs` 마커 반경 `_markerSafeRadius`(체비쇼프) 및 `ChestCandidate` 칸을 스폰 금지로 예약 → 탈출구·계단 마커 반경 `_noDropRadius` 칸을 `TileSystem` 드랍 금지 칸으로 등록(계단은 10층 미만만) → 잠긴 `FloorStairs` 생성·`Initialize(칸)` → 상자 B안(`SpawnChests`) → `Exit` 마커 칸만 기억(탈출구는 클리어 시 굴림) → `Combat`/`Corridor` 구역과 구역 밖 복도에 몬스터·함정 → 안개 초기화 → `OnFloorEntered` → `FloorClearTracker.Arm()`. 스폰물은 층 루트 아래 `Spawned`에 모은다.
     *   **층 추첨(T3, Q13)**: 1~4층 Early 풀·6~9층 Late 풀에서 `Weight` 가중치 추첨, 5층·10층 보스 디자인 고정. 한 판 안에서 같은 층 프리팹 재사용 금지(SO가 아닌 프리팹 기준, `_usedLayouts`). `DebugAllowDuplicateDesigns`면 무시. 후보가 0장이면 LogError 후 중복 허용으로 진행.
     *   **상자 B안(T3, Q30)**: `FloorRule.ChestRolls`만큼 `ChestChance` 판정 → 당첨마다 남은 `ChestCandidate` 중 무작위 1곳에 `FloorChest`(지역 상자 드랍 풀 ID 주입). 보스층은 규칙 0.
     *   **층 전환(T2)**: `UpStairs` 마커에 `FloorStairs`(10층 제외)를 두고, 밟히면 `FloorStairs.OnStairsEntered` → `AscendRoutine`: `GamePauseService.Request` + `PlayerInput.IsInputLocked` → `GlobalEvents.OnFloorTransitionStarted(fade)` → 페이드 시간 대기(실시간) → `ClearFloor()`(투사체·예고 장판 `ReleaseAll`, 이전 층 루트 비활성·분리·파괴, `Physics2D.SyncTransforms`, `TileSystem.ClearAll`로 점유·위험 칸·바닥 아이템 정리) → 다음 층 `BuildFloor`/`SetupFloorLayout` → `GlobalEvents.OnFloorEntered` → 페이드 시간 대기 → 잠금 해제.
     *   플레이어는 1층에서만 생성하고 2층부터는 `PlayerController.ResetForFloorTransition`(이동 코루틴·차징·선입력 정지, 위치 이동, 타일 등록, 카메라 `SnapToTarget`)으로 재사용한다 → HP·MP·쿨타임·HoT 유지.
-    *   현재 층은 `PlayerSessionData.CurrentRegionId/CurrentFloor`에 기록(결과 화면 지역·층 표시, 07 문서 F7용). 계단 잠금·클리어 판정은 F3.
+    *   현재 층은 `PlayerSessionData.CurrentRegionId/CurrentFloor`에 기록(결과 화면 지역·층 표시, 07 문서 F7용).
+    *   **층 클리어(T4, F3)**: `FloorClearTracker`(POCO)를 층 생명주기에 연결 — 플레이어 스폰 직전 `Begin(보스층 여부)`, 층 진입 알림 뒤 `Arm()`, `ClearFloor` 맨 앞에서 `End()`(이전 층 몬스터 파괴가 클리어를 띄우지 않게). 클리어 콜백 `HandleFloorCleared`: 보스층이면 남은 몬스터 `DespawnWithoutLoot` + 투사체·예고 장판 `ReleaseAll` → `FogOfWarSystem.RevealAll` → `PlayerCombatState.ExitCombat` → 계단 `Unlock(마지막 도착 칸)` → `TryOpenExit`(보스층 100%, 그 외 `FloorRule.ExitChance`, 성공 시 포탈 생성·`Activate(칸, 마지막 도착 칸)`) → `GlobalEvents.OnFloorCleared(층, 탈출구 열림)`.
+    *   플레이어의 마지막 도착 칸은 `OnPlayerCellChanged`로 추적하고, 1층은 `PlayerController.Start`보다 배치가 먼저라 `SpawnPlayerAtCell`에서 직접 넣는다(겹침 가드 기준).
 
 ### 2.2. `FogOfWarSystem` (`MonoBehaviour`)
 *   **역할**: 플레이어의 타일 이동 이벤트(`GlobalEvents.OnPlayerCellChanged`) 및 시야원들을 추적하여 3단계 전장의 안개(`Unexplored`, `Explored`, `Visible`)와 엔티티 가시성을 총괄 제어하는 코어 비전 매니저.
@@ -107,8 +109,14 @@ graph TD
 *   몬스터 사망 이벤트와 분리한 이유: 층 클리어 카운터(07 문서 F3)가 `OnMonsterDied`만 세야 한다.
 *   내용물 `DropPool_Chest_Region1`(ID 1000): 재료(전리품 하위 등급) 2회 + 장비(악세서리)·포션 30% / 꽝 70%. 기획 5절 [추천] 값, 플레이 테스트로 조정.
 
-### 2.8. `DungeonExit` (`MonoBehaviour`)
-*   **역할**: 탈출구(포탈)의 상호작용 및 씬 전환 처리 (`LoadSceneMode.Single`).
+### 2.8. `DungeonExit` (`MonoBehaviour`, Controller)
+*   **역할**: 탈출 포탈. 층 클리어 시 확률로 생성되고 `Activate(칸, 마지막 도착 칸)`로 켜진다. 진입은 물리 트리거가 아니라 `OnPlayerCellChanged`의 칸 비교(포탈 1×1·플레이어 0.8×1 콜라이더가 위아래 인접 칸에서 닿아 오발동하던 문제 방지). 도착하면 정적 지역 이벤트 `OnExitRequested(this)`만 던지고, `ExitConfirmUI`가 확인창을 띄워 `ConfirmExit`(결과 기록 + 허브 `LoadSceneMode.Single`) 또는 `CancelExit`을 부른다.
+*   **겹침 가드**: 생성 순간·취소 직후 포탈 칸에 서 있으면 다른 칸에 도착했다가 다시 밟아야 재요청. 확인창 UI 구독자가 없으면 바로 탈출. 구독 해제는 `OnDisable`(층 정리 시 즉시 비활성).
+
+### 2.8b. `FloorClearTracker` (POCO)
+*   **역할**: 현재 층의 살아 있는 몬스터 집합(`MonsterController.OnSpawned`/`OnRemoved`)으로 클리어 판정. 일반층은 소환수 포함 전부, 보스층은 `IsBoss` 전부(0마리면 일반층 규칙). 보스·소환 여부는 `Awake` 시점에 미주입이라 `Arm`·제거 시점에 조회.
+*   클리어 시 판정을 먼저 끄고 남은 개체를 버퍼에 복사해 넘긴다(정리 중 `OnRemoved` 재진입으로 인한 컬렉션 변경·중복 클리어 방지).
+*   `OnMonsterDied`(전리품 이벤트, 개체 정보 없음)는 쓰지 않는다. 소환수는 `OnMonsterDied`를 발행하지 않아 전리품이 없다.
 
 ### 2.9. `FloorLayout` / `FloorMarker` (`MonoBehaviour`)
 *   **`FloorLayout`**: 층 프리팹 루트. `Floor`·`Wall` 타일맵 참조, 마커·구역 수집(지연 캐싱, Edit Mode에서는 매번 재수집), 루트 기준 칸 좌표(`GetLocalCell`, 셀 크기 1).
@@ -124,10 +132,10 @@ graph TD
 *   **풀 장수(T3)**: 구간 고유 프리팹 수 < 구간 층 수(4) → 오류, = 4 → 경고(추천 6장 이상). 1~5 풀과 6~9 풀이 같은 프리팹을 쓰면 오류(6~9층 후보 부족 방지). 디버그 중복 허용이면 오류 대신 경고. 경고는 별도 목록으로 에디터 메뉴가 LogWarning.
 
 ### 2.12. `FloorStairs` (`MonoBehaviour`, Controller)
-*   **역할**: 위층 계단 트리거. 플레이어가 밟으면 정적 지역 이벤트 `OnStairsEntered`만 던지고 1회 후 비활성. T2는 항상 열림, 잠금·겹침 가드는 F3.
+*   **역할**: 위층 계단. 잠긴 채(어두운 색) 생성되고 층 클리어 시 `Unlock(마지막 도착 칸)`. 진입은 `OnPlayerCellChanged` 칸 비교로 판정하고, 열린 계단 칸에 도착하면 정적 지역 이벤트 `OnStairsEntered`만 던지고 1회 후 비활성. 잠금이 풀리는 순간 계단 위에 서 있었다면 한 번 벗어나야 발동.
 
 ### 2.13. `FloorHUD` (`MonoBehaviour`, UI)
-*   **역할**: 현재 층 상시 표시(우측 상단), 층 진입 배너(상단 중앙), 층 전환 암전. `GlobalEvents.OnFloorTransitionStarted`/`OnFloorEntered`만 구독(OnEnable/OnDisable), 연출은 unscaled time. 서식 `{0}` 지역 번호, `{1}` 층, `{2}` 지역 이름.
+*   **역할**: 현재 층 상시 표시(우측 상단), 층 진입 배너(상단 중앙), 층 전환 암전. `GlobalEvents.OnFloorTransitionStarted`/`OnFloorEntered`/`OnFloorCleared` 구독(OnEnable/OnDisable), 클리어 시 `UIToast`로 알림(탈출구 열림 여부 포함), 연출은 unscaled time. 서식 `{0}` 지역 번호, `{1}` 층, `{2}` 지역 이름.
 
 ### 2.14. `FloorGrayBoxBuilder` (Editor)
 *   메뉴 `BagBack100/Floor/Create Gray Box Floors`: 회색 박스 층 3장(일반 2 + 보스 1)과 `Region1Config`·`FloorDesignSO` 생성 후 검증. 템플릿은 `Floor_GrayBox_Normal01.prefab`의 Floor·Wall(먼저 복제 후 템플릿을 닫고 저장).

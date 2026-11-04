@@ -7,9 +7,9 @@ namespace BagBack100.UI
 {
     /// <summary>
     /// Role: 수량 선택 + 확인 대화상자. 버리기·삭제·판매처럼 "몇 개를 처리할지" 고르는 공용 뷰.
-    ///       최대 수량이 1이면 슬라이더를 숨겨 단순 확인창으로 동작한다. 결과는 콜백으로만 돌려주고 데이터는 직접 바꾸지 않는다.
+    ///       최대 수량이 1이면 슬라이더를 숨겨 단순 확인창으로 동작한다(탈출 확인창 등). 결과는 콜백으로만 돌려주고 데이터는 직접 바꾸지 않는다.
     /// Dependencies: 없음
-    /// Events: 없음 (확인 시 Open에 넘긴 콜백 호출)
+    /// Events: 없음 (확인·취소 시 Open에 넘긴 콜백 호출)
     /// </summary>
     public class ItemQuantityDialogUI : MonoBehaviour
     {
@@ -22,6 +22,8 @@ namespace BagBack100.UI
         [SerializeField] private Button _cancelButton;
 
         private Action<int> _onConfirm;
+        // 취소 버튼이나 열린 채 비활성화될 때만 1회 호출 (확인·초기화 닫힘에서는 호출하지 않는다)
+        private Action _onCancel;
         private int _maxAmount;
         private Canvas _rootCanvas;
 
@@ -39,7 +41,7 @@ namespace BagBack100.UI
             var canvas = GetComponentInParent<Canvas>();
             _rootCanvas = canvas != null ? canvas.rootCanvas : null;
             if (_confirmButton != null) _confirmButton.onClick.AddListener(Confirm);
-            if (_cancelButton != null) _cancelButton.onClick.AddListener(Close);
+            if (_cancelButton != null) _cancelButton.onClick.AddListener(Cancel);
             if (_amountSlider != null) _amountSlider.onValueChanged.AddListener(HandleSliderChanged);
             Close();
         }
@@ -47,21 +49,27 @@ namespace BagBack100.UI
         private void OnDestroy()
         {
             if (_confirmButton != null) _confirmButton.onClick.RemoveListener(Confirm);
-            if (_cancelButton != null) _cancelButton.onClick.RemoveListener(Close);
+            if (_cancelButton != null) _cancelButton.onClick.RemoveListener(Cancel);
             if (_amountSlider != null) _amountSlider.onValueChanged.RemoveListener(HandleSliderChanged);
         }
 
         private void OnDisable()
         {
-            // 가방 패널이 닫히면 열려 있던 대화상자도 결정 없이 닫는다
-            Close();
+            // 가방 패널이 닫히면 열려 있던 대화상자도 결정 없이 닫는다 (취소로 본다: 일시정지 등을 건 호출자가 풀 수 있게)
+            Cancel();
         }
 
         public void Open(string title, int maxAmount, string confirmLabel, Action<int> onConfirm)
         {
+            Open(title, maxAmount, confirmLabel, onConfirm, null);
+        }
+
+        public void Open(string title, int maxAmount, string confirmLabel, Action<int> onConfirm, Action onCancel)
+        {
             if (maxAmount <= 0 || onConfirm == null) return;
 
             _onConfirm = onConfirm;
+            _onCancel = onCancel;
             _maxAmount = maxAmount;
 
             if (_titleText != null) _titleText.text = title;
@@ -90,11 +98,20 @@ namespace BagBack100.UI
         public void Close()
         {
             _onConfirm = null;
+            _onCancel = null;
             if (_root != null && _root.activeSelf)
             {
                 s_openCount = Mathf.Max(0, s_openCount - 1);
                 _root.SetActive(false);
             }
+        }
+
+        private void Cancel()
+        {
+            bool wasOpen = IsOpen;
+            var callback = _onCancel;
+            Close();
+            if (wasOpen) callback?.Invoke();
         }
 
         private void Confirm()

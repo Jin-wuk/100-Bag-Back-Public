@@ -4,7 +4,7 @@ using UnityEngine;
 namespace BagBack100.Core
 {
     /// <summary>
-    /// Role: 타일 단위 점유(엔티티), 고정 장애물 칸(상자 등), 바닥 아이템 칸, 위험 칸(장판 경로 비용) 관리. 층 전환 시 ClearAll로 전부 비운다.
+    /// Role: 타일 단위 점유(엔티티), 고정 장애물 칸(상자 등), 바닥 아이템 칸, 드랍 금지 칸, 위험 칸(장판 경로 비용) 관리. 층 전환 시 ClearAll로 전부 비운다.
     /// Dependencies: LootableItem
     /// Events: 없음
     /// </summary>
@@ -133,6 +133,15 @@ namespace BagBack100.Core
 
         public bool IsStaticBlocker(Vector3Int cellPos) => _staticBlockers.Contains(cellPos);
 
+        // --- No-Drop Cells ---
+        // 탈출구·계단 주변처럼 바닥 아이템을 놓으면 안 되는 칸. 아이템이 그 칸을 밟는 순간 줍기와 계단·탈출 발동이 겹치거나
+        // 실수로 밟은 계단으로 전리품을 잃는 것을 막는다 (기획 07 Q27). 이동·경로에는 영향이 없다.
+        private readonly HashSet<Vector3Int> _noDropCells = new HashSet<Vector3Int>();
+
+        public void RegisterNoDropCell(Vector3Int cellPos) => _noDropCells.Add(cellPos);
+
+        public bool IsNoDropCell(Vector3Int cellPos) => _noDropCells.Contains(cellPos);
+
         /// <summary>
         /// 층 전환 시 점유·위험 칸을 비우고 바닥 아이템을 파괴한다.
         /// 바닥 아이템은 모두 RegisterItemTile로 등록되므로 씬 탐색 없이 여기서 정리한다.
@@ -147,6 +156,7 @@ namespace BagBack100.Core
             _occupiedTiles.Clear();
             _dangerExpirations.Clear();
             _staticBlockers.Clear();
+            _noDropCells.Clear();
         }
     }
 }
