@@ -9,6 +9,7 @@ namespace BagBack100.UI
 {
     /// <summary>
     /// Role: 허브 진입 시 직전 던전 결과 표시. 탈출이면 가져온 전리품과 총 가치, 사망이면 잃은 아이템과 보안 파우치로 지킨 아이템을 대조한다.
+    ///       제목 아래에 탈출·사망한 지역과 층을 던전 HUD와 같은 형식으로 표시한다 (기획 07 F7).
     ///       닫으면 결과 기록을 비워 다시 뜨지 않는다.
     /// Dependencies: PlayerSessionData.LastRunResult, RunResult
     /// Events: 없음
@@ -24,6 +25,9 @@ namespace BagBack100.UI
         [SerializeField] private TextMeshProUGUI _rightList;
         [SerializeField] private TextMeshProUGUI _summaryText;
         [SerializeField] private Button _closeButton;
+
+        [Tooltip("제목 아래 지역·층 표시 형식. {0} = 지역 번호, {1} = 층 (던전 HUD 표기와 맞춤)")]
+        [SerializeField] private string _stageFormat = "Stage {0}-{1}F";
 
         [Header("Colors")]
         [SerializeField] private Color _extractedColor = new Color(0.15f, 0.22f, 0.15f, 0.97f);
@@ -54,7 +58,7 @@ namespace BagBack100.UI
 
             if (result.IsExtracted)
             {
-                SetText(_titleText, "Extracted!");
+                SetText(_titleText, BuildTitle("Extracted!", result));
                 SetText(_leftHeader, "Brought back");
                 SetText(_leftList, BuildList(result.BroughtBack));
                 SetText(_rightHeader, string.Empty);
@@ -64,7 +68,7 @@ namespace BagBack100.UI
             }
             else
             {
-                SetText(_titleText, "Killed in Action");
+                SetText(_titleText, BuildTitle("Killed in Action", result));
                 SetText(_leftHeader, "Lost");
                 SetText(_leftList, BuildList(result.Lost));
                 SetText(_rightHeader, "Saved (Secure Pouch)");
@@ -76,6 +80,13 @@ namespace BagBack100.UI
             _root.SetActive(true);
             // 같은 Canvas의 퀵슬롯 바 등 다른 UI보다 위에 그린다
             transform.SetAsLastSibling();
+        }
+
+        // 층 정보가 없으면(던전을 거치지 않은 기록) 제목만 쓴다
+        private string BuildTitle(string title, RunResult result)
+        {
+            if (result.Floor <= 0) return title;
+            return $"{title}\n<size=60%>{string.Format(_stageFormat, result.RegionId, result.Floor)}</size>";
         }
 
         private string BuildList(List<RuntimeItem> items)
