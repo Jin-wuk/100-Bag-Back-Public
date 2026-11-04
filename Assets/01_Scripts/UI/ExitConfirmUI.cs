@@ -41,11 +41,20 @@ namespace BagBack100.UI
             }
         }
 
-        private void OnEnable() => DungeonExit.OnExitRequested += HandleExitRequested;
+        // 꺼져 있는 동안에는 귀환석 요청을 받지 않아야 ConsumableController가 확인창 없음으로 보고 대체 경로를 탄다
+        private void OnEnable()
+        {
+            DungeonExit.OnExitRequested += HandleExitRequested;
+            if (_consumables == null) return;
+            // Awake의 바인딩과 겹쳐 두 번 구독되지 않게 먼저 뺀다 (Awake 시점의 isActiveAndEnabled 값에 기대지 않음)
+            _consumables.OnReturnStoneRequested -= HandleReturnStoneRequested;
+            _consumables.OnReturnStoneRequested += HandleReturnStoneRequested;
+        }
 
         private void OnDisable()
         {
             DungeonExit.OnExitRequested -= HandleExitRequested;
+            if (_consumables != null) _consumables.OnReturnStoneRequested -= HandleReturnStoneRequested;
             ClearPending();
             ReleaseLock();
         }
@@ -72,7 +81,7 @@ namespace BagBack100.UI
             if (_consumables == consumables) return;
             if (_consumables != null) _consumables.OnReturnStoneRequested -= HandleReturnStoneRequested;
             _consumables = consumables;
-            if (_consumables != null) _consumables.OnReturnStoneRequested += HandleReturnStoneRequested;
+            if (_consumables != null && isActiveAndEnabled) _consumables.OnReturnStoneRequested += HandleReturnStoneRequested;
         }
 
         private bool HasPending => _pendingExit != null || _pendingStone != null;
