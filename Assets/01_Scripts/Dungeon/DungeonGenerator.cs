@@ -49,7 +49,7 @@ namespace BagBack100.Dungeon
         [SerializeField] private List<GameObject> _monsterPrefabPool = new List<GameObject>();
         [Tooltip("함정 프리팹 풀")]
         [SerializeField] private List<GameObject> _trapPrefabPool = new List<GameObject>();
-        [Tooltip("탈출 포탈 프리팹")]
+        [Tooltip("탈출 포탈 프리팹 (DungeonExit). 층 클리어 시 층별 확률 굴림에 성공하면 탈출구 마커에 생성 (보스층은 100%)")]
         [SerializeField] private GameObject _fixedExitPrefab;
 
         [Header("Floor Dungeon")]
@@ -84,6 +84,9 @@ namespace BagBack100.Dungeon
 
         private FloorClearTracker _clearTracker;
         private FloorStairs _currentStairs;
+        // 이 층 탈출구 마커 칸. 탈출구는 층 생성 때가 아니라 클리어 순간 굴려서 만든다 (기획 07 4절)
+        private Vector3Int _exitCell;
+        private bool _hasExitMarker;
         // 플레이어가 마지막으로 도착한 칸. 계단·탈출구가 열리는 순간 그 위에 서 있는지(겹침 가드) 판정에 쓴다
         private Vector3Int _lastPlayerCell;
 
@@ -278,6 +281,7 @@ namespace BagBack100.Dungeon
             // 이전 층 몬스터가 파괴되며 들어오는 제거 이벤트가 클리어를 띄우지 않도록 판정부터 끈다
             _clearTracker.End();
             _currentStairs = null;
+            _hasExitMarker = false;
             Projectile.ReleaseAll();
             AttackWarningUI.ReleaseAll();
 
@@ -373,13 +377,10 @@ namespace BagBack100.Dungeon
 
             SpawnChests(layout);
 
-            // T1: 탈출구를 마커에 항상 배치한다. T4에서 클리어 시 확률 활성화로 교체한다.
+            // 탈출구는 클리어 순간 굴림으로 만들므로 마커 칸만 기억한다
             FloorMarker exitMarker = layout.GetSingleMarker(FloorMarkerType.Exit);
-            GameObject exitPrefab = _fixedExitPrefab;
-            if (exitMarker != null && exitPrefab != null)
-            {
-                Instantiate(exitPrefab, _grid.GetCellCenterWorld(LayoutToGridCell(layout, exitMarker)), Quaternion.identity, _spawnRoot);
-            }
+            _hasExitMarker = exitMarker != null;
+            if (_hasExitMarker) _exitCell = LayoutToGridCell(layout, exitMarker);
 
             DungeonZone[] monsterZones = layout.Zones;
             HashSet<Vector3Int> allZonedCells = new HashSet<Vector3Int>();
@@ -470,7 +471,31 @@ namespace BagBack100.Dungeon
 
             if (_currentStairs != null) _currentStairs.Unlock(_lastPlayerCell);
 
-            GlobalEvents.OnFloorCleared?.Invoke(_currentFloorNumber, false);
+            bool exitOpened = TryOpenExit(isBossFloor);
+            GlobalEvents.OnFloorCleared?.Invoke(_currentFloorNumber, exitOpened);
+        }
+
+        /// <summary>
+        /// 층별 확률로 탈출구를 1회 굴린다. 보스층(5·10층)은 100%. 보정 규칙 없음(기획 07 U8).
+        /// 플레이어가 마커 칸에 선 채로 클리어하면 포탈이 바로 확인창을 띄우지 않게 겹침 가드를 건다.
+        /// </summary>
+        private bool TryOpenExit(bool isBossFloor)
+        {
+            if (!_hasExitMarker || _fixedExitPrefab == null || _spawnRoot == null) return false;
+
+            float chance = isBossFloor ? 1f : _regionConfig.GetRule(_currentFloorNumber).ExitChance;
+            if (Random.value >= chance) return false;
+
+            GameObject exitGo = Instantiate(_fixedExitPrefab, _grid.GetCellCenterWorld(_exitCell), Quaternion.identity, _spawnRoot);
+            if (exitGo.TryGetComponent<DungeonExit>(out var exit))
+            {
+                exit.Activate(_exitCell, _lastPlayerCell);
+            }
+            else
+            {
+                Debug.LogError("[DungeonGenerator] 탈출 포탈 프리팹에 DungeonExit가 없습니다.");
+            }
+            return true;
         }
 
         private void ReserveMarkerCells(FloorLayout layout, FloorMarkerType type, int radius, HashSet<Vector3Int> occupiedCells)
