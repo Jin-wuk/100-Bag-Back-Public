@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Stolen Brooch
   itemIcon: {fileID: 21300000, guid: f6f725db073473040ab8d5c97e61ed1f, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 1

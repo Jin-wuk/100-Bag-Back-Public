@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Crystal Orb
   itemIcon: {fileID: 21300000, guid: 4f2b37c85fc51f249ad9c4113e70b591, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 2

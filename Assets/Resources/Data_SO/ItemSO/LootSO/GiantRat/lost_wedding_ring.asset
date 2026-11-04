@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Lost Wedding Ring
   itemIcon: {fileID: 21300000, guid: 948dc223aa9456242a828b395f517827, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 1

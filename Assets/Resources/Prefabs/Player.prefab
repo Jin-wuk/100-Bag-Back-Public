@@ -236,7 +236,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d77dd81edd31fe48931aad2e06343dc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _baseMaxSlots: 35
+  _baseMaxSlots: 25
   _discardRadius: 2
   _allowDiscard: 1
 --- !u!114 &6874008522880951106

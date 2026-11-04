@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Rusted Buckle
   itemIcon: {fileID: 21300000, guid: fd7407fc789389c499a871cce2309623, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 2
   baseValue: 0
   rarity: 0

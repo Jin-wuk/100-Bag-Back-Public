@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Torn Scroll
   itemIcon: {fileID: 21300000, guid: a582513710b476646a84e4b929ba827e, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 2
   baseValue: 0
   rarity: 0

@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Rat Tail
   itemIcon: {fileID: 21300000, guid: 1294c54ab0ae3df4694e47b133a6a754, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 2
   baseValue: 0
   rarity: 0

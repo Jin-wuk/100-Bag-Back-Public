@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Spirit Lantern
   itemIcon: {fileID: 21300000, guid: 56ea58849094cf74d8b9c9736d3ef2e3, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 1

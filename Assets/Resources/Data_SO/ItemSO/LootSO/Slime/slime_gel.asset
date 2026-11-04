@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Slime Gel
   itemIcon: {fileID: 21300000, guid: dcf072b44ba90a544bacaf2403fcc462, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 2
   baseValue: 0
   rarity: 0

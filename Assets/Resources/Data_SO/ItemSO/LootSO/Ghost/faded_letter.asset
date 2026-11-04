@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Faded Letter
   itemIcon: {fileID: 21300000, guid: b20b867b7199ed047b45338c1681e6a2, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 2
   baseValue: 0
   rarity: 0

@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Fairy Ring Stone
   itemIcon: {fileID: 21300000, guid: 417f4d1b2f29d87408b676034d130fd6, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 1

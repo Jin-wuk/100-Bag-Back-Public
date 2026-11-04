@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Chieftain's Crown
   itemIcon: {fileID: 21300000, guid: ac320fba851b8bc4f890d70e6aad9fd2, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 2

@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Widow's Eye Gem
   itemIcon: {fileID: 21300000, guid: ae567c1a780dd104fa9edbe168cda386, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 2

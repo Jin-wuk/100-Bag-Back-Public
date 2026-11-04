@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Plague Charm
   itemIcon: {fileID: 21300000, guid: ce84bac951d9fed4fab8100e1d4fa887, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 1

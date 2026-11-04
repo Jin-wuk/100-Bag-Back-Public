@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Pearl Brooch
   itemIcon: {fileID: 21300000, guid: 550754474bf56b241babccd583323518, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 1

@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Spore Cap
   itemIcon: {fileID: 21300000, guid: e74e810ba33ccd44983c09b5af1e1afd, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 2
   baseValue: 0
   rarity: 0

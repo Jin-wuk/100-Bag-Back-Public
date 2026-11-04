@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Soul Gem
   itemIcon: {fileID: 21300000, guid: 9dc80882e947da94a83304fccbabcad1, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 2
