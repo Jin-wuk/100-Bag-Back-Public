@@ -257,10 +257,10 @@ flowchart TD
 
 | 클래스 | 책임 |
 | --- | --- |
-| `RegionConfigSO` | 지역 하나의 설정: 초반(1~4층)·후반(6~9층) 디자인 풀, 5층·10층 고정 디자인, 층별 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 상자 드랍 풀 ID |
+| `RegionConfigSO` | 지역 하나의 설정: 초반(1~4층)·후반(6~9층) 디자인 풀, 5층·10층 고정 디자인, 층별 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률, 몬스터 수), 상자 드랍 풀 ID |
 | `FloorDesignSO` | 층 디자인 하나: 층 프리팹, 가중치 |
 | `FloorLayout` / `FloorMarker` | 층 프리팹 루트(바닥·벽 타일맵, 마커, 구역)와 칸 역할 마커(시작점·위층 계단·탈출구·상자 후보) |
-| `DungeonZone` | 몬스터·함정 스폰 구역 |
+| `DungeonZone` | 몬스터 배치 영역. 1~9층은 층별 규칙의 몬스터 수를 구역 칸 수 비율로 나눠 놓음 (구역 자체 수는 10층만, 함정은 미배치) |
 | `DungeonGenerator` | 층 추첨·생성·교체, 마커와 구역 배치, 같은 씬 층 전환, 층 클리어 처리(보스층 정리·안개 해제·계단 열기·탈출구 굴림) |
 | `FloorClearTracker` | 현재 층의 살아 있는 몬스터 등록부와 클리어 판정 (POCO, `DungeonGenerator` 소유) |
 | `FloorDesignValidator` | 층 규격 검증. 에디터 메뉴(`FloorGrayBoxBuilder`)와 런타임이 함께 씀 |
