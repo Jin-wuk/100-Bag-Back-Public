@@ -176,7 +176,7 @@ namespace BagBack100.Data.Core
         /// <summary>외부 아이템 전량이 자동 배치로 들어가는지 (한도를 넘는 묶음은 여러 칸으로 나눠 넣는 것까지 고려).</summary>
         public bool CanAdd(RuntimeItem item)
         {
-            if (item == null || item.ItemData == null || Contains(item)) return false;
+            if (item == null || item.ItemData == null || item.Count <= 0 || Contains(item)) return false;
             return GetAcceptableAmount(item, -1) >= item.Count;
         }
 
@@ -185,7 +185,7 @@ namespace BagBack100.Data.Core
         {
             if (item == null || item.ItemData == null || slot < 0 || slot >= _slots.Length) return false;
             if (_items.Contains(item)) return true;
-            return GetAcceptableAmount(item, slot) >= item.Count;
+            return item.Count > 0 && GetAcceptableAmount(item, slot) >= item.Count;
         }
 
         public bool AddAt(RuntimeItem item, int slot)

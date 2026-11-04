@@ -25,7 +25,7 @@ namespace BagBack100.Player
         }
 
         [Header("Base Settings")]
-        [SerializeField] private int _baseMaxSlots = 30;
+        [SerializeField] private int _baseMaxSlots = 25;
         [Tooltip("가방에서 버린 아이템이 떨어질 수 있는 플레이어 주변 반경(칸)")]
         [Min(1)] [SerializeField] private int _discardRadius = 2;
         [Tooltip("바닥에 버리기 허용 여부. 허브에는 바닥이 없으므로 던전 플레이어 프리팹에서만 켠다")]
