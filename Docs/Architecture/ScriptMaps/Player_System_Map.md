@@ -32,7 +32,7 @@
 
 | 스크립트 | 역할 |
 | --- | --- |
-| `InventoryManager.cs` | 가방. `SlotContainer` 사용, 배낭 보너스로 칸 수 변경, 줍기(`OnItemPickedUpByPlayer` 구독), 버리기(`OnItemDiscardRequested` 발행, 반경 2칸, 기지에서는 `CanDiscard = false`), 휴지통 삭제 |
+| `InventoryManager.cs` | 가방. `SlotContainer` 사용, 배낭 보너스로 칸 수 변경, 나누기(`GetSplitMaxAmount`·`TrySplitFrom`: 가방·창고·파우치에서 떼어 가방 빈칸으로, 가방 안에서는 원본 1개 이상 유지), 줍기(`OnItemPickedUpByPlayer` 구독), 버리기(`OnItemDiscardRequested` 발행, 반경 2칸, 기지에서는 `CanDiscard = false`), 휴지통 삭제 |
 | `EquipmentManager.cs` | 8부위 장착. 던전 프리팹에서는 장착·해제 잠금(기지 전용). 배낭 교체 시 칸 축소로 넘친 아이템은 `OnItemDroppedOnGround` |
 | `SecurePouchManager.cs` | 보안 파우치 2칸, 장비 거부, `PouchItems` 동기화 |
 | `QuickSlotManager.cs` | 퀵슬롯 1·2·3을 itemID로 연결. 사용 시 가방의 같은 종류 앞 칸부터 소모. 파우치는 세지 않음 |
@@ -51,7 +51,7 @@
 | 스크립트 | 역할 |
 | --- | --- |
 | `ItemContainerUIBase.cs` / `IItemContainerUI.cs` / `IItemDropTarget.cs` | 컨테이너 UI 공통: 드래그 앤 드롭, 더블클릭, `E` 빠른 이동, 드롭 대상(휴지통·판매 칸·퀵슬롯). 다른 컨테이너로의 이동은 모두 `SlotItemTransfer`(일부만 들어가도 이동, 드래그는 이동 전 아이콘 원위치). `IItemContainerUI.SlotContainer`로 원본 컨테이너를 넘김 |
-| `InventoryUIController.cs` | 가방 뷰. 우클릭 시 `ItemContextMenuUI`(버리기·판매) |
+| `InventoryUIController.cs` | 가방 뷰. `TryOpenItemMenu`로 우클릭 메뉴(`ItemContextMenuUI`)를 연다 — 가방 아이템은 버리기·판매·나누기, 창고·파우치 아이템은 나누기만(두 UI가 이 메서드를 호출). 나누기는 `InventoryManager.TrySplitFrom`(가방 앞쪽 빈칸에만, 합치지 않음), 최대치 1이면 수량 창 생략. `CloseItemActions`로 창고 패널이 닫힐 때 메뉴·수량 창 정리 |
 | `StorageUIController.cs` / `SecurePouchUIController.cs` / `EquipmentUIController.cs` / `EquipmentSlotUI.cs` / `DraggableItemUI.cs` | 창고, 파우치, 장비창, 장비 칸, 끌리는 아이템 |
 | `ItemQuantityDialogUI.cs` / `TrashSlotUI.cs` / `SellSlotUI.cs` | 수량 선택 확인창, 휴지통(확인 후 영구 삭제), 판매 칸 |
 | `QuickSlotBarUI.cs` / `QuickSlotSlotUI.cs` | 퀵슬롯 HUD: 아이콘, 가방 내 총 수량, 공용 쿨타임 |

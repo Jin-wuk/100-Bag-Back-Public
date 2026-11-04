@@ -56,6 +56,7 @@ flowchart LR
 | [Dungeon.md](Dungeon.md) | 층계 구조, 배치 규칙, 상자, 전장의 안개, 탈출과 사망 |
 | [Items.md](Items.md) | 가방, 아이템 분류, 장비, 획득·버리기, 소모품, 골드, 보안 파우치 |
 | [Hub.md](Hub.md) | 기지 구성, 판매·구매, 창고 |
+| [UI_Direction.md](UI_Direction.md) | 창고·상점·툴팁·테크트리 화면의 목표 구성 (미구현) |
 | [Roadmap.md](Roadmap.md) | 아직 구현하지 않은 기획, 아이디어 백로그 |
 
 코드 구조는 [ARCHITECTURE.md](../ARCHITECTURE.md)를 참고하세요.

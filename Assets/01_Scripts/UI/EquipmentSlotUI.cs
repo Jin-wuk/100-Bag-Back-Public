@@ -40,6 +40,8 @@ namespace BagBack100.UI
 
         public void OnPointerClick(PointerEventData eventData)
         {
+            // 수량 창이 떠 있는 동안 해제로 가방 칸이 바뀌지 않게 한다
+            if (ItemQuantityDialogUI.IsAnyOpen) return;
             if (eventData.clickCount == 2 && eventData.button == PointerEventData.InputButton.Left)
             {
                 if (_currentItem != null && _equipmentManager != null)
