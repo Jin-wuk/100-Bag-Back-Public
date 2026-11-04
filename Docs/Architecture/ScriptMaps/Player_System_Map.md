@@ -36,7 +36,7 @@
 | `EquipmentManager.cs` | 8부위 장착. 던전 프리팹에서는 장착·해제 잠금(기지 전용). 배낭 교체 시 칸 축소로 넘친 아이템은 `OnItemDroppedOnGround` |
 | `SecurePouchManager.cs` | 보안 파우치 2칸, 장비 거부, `PouchItems` 동기화 |
 | `QuickSlotManager.cs` | 퀵슬롯 1·2·3을 itemID로 연결. 사용 시 가방의 같은 종류 앞 칸부터 소모. 파우치는 세지 않음 |
-| `ConsumableController.cs` | 포션 규칙: 전투 중 지속 회복(`hotDuration` 5초) + 공용 쿨타임(`combatGcd` 7초), 비전투 즉시 회복. 회복할 것이 없으면 소모 안 함 |
+| `ConsumableController.cs` | 포션 규칙: 전투 중 지속 회복(`hotDuration` 5초) + 공용 쿨타임(`combatGcd` 7초), 비전투 즉시 회복. 회복할 것이 없으면 소모 안 함. 귀환석(`ReturnStoneDataSO`): 전투 중·보스층(`RegionConfigSO.IsBossFloor`)이면 `OnUseFailed`, 아니면 `OnReturnStoneRequested` → `ExitConfirmUI` 확인 시 `ConfirmReturnStone`(1개 소모 → `RunResult` 기록 → 허브 로드) |
 
 ## 4. 기지 — `Hub/`
 
@@ -56,11 +56,11 @@
 | `ItemQuantityDialogUI.cs` / `TrashSlotUI.cs` / `SellSlotUI.cs` | 수량 선택 확인창, 휴지통(확인 후 영구 삭제), 판매 칸 |
 | `QuickSlotBarUI.cs` / `QuickSlotSlotUI.cs` | 퀵슬롯 HUD: 아이콘, 가방 내 총 수량, 공용 쿨타임 |
 | `ShopPanelUI.cs` / `GoldDisplayUI.cs` / `RunResultUI.cs` / `UIToast.cs` | 잡화상 목록, 지갑 골드, 결과 화면(한 번 표시 후 비움), 알림 |
-| `DungeonUIManager.cs` | 던전 가방 패널. 열려 있는 동안 이동 차단 + `GamePauseService` 일시정지 요청. 플레이어의 `PlayerCombatState`를 캐싱해 전투 중이면 Tab·보상 화면 열기를 거부하고 `UIToast`(던전 HUD의 FloorToast)로 안내. 닫기는 항상 허용 |
+| `DungeonUIManager.cs` | 던전 가방 패널. 열려 있는 동안 이동 차단 + `GamePauseService` 일시정지 요청. 플레이어의 `PlayerCombatState`를 캐싱해 전투 중이면 Tab·보상 화면 열기를 거부하고 `UIToast`(던전 HUD의 FloorToast)로 안내. 소모품 사용 실패 사유(`ConsumableController.OnUseFailed`)도 같은 토스트로 표시. 닫기는 항상 허용(단 확인창·층 전환의 입력 잠금 중에는 Esc 무시) |
 | `PlayerStatsUIController.cs` | HP·MP·스탯 텍스트 |
 
 ---
 
 **익스트랙션 루프 흐름**
-1. **생환**: `DungeonExit` 도달 → `RunResult`(탈출) 기록 → `PlayerSessionData`에 동기화된 가방·장비·파우치 보존 → `02_HubScene` 로드 → `RunResultUI` 표시 → 대장간에서 전리품 판매(`HubTradeSystem`) → 잡화상에서 포션 구매.
+1. **생환**: `DungeonExit` 도달(또는 귀환석 `ConsumableController.ConfirmReturnStone`) → `RunResult`(탈출, 지역·층 포함) 기록 → `PlayerSessionData`에 동기화된 가방·장비·파우치 보존 → `02_HubScene` 로드 → `RunResultUI` 표시 → 대장간에서 전리품 판매(`HubTradeSystem`) → 잡화상에서 포션 구매.
 2. **사망**: `PlayerStatManager.TakeDamage`(`CurrentHp <= 0`) → `HandleDeath()` → `RunResult`(사망: 잃은 것 / 파우치로 지킨 것) 기록 → `EquipmentManager.ClearEquipment()` · `InventoryManager.ClearInventory()` · `PlayerSessionData.ClearPlayerLoadoutOnDeath()` (가방·장착 장비 삭제, 파우치·창고·지갑 골드 유지) → `02_HubScene` 복귀 → `RunResultUI` 표시.

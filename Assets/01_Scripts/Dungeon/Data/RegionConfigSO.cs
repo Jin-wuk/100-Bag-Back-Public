@@ -80,6 +80,9 @@ namespace BagBack100.Dungeon.Data
         public bool DebugAllowDuplicateDesigns => _debugAllowDuplicateDesigns;
         public int ChestDropPoolId => _chestDropPoolId;
 
+        /// <summary>5층 중간 보스층·10층 보스층 여부 (귀환석 사용 불가 등 보스층 규칙 판정용).</summary>
+        public static bool IsBossFloor(int floor) => floor == MidBossFloor || floor == BossFloor;
+
         /// <summary>1~9층 규칙. 범위 밖(10층 등)은 기본값(전부 0).</summary>
         public FloorRule GetRule(int floor)
         {

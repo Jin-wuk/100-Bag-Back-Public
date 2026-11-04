@@ -15,13 +15,20 @@ namespace BagBack100.Data.Core
         public List<RuntimeItem> Lost { get; } = new List<RuntimeItem>();        // 사망: 가방 + 장착 장비
         public List<RuntimeItem> Saved { get; } = new List<RuntimeItem>();       // 사망: 보안 파우치
         public int TotalValue { get; private set; }                             // 탈출: 가져온 전리품 Σ baseValue × Count, 사망: 잃은 것의 가치
+        public int RegionId { get; private set; }                               // 탈출·사망한 지역 번호
+        public int Floor { get; private set; }                                  // 탈출·사망한 층 (0 = 던전 층 정보 없음)
 
         /// <summary>
         /// 현재 세션 상태를 복사해 결과를 만든다. 사망 처리는 세션 목록을 그 자리에서 비우므로 반드시 비우기 전에 호출해야 한다.
         /// </summary>
         public static RunResult CreateFromSession(bool isExtracted)
         {
-            var result = new RunResult { IsExtracted = isExtracted };
+            var result = new RunResult
+            {
+                IsExtracted = isExtracted,
+                RegionId = PlayerSessionData.CurrentRegionId,
+                Floor = PlayerSessionData.CurrentFloor
+            };
 
             if (isExtracted)
             {
