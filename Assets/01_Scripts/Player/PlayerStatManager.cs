@@ -7,7 +7,7 @@ using BagBack100.Core;
 namespace BagBack100.Player
 {
     /// <summary>
-    /// Role: 플레이어 기본 스탯 + 장비 보너스 합산, HP/MP 관리, 피격(방어력 경감) 및 사망 처리(가방·장비 증발 후 허브 복귀).
+    /// Role: 플레이어 기본 스탯 + 장비 보너스 합산, HP/MP 관리, 피격(방어력 경감, 보스 처치 후 무적), 사망 처리(가방·장비 증발 후 허브 복귀).
     /// Dependencies: EquipmentManager, InventoryManager, CombatMath, PlayerSessionData
     /// Events: OnManagerCreated(static), OnStatsChanged, GlobalEvents.OnEntityDamaged
     /// </summary>
@@ -108,11 +108,15 @@ namespace BagBack100.Player
             OnStatsChanged?.Invoke(CurrentHp, CurrentMp, CurrentAttack, CurrentDefense, CurrentSpeed, CurrentRange);
         }
 
+        // 보스 처치 후 그 층을 떠날 때까지 피해를 받지 않는다 (기획 07 Q29). DungeonGenerator가 켜고 끈다
+        public bool IsInvincible { get; private set; }
+        public void SetInvincible(bool value) => IsInvincible = value;
+
         /// <param name="damage">방어력 경감 전 원본 피해</param>
         /// <returns>방어력 경감 후 실제로 깎인 체력. 사망 상태이거나 피해가 0 이하면 0 (흡혈 등 후속 효과 판정용)</returns>
         public int TakeDamage(int damage)
         {
-            if (_isDead || damage <= 0) return 0;
+            if (_isDead || damage <= 0 || IsInvincible) return 0;
 
             // 방어력 경감 후 값이 이후 HP 차감·데미지 텍스트·반환값의 기준이 된다
             damage = CombatMath.Mitigate(damage, CurrentDefense);

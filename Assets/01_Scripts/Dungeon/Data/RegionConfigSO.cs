@@ -60,6 +60,12 @@ namespace BagBack100.Dungeon.Data
         [Tooltip("10층 보스층 디자인 (위층 계단은 있어도 무시)")]
         [SerializeField] private FloorDesignSO _bossFloor;
 
+        [Header("Bosses")]
+        [Tooltip("5층 BossSpawn 마커에 놓을 중간 보스 프리팹 (MonsterDataSO.type = Boss). 비우면 5층은 전원 처치 규칙")]
+        [SerializeField] private GameObject _midBossPrefab;
+        [Tooltip("10층 BossSpawn 마커에 놓을 보스 프리팹 (MonsterDataSO.type = Boss). 비우면 10층은 전원 처치 규칙")]
+        [SerializeField] private GameObject _bossPrefab;
+
         [Header("Floor Rules (index 0 = 1F, 9칸)")]
         [SerializeField] private FloorRule[] _floorRules = new FloorRule[RuleFloorCount];
 
@@ -77,6 +83,16 @@ namespace BagBack100.Dungeon.Data
         public IReadOnlyList<FloorDesignSO> LatePool => _latePool;
         public FloorDesignSO MidBossFloorDesign => _midBossFloor;
         public FloorDesignSO BossFloorDesign => _bossFloor;
+        public GameObject MidBossPrefab => _midBossPrefab;
+        public GameObject BossPrefab => _bossPrefab;
+
+        /// <summary>보스층의 보스 프리팹. 보스층이 아니거나 지정되지 않았으면 null.</summary>
+        public GameObject GetBossPrefab(int floor)
+        {
+            if (floor == MidBossFloor) return _midBossPrefab;
+            if (floor == BossFloor) return _bossPrefab;
+            return null;
+        }
         public bool DebugAllowDuplicateDesigns => _debugAllowDuplicateDesigns;
         public int ChestDropPoolId => _chestDropPoolId;
 
