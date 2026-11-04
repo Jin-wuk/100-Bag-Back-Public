@@ -270,7 +270,8 @@ namespace BagBack100.Combat
             {
                 Vector3Int curr = _discardQueue.Dequeue();
 
-                if (curr != origin && TileSystem.Instance.GetItemAtTile(curr) == null && TileSystem.Instance.GetEntityAtTile(curr) == null)
+                // 드랍 금지 칸(탈출구·계단 주변)은 놓지 않되 BFS 확장은 계속해 그 너머 빈 칸을 찾는다
+                if (curr != origin && !TileSystem.Instance.IsNoDropCell(curr) && TileSystem.Instance.GetItemAtTile(curr) == null && TileSystem.Instance.GetEntityAtTile(curr) == null)
                 {
                     result = curr;
                     return true;
@@ -354,7 +355,7 @@ namespace BagBack100.Combat
                 Vector3Int curr = _discardQueue.Dequeue();
                 bool isObstacle = IsBlocked(curr);
 
-                bool canPlaceHere = !(avoidOriginCell && curr == startCell);
+                bool canPlaceHere = !(avoidOriginCell && curr == startCell) && !TileSystem.Instance.IsNoDropCell(curr);
                 if (canPlaceHere && !isObstacle && TileSystem.Instance.GetItemAtTile(curr) == null)
                 {
                     return curr;
