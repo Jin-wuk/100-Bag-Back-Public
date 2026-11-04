@@ -279,7 +279,7 @@ flowchart TD
 
 | 클래스 | 책임 |
 | --- | --- |
-| `ItemDataSO` 계열 | 아이템 원본 데이터 (읽기 전용). `EquipmentDataSO` → `WeaponDataSO`·`ArmorDataSO`·`BackpackDataSO`·`AccessoryDataSO`, `ConsumableDataSO`(회복량, 지속 회복 시간, 공용 쿨타임) |
+| `ItemDataSO` 계열 | 아이템 원본 데이터 (읽기 전용). `EquipmentDataSO` → `WeaponDataSO`·`ArmorDataSO`·`BackpackDataSO`·`AccessoryDataSO`, `ConsumableDataSO`(회복량, 지속 회복 시간, 공용 쿨타임) → `ReturnStoneDataSO`(귀환석 표식) |
 | `RuntimeItem` | 획득한 아이템 1개. 원본 SO 참조 + 고유 ID + 슬롯 위치 + 개수 |
 | `SlotContainer` / `ISlotItemContainer` | 칸 배열·겹치기·이동·크기 변경 공통 로직. 가방·창고·파우치가 같이 씀. 컨테이너별 최소 겹침 한도(창고 10)와 받을 수 있는 수량(`GetAcceptableAmount`) |
 | `SlotItemTransfer` | 컨테이너 사이 이동. 대상이 다 못 받으면 들어갈 만큼만 떼어 옮김(E키·더블클릭·드래그 공통) |
@@ -287,7 +287,7 @@ flowchart TD
 | `EquipmentManager` | 8부위 장착 장비. 던전에서는 장착·해제 잠금 |
 | `SecurePouchManager` | 보안 파우치(2칸, 장비 불가) |
 | `QuickSlotManager` | 퀵슬롯 1·2·3. 아이템 개체가 아니라 itemID에 연결 |
-| `ConsumableController` | 포션 사용 규칙(전투 중 지속 회복 + 공용 쿨타임, 비전투 즉시 회복) |
+| `ConsumableController` | 소모품 사용 규칙. 포션(전투 중 지속 회복 + 공용 쿨타임, 비전투 즉시 회복), 귀환석(비전투·보스층 아님 확인 → 확인창 요청 → 확인 시 소모 후 탈출) |
 | `LootSystem` | 몬스터 사망·상자 열림·버리기 이벤트를 받아 바닥 아이템 생성 (`DropPoolSO` 기반) |
 | `LootableItem` | 바닥 아이템. 밟으면 획득 이벤트 발행 |
 
@@ -304,8 +304,8 @@ flowchart TD
 | `ItemContextMenuUI` / `ItemQuantityDialogUI` / `TrashSlotUI` / `SellSlotUI` | 우클릭 메뉴(버리기·판매·나누기, 가방 패널에 하나를 창고·파우치도 공용), 수량 선택 확인창, 휴지통, 판매 칸 |
 | `QuickSlotBarUI` / `QuickSlotSlotUI` | 퀵슬롯 HUD (수량, 쿨타임) |
 | `ShopPanelUI` / `GoldDisplayUI` / `RunResultUI` / `UIToast` | 잡화상 목록, 지갑 골드, 결과 화면, 알림 |
-| `DungeonUIManager` | 던전 가방 패널 열기·닫기와 일시정지 요청. 전투 중(`PlayerCombatState`)이면 열기 거부 + HUD 토스트 |
-| `ExitConfirmUI` | 탈출 확인창. `DungeonExit.OnExitRequested`를 받아 일시정지·입력 잠금 후 확인/취소를 포탈에 전달 |
+| `DungeonUIManager` | 던전 가방 패널 열기·닫기와 일시정지 요청. 전투 중(`PlayerCombatState`)이면 열기 거부 + HUD 토스트. 소모품 사용 실패 사유(`ConsumableController.OnUseFailed`)도 토스트로 표시 |
+| `ExitConfirmUI` | 던전을 떠나는 확인창. `DungeonExit.OnExitRequested`(포탈)와 `ConsumableController.OnReturnStoneRequested`(귀환석)를 받아 일시정지·입력 잠금 후 확인/취소를 요청한 쪽에 전달 |
 | `PlayerStatsUIController` | HP·MP·스탯 텍스트 |
 | `UISortingOverride` | UI 정렬 순서 보정 |
 
