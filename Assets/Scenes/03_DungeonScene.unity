@@ -242,6 +242,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _inventoryScreenRoot: {fileID: 1111384397}
   _rewardPanel: {fileID: 0}
+  _toast: {fileID: 1401202064}
+  _combatLockedMessage: Can't open the bag during combat.
 --- !u!1 &133673142
 GameObject:
   m_ObjectHideFlags: 0
@@ -1137,8 +1139,6 @@ MonoBehaviour:
     m_Bits: 64
   _startSafeStepRadius: 10
   _minMonsterSpacing: 3
-  _corridorMonsterCount: 4
-  _corridorTrapCount: 2
   _playerPrefab: {fileID: 8512937500303504559, guid: d7ab76544ca784842ad6cf9233b76fd7, type: 3}
   _monsterPrefabPool:
   - {fileID: 4769375905301041180, guid: 8df9a16836a132d4796e502b6c008942, type: 3}
