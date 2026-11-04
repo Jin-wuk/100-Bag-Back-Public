@@ -56,6 +56,8 @@ namespace BagBack100.Dungeon
         private Texture2D _runtimeFogTileTexture;
         private Vector3Int _currentPlayerCell;
         private bool _isInitialized;
+        // 층 클리어로 안개를 모두 걷은 상태. 이 층에서는 시야를 다시 계산하지 않는다 (다음 층 Initialize에서 해제)
+        private bool _isRevealed;
         private bool _useCustomShader;
 
         private readonly Dictionary<Vector3Int, FogState> _fogStates = new Dictionary<Vector3Int, FogState>();
@@ -187,6 +189,7 @@ namespace BagBack100.Dungeon
 
             _currentPlayerCell = new Vector3Int(playerStartCell.x, playerStartCell.y, 0);
             _isInitialized = true;
+            _isRevealed = false;
 
             EnsureFogTilemap();
             CreateRuntimeSoftFogTile();
@@ -382,8 +385,38 @@ namespace BagBack100.Dungeon
             CalculateAndApplyVision();
         }
 
+        /// <summary>
+        /// 층 클리어 시 현재 층의 안개를 전부 걷는다(기획 07 Q20: 클리어 신호이자 계단·탈출구 위치 공개).
+        /// 미탐험 구역의 상자·바닥 아이템도 보이도록 오브젝트 가시성까지 갱신한다.
+        /// </summary>
+        public void RevealAll()
+        {
+            if (!_isInitialized || _fogTilemap == null) return;
+
+            // 상태 사전을 순회하며 같은 사전을 고치지 않도록 칸 목록을 먼저 복사한다
+            _previousVisibleBuffer.Clear();
+            foreach (var cell in _fogStates.Keys)
+            {
+                _previousVisibleBuffer.Add(cell);
+            }
+
+            _currentlyVisibleCells.Clear();
+            for (int i = 0; i < _previousVisibleBuffer.Count; i++)
+            {
+                Vector3Int cell = _previousVisibleBuffer[i];
+                _currentlyVisibleCells.Add(cell);
+                SetCellFogStateInternal(cell, FogState.Visible, _visibleColor.a);
+            }
+
+            _isRevealed = true;
+            RefreshMonstersVisibility();
+            RefreshObjectsVisibility();
+        }
+
         private void CalculateAndApplyVision()
         {
+            // 광원 등록·해제 경로(RequestVisionUpdate)도 여기로 들어오므로 가드는 진입부에 둔다
+            if (_isRevealed) return;
             if (_grid == null || _fogTilemap == null) return;
 
             // 1. 이전 시야 셀 백업 및 초기화

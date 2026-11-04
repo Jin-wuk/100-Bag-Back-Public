@@ -14,9 +14,10 @@ namespace BagBack100.Dungeon
     /// Role: 층계 던전 맵 생성과 엔티티 스폰. RegionConfigSO에서 층 디자인을 골라 층 프리팹을 런타임 생성하고
     ///       마커(시작점·계단·탈출구·상자 후보)와 몬스터 구역(DungeonZone)으로 배치한다.
     ///       위층 계단(FloorStairs)으로 같은 씬 안에서 다음 층을 다시 만든다(층 전환).
+    ///       층 클리어(FloorClearTracker) 시 보스층 정리, 안개 해제, 전투 상태 해제, 계단 잠금 해제, 탈출구 굴림을 처리한다.
     /// Dependencies: RegionConfigSO, FloorDesignSO, FloorLayout, FloorMarker, FloorStairs, FloorChest, FloorDesignValidator, DungeonZone,
-    ///               FogOfWarSystem, TileSystem, GamePauseService, PlayerController, PlayerSessionData
-    /// Events: GlobalEvents.OnFloorTransitionStarted, GlobalEvents.OnFloorEntered
+    ///               FloorClearTracker, FogOfWarSystem, TileSystem, GamePauseService, PlayerController, PlayerCombatState, PlayerSessionData
+    /// Events: GlobalEvents.OnFloorTransitionStarted, GlobalEvents.OnFloorEntered, GlobalEvents.OnFloorCleared
     /// </summary>
     public class DungeonGenerator : MonoBehaviour
     {
@@ -56,6 +57,8 @@ namespace BagBack100.Dungeon
         [SerializeField] private RegionConfigSO _regionConfig;
         [Tooltip("탈출구·위층 계단 마커 주변 몬스터·함정 스폰 금지 반경 (체비쇼프, 1 = 3x3)")]
         [SerializeField, Min(0)] private int _markerSafeRadius = 1;
+        [Tooltip("탈출구·위층 계단 마커 주변 바닥 아이템 드랍 금지 반경 (체비쇼프, 1 = 3x3, 기획 07 Q27)")]
+        [SerializeField, Min(0)] private int _noDropRadius = 1;
         [Tooltip("위층 계단 프리팹 (FloorStairs). 10층은 생성하지 않는다")]
         [SerializeField] private FloorStairs _stairsPrefab;
         [Tooltip("상자 프리팹 (FloorChest). 층별 규칙의 굴림 횟수·확률로 상자 후보 마커에 놓는다")]
@@ -79,6 +82,11 @@ namespace BagBack100.Dungeon
         private readonly List<FloorDesignSO> _designCandidates = new List<FloorDesignSO>();
         private readonly List<FloorMarker> _chestCandidates = new List<FloorMarker>();
 
+        private FloorClearTracker _clearTracker;
+        private FloorStairs _currentStairs;
+        // 플레이어가 마지막으로 도착한 칸. 계단·탈출구가 열리는 순간 그 위에 서 있는지(겹침 가드) 판정에 쓴다
+        private Vector3Int _lastPlayerCell;
+
         public static DungeonGenerator Instance { get; private set; }
 
         public Tilemap FloorTilemap => _floorTilemap;
@@ -97,6 +105,7 @@ namespace BagBack100.Dungeon
             }
 
             if (_grid == null) _grid = FindObjectOfType<Grid>();
+            _clearTracker = new FloorClearTracker(HandleFloorCleared);
 
             // 층 경로는 Start 전에 타일맵을 바인딩해야 Pathfinder·FogOfWar가 새 층을 본다
             if (_regionConfig == null)
@@ -113,13 +122,22 @@ namespace BagBack100.Dungeon
         private void OnEnable()
         {
             FloorStairs.OnStairsEntered += HandleStairsEntered;
+            GlobalEvents.OnPlayerCellChanged += HandlePlayerCellChanged;
         }
 
         private void OnDisable()
         {
             FloorStairs.OnStairsEntered -= HandleStairsEntered;
+            GlobalEvents.OnPlayerCellChanged -= HandlePlayerCellChanged;
             if (_isTransitioning) EndTransitionLock();
         }
+
+        private void OnDestroy()
+        {
+            _clearTracker?.End();
+        }
+
+        private void HandlePlayerCellChanged(Vector3Int cell) => _lastPlayerCell = cell;
 
         public bool IsCellWalkable(Vector3Int cell)
         {
@@ -138,6 +156,8 @@ namespace BagBack100.Dungeon
 
             SetupFloorLayout(_currentFloor);
             RaiseFloorEntered();
+            // 층 진입 알림 뒤에 판정을 켠다 (몬스터 0마리 층의 클리어가 진입 알림보다 먼저 나가지 않게)
+            _clearTracker.Arm();
         }
 
         #region Floor Dungeon Setup (FloorLayout + Marker)
@@ -226,6 +246,7 @@ namespace BagBack100.Dungeon
             }
 
             RaiseFloorEntered();
+            _clearTracker.Arm();
             yield return new WaitForSecondsRealtime(_floorFadeSeconds);
             EndTransitionLock();
         }
@@ -254,6 +275,9 @@ namespace BagBack100.Dungeon
         /// </summary>
         private void ClearFloor()
         {
+            // 이전 층 몬스터가 파괴되며 들어오는 제거 이벤트가 클리어를 띄우지 않도록 판정부터 끈다
+            _clearTracker.End();
+            _currentStairs = null;
             Projectile.ReleaseAll();
             AttackWarningUI.ReleaseAll();
 
@@ -322,21 +346,29 @@ namespace BagBack100.Dungeon
             }
 
             Vector3Int playerStartCell = LayoutToGridCell(layout, startMarker);
+            // 몬스터 생성(Awake의 OnSpawned)보다 먼저 등록부를 연다
+            _clearTracker.Begin(IsBossFloor(_currentFloorNumber));
             SpawnPlayerAtCell(playerStartCell);
 
             Dictionary<Vector3Int, int> reachableSteps = BuildReachableTileMap(playerStartCell, 5000);
             HashSet<Vector3Int> occupiedCells = new HashSet<Vector3Int> { playerStartCell };
 
             // 탈출구·계단 주변은 스폰 금지, 상자 후보 칸은 상자 자리로 예약 (상자가 안 나와도 비워 둔다)
+            // 계단은 10층에 만들지 않으므로, 보스층에 마커가 남아 있어도 스폰·드랍 금지 영역을 만들지 않는다
+            bool hasStairs = _currentFloorNumber < RegionConfigSO.BossFloor;
             ReserveMarkerCells(layout, FloorMarkerType.Exit, _markerSafeRadius, occupiedCells);
-            ReserveMarkerCells(layout, FloorMarkerType.UpStairs, _markerSafeRadius, occupiedCells);
+            if (hasStairs) ReserveMarkerCells(layout, FloorMarkerType.UpStairs, _markerSafeRadius, occupiedCells);
             ReserveMarkerCells(layout, FloorMarkerType.ChestCandidate, 0, occupiedCells);
+            RegisterNoDropCells(layout, FloorMarkerType.Exit);
+            if (hasStairs) RegisterNoDropCells(layout, FloorMarkerType.UpStairs);
 
-            // T2: 위층 계단은 항상 열림. 10층은 계단 없음. 잠금·겹침 가드는 T4.
+            // 위층 계단은 잠긴 채로 만들고 층 클리어 시 연다. 10층은 계단 없음.
             FloorMarker stairsMarker = layout.GetSingleMarker(FloorMarkerType.UpStairs);
-            if (stairsMarker != null && _stairsPrefab != null && _currentFloorNumber < RegionConfigSO.BossFloor)
+            if (hasStairs && stairsMarker != null && _stairsPrefab != null)
             {
-                Instantiate(_stairsPrefab, _grid.GetCellCenterWorld(LayoutToGridCell(layout, stairsMarker)), Quaternion.identity, _spawnRoot);
+                Vector3Int stairsCell = LayoutToGridCell(layout, stairsMarker);
+                _currentStairs = Instantiate(_stairsPrefab, _grid.GetCellCenterWorld(stairsCell), Quaternion.identity, _spawnRoot);
+                _currentStairs.Initialize(stairsCell);
             }
 
             SpawnChests(layout);
@@ -391,6 +423,54 @@ namespace BagBack100.Dungeon
                 FloorChest chest = Instantiate(_chestPrefab, _grid.GetCellCenterWorld(chestCell), Quaternion.identity, _spawnRoot);
                 chest.Initialize(_regionConfig.ChestDropPoolId, chestCell);
             }
+        }
+
+        private void RegisterNoDropCells(FloorLayout layout, FloorMarkerType type)
+        {
+            if (TileSystem.Instance == null) return;
+            layout.CollectMarkers(type, _markerBuffer);
+            for (int i = 0; i < _markerBuffer.Count; i++)
+            {
+                Vector3Int center = LayoutToGridCell(layout, _markerBuffer[i]);
+                for (int dx = -_noDropRadius; dx <= _noDropRadius; dx++)
+                {
+                    for (int dy = -_noDropRadius; dy <= _noDropRadius; dy++)
+                    {
+                        TileSystem.Instance.RegisterNoDropCell(new Vector3Int(center.x + dx, center.y + dy, 0));
+                    }
+                }
+            }
+        }
+
+        private static bool IsBossFloor(int floor) => floor == RegionConfigSO.MidBossFloor || floor >= RegionConfigSO.BossFloor;
+
+        /// <summary>
+        /// 층 클리어 (FloorClearTracker 콜백, 층마다 1회). 보스층이면 남은 잡몹·소환수를 전리품 없이 제거하고
+        /// 날아가는 투사체·예고 장판을 지운다. 이어서 안개 해제, 전투 상태 해제, 계단 잠금 해제.
+        /// </summary>
+        private void HandleFloorCleared(IReadOnlyList<Monster.MonsterController> remaining)
+        {
+            bool isBossFloor = IsBossFloor(_currentFloorNumber);
+            if (isBossFloor)
+            {
+                for (int i = 0; i < remaining.Count; i++)
+                {
+                    if (remaining[i] != null) remaining[i].DespawnWithoutLoot();
+                }
+                Projectile.ReleaseAll();
+                AttackWarningUI.ReleaseAll();
+            }
+
+            if (FogOfWarSystem.Instance != null) FogOfWarSystem.Instance.RevealAll();
+
+            if (_player != null && _player.TryGetComponent<PlayerCombatState>(out var combatState))
+            {
+                combatState.ExitCombat();
+            }
+
+            if (_currentStairs != null) _currentStairs.Unlock(_lastPlayerCell);
+
+            GlobalEvents.OnFloorCleared?.Invoke(_currentFloorNumber, false);
         }
 
         private void ReserveMarkerCells(FloorLayout layout, FloorMarkerType type, int radius, HashSet<Vector3Int> occupiedCells)
@@ -577,6 +657,9 @@ namespace BagBack100.Dungeon
         {
             if (_grid == null) return;
             Vector3 worldPos = _grid.GetCellCenterWorld(cell);
+
+            // 1층은 PlayerController.Start(첫 OnPlayerCellChanged)보다 층 배치가 먼저라 마지막 도착 칸을 직접 넣는다
+            _lastPlayerCell = cell;
 
             if (_player != null)
             {
