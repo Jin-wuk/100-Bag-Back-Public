@@ -6,7 +6,8 @@ namespace BagBack100.UI
 {
     /// <summary>
     /// Role: 던전 가방(인벤토리·장비·보상) 패널 열기/닫기. 열려 있는 동안 이동 차단과 게임 일시정지를 요청한다.
-    /// Dependencies: PlayerInput, GamePauseService
+    ///       전투 중에는 가방을 열지 않는다(일시정지로 숨 돌리기 방지, 보안 파우치 이동도 비전투로 제한 — 기획 07 Q16).
+    /// Dependencies: PlayerInput, PlayerCombatState, GamePauseService, UIToast
     /// Events: 없음
     /// </summary>
     public class DungeonUIManager : MonoBehaviour
@@ -16,7 +17,13 @@ namespace BagBack100.UI
         [Tooltip("상자 오픈 등 특정 상황에서만 켜질 보상 패널 (루트의 자식이어야 함)")]
         [SerializeField] private GameObject _rewardPanel;
 
+        [Header("Combat Lock")]
+        [Tooltip("전투 중 가방을 열려고 할 때 안내할 토스트 (가방 패널 밖 HUD 캔버스의 UIToast)")]
+        [SerializeField] private UIToast _toast;
+        [SerializeField] private string _combatLockedMessage = "Can't open the bag during combat.";
+
         private PlayerInput _playerInput;
+        private PlayerCombatState _combatState;
 
         private void Awake()
         {
@@ -49,10 +56,20 @@ namespace BagBack100.UI
                 _playerInput.OnInventoryToggle -= ToggleInventoryScreen;
             }
             _playerInput = input;
+            _combatState = null;
             if (_playerInput != null)
             {
                 _playerInput.OnInventoryToggle += ToggleInventoryScreen;
+                // 전투 상태는 입력과 같은 플레이어 오브젝트에 붙어 있다
+                _playerInput.TryGetComponent(out _combatState);
             }
+        }
+
+        private bool IsOpenBlockedByCombat()
+        {
+            if (_combatState == null || !_combatState.IsInCombat) return false;
+            if (_toast != null) _toast.Show(_combatLockedMessage);
+            return true;
         }
 
         private void Update()
@@ -68,6 +85,7 @@ namespace BagBack100.UI
             if (_inventoryScreenRoot == null) return;
 
             bool open = !_inventoryScreenRoot.activeSelf;
+            if (open && IsOpenBlockedByCombat()) return;
 
             // 순수하게 'Tab' 키로 인벤토리를 열 때는 보상 패널을 끔
             if (open && _rewardPanel != null)
@@ -89,6 +107,9 @@ namespace BagBack100.UI
         /// </summary>
         public void OpenRewardScreen()
         {
+            // 보상 패널만 켜진 채 남지 않도록 패널을 켜기 전에 검사한다
+            if (IsOpenBlockedByCombat()) return;
+
             if (_rewardPanel != null)
             {
                 _rewardPanel.SetActive(true);
