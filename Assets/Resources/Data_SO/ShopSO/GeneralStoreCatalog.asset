@@ -32,3 +32,5 @@ MonoBehaviour:
     price: 800
   - item: {fileID: 11400000, guid: 9c1645afb940481fbf646518f8cc5dc7, type: 2}
     price: 1500
+  - item: {fileID: 11400000, guid: 7d845068c157a9242b5feea4a9f79aee, type: 2}
+    price: 200
