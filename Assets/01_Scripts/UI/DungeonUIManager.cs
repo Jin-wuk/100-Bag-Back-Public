@@ -7,7 +7,8 @@ namespace BagBack100.UI
     /// <summary>
     /// Role: 던전 가방(인벤토리·장비·보상) 패널 열기/닫기. 열려 있는 동안 이동 차단과 게임 일시정지를 요청한다.
     ///       전투 중에는 가방을 열지 않는다(일시정지로 숨 돌리기 방지, 보안 파우치 이동도 비전투로 제한 — 기획 07 Q16).
-    /// Dependencies: PlayerInput, PlayerCombatState, GamePauseService, UIToast
+    ///       소모품 사용 실패 사유(전투 중 귀환석, 포션 쿨타임 등)도 같은 HUD 토스트로 띄운다.
+    /// Dependencies: PlayerInput, PlayerCombatState, ConsumableController(OnUseFailed), GamePauseService, UIToast
     /// Events: 없음
     /// </summary>
     public class DungeonUIManager : MonoBehaviour
@@ -24,6 +25,7 @@ namespace BagBack100.UI
 
         private PlayerInput _playerInput;
         private PlayerCombatState _combatState;
+        private ConsumableController _consumables;
 
         private void Awake()
         {
@@ -47,6 +49,7 @@ namespace BagBack100.UI
             {
                 _playerInput.OnInventoryToggle -= ToggleInventoryScreen;
             }
+            BindConsumables(null);
         }
 
         private void OnInputCreated(PlayerInput input)
@@ -63,17 +66,37 @@ namespace BagBack100.UI
                 // 전투 상태는 입력과 같은 플레이어 오브젝트에 붙어 있다
                 _playerInput.TryGetComponent(out _combatState);
             }
+
+            ConsumableController consumables = null;
+            if (_playerInput != null) _playerInput.TryGetComponent(out consumables);
+            BindConsumables(consumables);
+        }
+
+        private void BindConsumables(ConsumableController consumables)
+        {
+            if (_consumables == consumables) return;
+            if (_consumables != null) _consumables.OnUseFailed -= ShowToast;
+            _consumables = consumables;
+            if (_consumables != null) _consumables.OnUseFailed += ShowToast;
+        }
+
+        private void ShowToast(string message)
+        {
+            if (_toast != null) _toast.Show(message);
         }
 
         private bool IsOpenBlockedByCombat()
         {
             if (_combatState == null || !_combatState.IsInCombat) return false;
-            if (_toast != null) _toast.Show(_combatLockedMessage);
+            ShowToast(_combatLockedMessage);
             return true;
         }
 
         private void Update()
         {
+            // 떠나기 확인창·층 전환 중(입력 잠금)에는 Esc로 확인창 뒤의 가방만 닫히지 않게 한다
+            if (_playerInput != null && _playerInput.IsInputLocked) return;
+
             if (_inventoryScreenRoot != null && _inventoryScreenRoot.activeSelf && Input.GetKeyDown(KeyCode.Escape))
             {
                 CloseInventoryScreen();
