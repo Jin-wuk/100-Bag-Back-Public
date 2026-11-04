@@ -1,28 +1,65 @@
-# 스크립트 종속성 맵: 플레이어 및 익스트랙션 데이터 시스템 (Player & Extraction System)
+# 스크립트 종속성 맵: 플레이어 · 아이템 · 익스트랙션 (Player & Items)
 
-본 문서는 플레이어의 이동, 스탯/사망, 인벤토리·장비·창고 관리 및 씬 전환 간 데이터 영속성을 담당하는 스크립트들의 아키텍처 지도입니다.
+플레이어 이동·전투·스탯, 가방·장비·창고·파우치·퀵슬롯, 기지 거래, 씬 간 데이터 영속성을 담당하는 스크립트 지도입니다.
+전체 구조와 `GlobalEvents` 목록은 [ARCHITECTURE.md](../../ARCHITECTURE.md)를 참고하세요.
 
-## 📁 `Assets/01_Scripts/Data/Core/`
-- **`SaveData.cs` (`PlayerSessionData`)**: `02_HubScene` ↔ `03_DungeonScene` 씬 전환 간 인벤토리(`InventoryItems`), 장착 장비(`EquippedItems`), 허브 창고(`StorageItems`) 런타임 데이터를 보존하는 영속 컨테이너입니다. 사망 시 `ClearPlayerLoadoutOnDeath()`를 통해 창고 아이템은 보존하고 인벤토리 및 장착 장비를 모두 증발시킵니다.
+## 1. 데이터와 영속성 — `Data/Core/`
 
-## 📁 `Assets/01_Scripts/Player/` & `Assets/01_Scripts/Combat/`
-- **`PlayerController.cs`**: 플레이어의 상태(`Idle`, `Moving`, `Attacking`, `Charging`) 및 전투 입력을 총괄합니다.
-  - **Zero-GC 단일 슬롯 선입력 버퍼 (`BufferedCommand`)**: 람다 클로저 할당 없이 값 타입 구조체(`BufferedCommand`)와 유효 시간(`_inputBufferWindow = 0.22s`) 기반으로 작동합니다. 타일 이동 중이나 공격 모션 락(Recovery) 종료 직전에 입력된 **마지막 1개의 명령(공격/차징/이동)**만 덮어쓰기(Single-Slot Overwrite)로 보존하여, 광클 폭주를 막고 타일 안착/모션 해제 프레임에 오차 없이 즉각 발동합니다.
-  - **좌클릭 3타 콤보 공격 & 무기별 그리드 히트박스**: 이동(WASD) 후에도 `_comboResetTime`(1.5초) 이내 입력 시 `1타(1.0x) ➡️ 2타(Y축 반전 1.15x) ➡️ 3타(확대 강타 1.5x)` 콤보가 유지되며, `WeaponDataSO`의 `WeaponHitboxPattern`(`SingleTile`, `ForwardLine2`, `WideSweep3`)에 따라 다중 타일 피격 판정 및 무기별 차등 `Shake`/`Hitstop` 배율이 적용됩니다.
-  - **우클릭 홀드 차징 강공격**: 우클릭을 `_chargeDuration`(0.6초) 동안 홀드하여 완충 후 떼면 전방 2칸 직선 타일(`_chargeLineLength = 2`)의 모든 적에게 강공격(`2.0x`)을 가합니다. 완충 전 마우스를 떼면 무효(캔슬) 처리됩니다.
-- **`PlayerInput.cs`**: WASD 4방향 이동, 마우스 8방향 조준, 좌클릭 일반 공격(`OnAttackInput`), 우클릭 차징 홀드/릴리즈(`OnChargeStartInput`/`OnChargeReleaseInput`), 인벤토리(`Tab`) 입력을 처리합니다.
-- **`PlayerMovement.cs`**: 그리드 타일 기반 이동을 수행합니다. 고속 선형 이동 시 미세 Y축 바운스(`_hopHeight`), 발걸음 좌우 틸트 워블(`_wobbleAngle`), 도약/착지 스쿼시&스트레치(`_enableSquashAndStretch`)를 결합하여 GC Zero 기반의 유기적인 보행감(Locomotion Feel)을 제공합니다.
-- **`PlayerStatManager.cs`**: `MaxHp`/`MaxMp`와 `CurrentHp`/`CurrentMp`를 분리 관리하며, 피격 시 `GlobalEvents.OnEntityDamaged`를 발행합니다. `CurrentHp <= 0` 도달 시 `HandleDeath()`를 호출하여 가방과 장착 장비를 모두 증발시키고 `02_HubScene`으로 복귀시킵니다.
-- **`EntityCombat.cs` & `CombatFeedbackSystem.cs`**: 무기 이펙트 프리팹, 투사체(`Projectile.cs`), 절차적 타격 스파크, 데미지 플로팅 텍스트를 `Instantiate/Destroy` 없이 100% 오브젝트 풀링으로 처리하며, `Time.unscaledDeltaTime` 기반의 프레임 독립적 쿨다운과 무기별 `CameraFollow.cs` 카메라 쉐이크 및 마이크로 히트스톱(`GlobalEvents.OnCombatImpact`)을 구동합니다.
-- **`InventoryManager.cs`**: 플레이어 가방 슬롯을 관리하며, `Awake` 시 `PlayerSessionData`에서 아이템과 가방 용량 보너스를 복원하고 변경 시 자동 동기화합니다.
-- **`EquipmentManager.cs`**: 장착 장비를 부위별로 관리하며, `Awake` 시 `PlayerSessionData`에서 장착 상태를 복원하고 변경 시 자동 동기화합니다.
+| 스크립트 | 역할 |
+| --- | --- |
+| `SaveData.cs` (`PlayerSessionData`) | 씬 전환 간 영속 정적 컨테이너. 가방(`InventoryItems`), 장착 장비(`EquippedItems`), 창고(`StorageItems`), 보안 파우치(`PouchItems`), 퀵슬롯 등록, 지갑 골드(`Gold`, 시작 1000, `OnGoldChanged`), 현재 지역·층, 직전 결과(`LastRunResult`). 사망 시 `ClearPlayerLoadoutOnDeath()`로 가방·장착 장비만 비움 |
+| `RunResult.cs` | 한 판의 결과 기록(POCO). 탈출이면 가져온 전리품과 총 가치, 사망이면 잃은 것과 파우치로 지킨 것. 아이템 사본으로 저장 |
+| `RuntimeItem.cs` | 획득한 아이템 1개: 원본 SO + 고유 ID + 슬롯 위치 + 개수 |
+| `SlotContainer.cs` / `ISlotItemContainer.cs` | 칸 배열, 겹치기(`maxStack`), 이동·교환, 크기 변경(`Resize`, 줄어들면 넘친 아이템 반환). 가방·창고·파우치가 공유 |
+| `GameEnums.cs` | `ItemCategory`, `EquipType`(8부위), `ItemRarity`, `ArmorBranch`, `GameState` 등 |
 
-## 📁 `Assets/01_Scripts/Hub/` & `Assets/01_Scripts/UI/`
-- **`StorageManager.cs`**: 허브 개인 창고 슬롯을 관리하며 `PlayerSessionData.StorageItems`와 동기화합니다.
-- **`HubSystem.cs`**: 허브 오브젝트 클릭 이벤트를 수신하며, 허브 씬 내 `StorageManager`/`InventoryManager`/`EquipmentManager` 존재를 보장합니다. 창고(`HubObjectType.Storage`) 클릭 시 창고 UI(`_storageUIPanel`)와 인벤토리/장비 통합 UI(`_inventoryUIPanel`)를 동시에 활성화합니다 (`ESC` 키로 닫기 지원).
-- **`InventoryUIController.cs` / `StorageUIController.cs` / `EquipmentUIController.cs`**: `IItemContainerUI` 인터페이스를 통해 인벤토리↔창고 간 드래그 앤 드롭 이동 및 더블클릭 장착/이동을 처리합니다.
+## 2. 플레이어 — `Player/`, `Combat/`, `Core/`
+
+| 스크립트 | 역할 |
+| --- | --- |
+| `PlayerInput.cs` | WASD 4방향 이동, 마우스 8방향 조준, 좌클릭 공격, 우클릭 차징 홀드/릴리즈, `Z` 투사체, `1` `2` `3` 퀵슬롯, `Tab` 가방. 입력을 이벤트로만 전달 |
+| `PlayerController.cs` | 상태(`Idle`/`Moving`/`Attacking`/`Charging`)와 단일 슬롯 선입력 버퍼(`BufferedCommand`, 0.22초). 3타 콤보(1.0/1.15/1.5배, 1.5초 유지), 차징(0.6초, 전방 2칸, 2.0배), 무기 히트박스(`WeaponHitboxPattern`) 계산 |
+| `PlayerMovement.cs` | 칸 단위 이동과 보행 연출(바운스, 틸트, 스쿼시) |
+| `EntityCombat.cs` | 공격 판정과 후딜레이(`Time.unscaledDeltaTime`). 공격 대상이 `IAttackInteractable`(상자)이면 피해 대신 상호작용 호출. 몬스터용 즉시 타격(`ApplyImmediateHit`) |
+| `PlayerStatManager.cs` | 기본 스탯 + 장비 합산, 피격 시 `CombatMath.Mitigate`로 방어력 경감 후 실제 적용 피해 반환, `OnEntityDamaged` 발행. HP 0이면 결과 기록 → 가방·장비 초기화 → 기지 복귀 |
+| `PlayerCombatState.cs` | `OnEntityDamaged`를 구독해 마지막 타격·피격 후 5초간 전투 중 판정, `OnCombatStateChanged` |
+| `CombatMath.cs` | `DEF/(100+DEF)` 점감, 음수 방어력 증폭(최대 2.0배), 관통력 |
+| `GamePauseService.cs` | `Time.timeScale` 단일 소유. 일시정지 요청자 집합 + 히트스톱 |
+| `CombatFeedbackSystem.cs` / `CameraFollow.cs` | 데미지 텍스트·이펙트·투사체 풀, 카메라 셰이크와 히트스톱 요청(`OnCombatImpact` 구독) |
+
+## 3. 아이템 — `Player/`
+
+| 스크립트 | 역할 |
+| --- | --- |
+| `InventoryManager.cs` | 가방. `SlotContainer` 사용, 배낭 보너스로 칸 수 변경, 줍기(`OnItemPickedUpByPlayer` 구독), 버리기(`OnItemDiscardRequested` 발행, 반경 2칸, 기지에서는 `CanDiscard = false`), 휴지통 삭제 |
+| `EquipmentManager.cs` | 8부위 장착. 던전 프리팹에서는 장착·해제 잠금(기지 전용). 배낭 교체 시 칸 축소로 넘친 아이템은 `OnItemDroppedOnGround` |
+| `SecurePouchManager.cs` | 보안 파우치 2칸, 장비 거부, `PouchItems` 동기화 |
+| `QuickSlotManager.cs` | 퀵슬롯 1·2·3을 itemID로 연결. 사용 시 가방의 같은 종류 앞 칸부터 소모. 파우치는 세지 않음 |
+| `ConsumableController.cs` | 포션 규칙: 전투 중 지속 회복(`hotDuration` 5초) + 공용 쿨타임(`combatGcd` 7초), 비전투 즉시 회복. 회복할 것이 없으면 소모 안 함 |
+
+## 4. 기지 — `Hub/`
+
+| 스크립트 | 역할 |
+| --- | --- |
+| `HubSystem.cs` | `OnHubObjectClicked` 분기(던전 포탈, 창고, 대장간, 잡화상). 플레이어가 없는 기지에서도 가방·장비·창고·파우치·퀵슬롯 매니저 존재 보장 |
+| `HubTradeSystem.cs` | 판매: `baseValue` × 수량 → 지갑 골드. 구매: `ShopCatalogSO` 가격, 가방 → 창고 순으로 넣고 둘 다 차면 취소. `OnTradeFailed`, `OnTradeCompleted` |
+| `StorageManager.cs` | 창고. `StorageItems`와 동기화 |
+
+## 5. UI — `UI/`
+
+| 스크립트 | 역할 |
+| --- | --- |
+| `ItemContainerUIBase.cs` / `IItemContainerUI.cs` / `IItemDropTarget.cs` | 컨테이너 UI 공통: 드래그 앤 드롭, 더블클릭, `E` 빠른 이동, 드롭 대상(휴지통·판매 칸·퀵슬롯) |
+| `InventoryUIController.cs` | 가방 뷰. 우클릭 시 `ItemContextMenuUI`(버리기·판매) |
+| `StorageUIController.cs` / `SecurePouchUIController.cs` / `EquipmentUIController.cs` / `EquipmentSlotUI.cs` / `DraggableItemUI.cs` | 창고, 파우치, 장비창, 장비 칸, 끌리는 아이템 |
+| `ItemQuantityDialogUI.cs` / `TrashSlotUI.cs` / `SellSlotUI.cs` | 수량 선택 확인창, 휴지통(확인 후 영구 삭제), 판매 칸 |
+| `QuickSlotBarUI.cs` / `QuickSlotSlotUI.cs` | 퀵슬롯 HUD: 아이콘, 가방 내 총 수량, 공용 쿨타임 |
+| `ShopPanelUI.cs` / `GoldDisplayUI.cs` / `RunResultUI.cs` / `UIToast.cs` | 잡화상 목록, 지갑 골드, 결과 화면(한 번 표시 후 비움), 알림 |
+| `DungeonUIManager.cs` | 던전 가방 패널. 열려 있는 동안 이동 차단 + `GamePauseService` 일시정지 요청 |
+| `PlayerStatsUIController.cs` | HP·MP·스탯 텍스트 |
 
 ---
-**[익스트랙션 루프 흐름]**
-1. **생환 (탈출 성공)**: `DungeonExit` 도달 ➡️ `PlayerSessionData`에 동기화된 인벤토리·장비 보존 ➡️ `02_HubScene` 로드 ➡️ 창고 클릭 시 창고 UI + 인벤토리/장비 UI 동시 표시 및 아이템 보관.
-2. **사망 (탈출 실패)**: `PlayerStatManager.TakeDamage` (`CurrentHp <= 0`) ➡️ `HandleDeath()` ➡️ `EquipmentManager.ClearEquipment()` & `InventoryManager.ClearInventory()` & `PlayerSessionData.ClearPlayerLoadoutOnDeath()` (가방+장착 장비 전량 증발, 창고는 유지) ➡️ `02_HubScene` 복귀.
+
+**익스트랙션 루프 흐름**
+1. **생환**: `DungeonExit` 도달 → `RunResult`(탈출) 기록 → `PlayerSessionData`에 동기화된 가방·장비·파우치 보존 → `02_HubScene` 로드 → `RunResultUI` 표시 → 대장간에서 전리품 판매(`HubTradeSystem`) → 잡화상에서 포션 구매.
+2. **사망**: `PlayerStatManager.TakeDamage`(`CurrentHp <= 0`) → `HandleDeath()` → `RunResult`(사망: 잃은 것 / 파우치로 지킨 것) 기록 → `EquipmentManager.ClearEquipment()` · `InventoryManager.ClearInventory()` · `PlayerSessionData.ClearPlayerLoadoutOnDeath()` (가방·장착 장비 삭제, 파우치·창고·지갑 골드 유지) → `02_HubScene` 복귀 → `RunResultUI` 표시.
