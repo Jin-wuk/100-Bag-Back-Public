@@ -66,6 +66,8 @@ namespace BagBack100.Player
 
         public bool CanAddItem(RuntimeItem item) => IsAllowed(item) && _container.CanAdd(item);
 
+        public int GetAcceptableAmount(RuntimeItem item, int targetSlot) => IsAllowed(item) ? _container.GetAcceptableAmount(item, targetSlot) : 0;
+
         public bool CanPlaceItemAtSlot(RuntimeItem item, int targetSlot) => IsAllowed(item) && _container.CanPlaceAt(item, targetSlot);
 
         public bool AddItemAt(RuntimeItem item, int targetSlot)

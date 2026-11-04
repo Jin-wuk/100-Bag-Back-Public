@@ -52,16 +52,7 @@ namespace BagBack100.UI
         {
             if (IsHoldingItem || clickedItem == null || clickedItem.Item == null || Container == null) return;
 
-            var inventory = FindInventory();
-            if (inventory == null || !inventory.CanAddItem(clickedItem.Item)) return;
-
-            var item = clickedItem.Item;
-            int originalSlot = item.SlotIndex;
-            Container.RemoveItem(item);
-            if (!inventory.TryAddNextAvailableSlot(item))
-            {
-                Container.AddItemAt(item, originalSlot);
-            }
+            TransferTo(FindInventory(), clickedItem.Item);
         }
     }
 }

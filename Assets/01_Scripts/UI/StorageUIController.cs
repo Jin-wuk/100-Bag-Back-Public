@@ -56,17 +56,7 @@ namespace BagBack100.UI
         {
             if (IsHoldingItem || clickedItem == null || clickedItem.Item == null || Container == null) return;
 
-            var inventoryManager = FindObjectOfType<InventoryManager>();
-            if (inventoryManager != null && inventoryManager.CanAddItem(clickedItem.Item))
-            {
-                var item = clickedItem.Item;
-                int originalSlot = item.SlotIndex;
-                Container.RemoveItem(item);
-                if (!inventoryManager.TryAddNextAvailableSlot(item))
-                {
-                    Container.AddItemAt(item, originalSlot);
-                }
-            }
+            TransferTo(FindObjectOfType<InventoryManager>(), clickedItem.Item);
         }
     }
 }

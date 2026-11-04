@@ -1,11 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
+using BagBack100.Data.Models;
 
 namespace BagBack100.Data.Core
 {
     /// <summary>
     /// Role: 1슬롯 1아이템 규칙의 슬롯 배열 + 스택/스왑 로직을 담는 순수 C# 컨테이너.
     ///       인벤토리·창고·보안 파우치가 같은 규칙을 복제하지 않도록 한 곳에 모은다 (리팩토링 트리거 4).
+    ///       겹침 한도는 아이템의 maxStack이 기본이고, 창고처럼 최소 겹침 한도를 받은 컨테이너만 더 크게 겹친다.
     /// Dependencies: RuntimeItem
     /// Events: 없음. 변경 알림과 세션 저장은 소유한 매니저가 성공한 변경 뒤에 직접 수행한다.
     /// </summary>
@@ -13,14 +15,26 @@ namespace BagBack100.Data.Core
     {
         private RuntimeItem[] _slots;
         private readonly List<RuntimeItem> _items = new List<RuntimeItem>();
+        private readonly int _minStackLimit;
 
         public int Capacity => _slots.Length;
         public int ItemCount => _items.Count;
         public IReadOnlyList<RuntimeItem> Items => _items;
 
-        public SlotContainer(int capacity)
+        /// <param name="minStackLimit">0이면 아이템의 maxStack을 그대로 쓴다. 양수면 겹치는 아이템과 재료를 이 수까지 겹친다 (창고).</param>
+        public SlotContainer(int capacity, int minStackLimit = 0)
         {
             _slots = new RuntimeItem[Mathf.Max(0, capacity)];
+            _minStackLimit = Mathf.Max(0, minStackLimit);
+        }
+
+        // 재료는 가방 압박을 위해 Rare·Legendary가 maxStack 1이지만, 창고에서는 모아 두는 자원이라 등급과 무관하게 겹친다 (기획 07 6절, 임시 규칙)
+        public int StackLimitOf(ItemDataSO data)
+        {
+            if (data == null) return 1;
+            int baseLimit = Mathf.Max(1, data.maxStack);
+            bool stackable = data.maxStack > 1 || data.category == ItemCategory.Material;
+            return _minStackLimit > 0 && stackable ? Mathf.Max(baseLimit, _minStackLimit) : baseLimit;
         }
 
         public bool Contains(RuntimeItem item) => item != null && _items.Contains(item);
@@ -124,39 +138,54 @@ namespace BagBack100.Data.Core
             return -1;
         }
 
-        public bool CanAdd(RuntimeItem item)
+        private bool IsSameStack(RuntimeItem a, RuntimeItem b) =>
+            a != null && b != null && a != b && a.ItemData.itemID == b.ItemData.itemID;
+
+        /// <summary>
+        /// 외부 아이템을 몇 개까지 받을 수 있는지. slot &lt; 0이면 자동 배치(같은 묶음 여유 + 빈칸 × 한도), 아니면 그 칸 기준.
+        /// 내부 아이템은 같은 컨테이너 안 이동이라 전량으로 본다. 결과는 [0, item.Count].
+        /// </summary>
+        public int GetAcceptableAmount(RuntimeItem item, int slot)
         {
-            if (item == null || item.ItemData == null) return false;
-            if (FindFirstEmptySlot() >= 0) return true;
+            if (item == null || item.ItemData == null || item.Count <= 0) return 0;
+            if (_items.Contains(item)) return item.Count;
 
-            // 빈칸이 없어도 같은 아이템 스택들의 남은 여유 합계로 전량 수용 가능하면 허용
-            if (item.ItemData.maxStack <= 1) return false;
+            int limit = StackLimitOf(item.ItemData);
+            long total = 0;
 
-            int availableSpace = 0;
-            for (int i = 0; i < _slots.Length; i++)
+            if (slot >= 0)
             {
-                var existing = _slots[i];
-                if (existing != null && existing != item && existing.ItemData.itemID == item.ItemData.itemID)
+                if (slot >= _slots.Length) return 0;
+                var target = _slots[slot];
+                if (target == null) total = limit;
+                else if (IsSameStack(target, item) && limit > 1) total = Mathf.Max(0, limit - target.Count);
+            }
+            else
+            {
+                for (int i = 0; i < _slots.Length; i++)
                 {
-                    availableSpace += Mathf.Max(0, existing.ItemData.maxStack - existing.Count);
-                    if (availableSpace >= item.Count) return true;
+                    var existing = _slots[i];
+                    if (existing == null) total += limit;
+                    else if (IsSameStack(existing, item) && limit > 1) total += Mathf.Max(0, limit - existing.Count);
+                    if (total >= item.Count) break;
                 }
             }
-            return false;
+            return (int)System.Math.Min(total, item.Count);
         }
 
-        /// <summary>내부 아이템은 어떤 슬롯이든 스왑 가능. 외부 아이템은 빈칸이거나 같은 아이템 스택에 전량 합쳐질 때만 가능.</summary>
+        /// <summary>외부 아이템 전량이 자동 배치로 들어가는지 (한도를 넘는 묶음은 여러 칸으로 나눠 넣는 것까지 고려).</summary>
+        public bool CanAdd(RuntimeItem item)
+        {
+            if (item == null || item.ItemData == null || Contains(item)) return false;
+            return GetAcceptableAmount(item, -1) >= item.Count;
+        }
+
+        /// <summary>내부 아이템은 어떤 슬롯이든 스왑 가능. 외부 아이템은 한도 안의 묶음을 빈칸에 놓거나 같은 아이템 스택에 전량 합쳐질 때만 가능.</summary>
         public bool CanPlaceAt(RuntimeItem item, int slot)
         {
             if (item == null || item.ItemData == null || slot < 0 || slot >= _slots.Length) return false;
             if (_items.Contains(item)) return true;
-
-            var target = _slots[slot];
-            if (target == null) return true;
-
-            return target.ItemData.itemID == item.ItemData.itemID &&
-                   item.ItemData.maxStack > 1 &&
-                   target.Count + item.Count <= target.ItemData.maxStack;
+            return GetAcceptableAmount(item, slot) >= item.Count;
         }
 
         public bool AddAt(RuntimeItem item, int slot)
@@ -165,12 +194,13 @@ namespace BagBack100.Data.Core
 
             bool isInternal = _items.Contains(item);
             var target = _slots[slot];
+            int limit = StackLimitOf(item.ItemData);
 
             if (target != null && target != item)
             {
-                if (target.ItemData.itemID == item.ItemData.itemID && item.ItemData.maxStack > 1)
+                if (target.ItemData.itemID == item.ItemData.itemID && limit > 1)
                 {
-                    int space = target.ItemData.maxStack - target.Count;
+                    int space = limit - target.Count;
                     if (space >= item.Count)
                     {
                         target.Count += item.Count;
@@ -189,6 +219,9 @@ namespace BagBack100.Data.Core
                 return true;
             }
 
+            // CanPlaceAt을 거치지 않은 호출에서도 한도를 넘는 묶음이 한 칸에 들어가지 않게 막는다
+            if (!isInternal && item.Count > limit) return false;
+
             if (isInternal && item.SlotIndex >= 0 && item.SlotIndex < _slots.Length)
             {
                 _slots[item.SlotIndex] = null;
@@ -200,25 +233,24 @@ namespace BagBack100.Data.Core
             return true;
         }
 
-        /// <summary>스택 가능한 아이템은 기존 스택에 먼저 합치고, 남은 수량은 앞쪽 빈칸에 넣는다.</summary>
+        /// <summary>
+        /// 스택 가능한 아이템은 기존 스택에 먼저 합치고, 남은 수량은 한도만큼씩 나눠 앞쪽 빈칸에 넣는다.
+        /// 전량이 들어갈 때만 실행한다(부분 수용은 SlotItemTransfer가 미리 수량을 나눠서 넣는다).
+        /// </summary>
         public bool TryAddAuto(RuntimeItem item)
         {
             // 외부에서 들어오는 아이템 전용. 내부 아이템을 넣으면 부분 병합 뒤 슬롯이 바뀌는 부작용이 있다.
-            if (Contains(item) || !CanAdd(item)) return false;
+            if (!CanAdd(item)) return false;
 
-            if (item.ItemData.maxStack > 1)
+            int limit = StackLimitOf(item.ItemData);
+            if (limit > 1)
             {
                 for (int i = 0; i < _slots.Length; i++)
                 {
                     var existing = _slots[i];
-                    if (existing == null || existing == item ||
-                        existing.ItemData.itemID != item.ItemData.itemID ||
-                        existing.Count >= existing.ItemData.maxStack)
-                    {
-                        continue;
-                    }
+                    if (!IsSameStack(existing, item) || existing.Count >= limit) continue;
 
-                    int addCount = Mathf.Min(existing.ItemData.maxStack - existing.Count, item.Count);
+                    int addCount = Mathf.Min(limit - existing.Count, item.Count);
                     existing.Count += addCount;
                     item.Count -= addCount;
 
@@ -226,8 +258,18 @@ namespace BagBack100.Data.Core
                 }
             }
 
-            int empty = FindFirstEmptySlot();
-            return empty >= 0 && AddAt(item, empty);
+            // 한도를 넘는 나머지는 새 묶음으로 떼어 빈칸에 넣고, 마지막 나머지는 원래 개체가 들고 들어간다
+            while (item.Count > limit)
+            {
+                int empty = FindFirstEmptySlot();
+                if (empty < 0) return false; // CanAdd가 막으므로 정상 흐름에서는 오지 않는다
+                var piece = new RuntimeItem(item.ItemData) { Count = limit };
+                item.Count -= limit;
+                AddAt(piece, empty);
+            }
+
+            int last = FindFirstEmptySlot();
+            return last >= 0 && AddAt(item, last);
         }
 
         public bool Remove(RuntimeItem item)

@@ -18,6 +18,9 @@ namespace BagBack100.Data.Core
         RuntimeItem GetItemAtSlot(int slotIndex);
 
         bool CanAddItem(RuntimeItem item);
+
+        /// <summary>외부 아이템을 몇 개까지 받을 수 있는지. targetSlot &lt; 0이면 자동 배치 기준 (부분 이동용, SlotItemTransfer)</summary>
+        int GetAcceptableAmount(RuntimeItem item, int targetSlot);
         bool CanPlaceItemAtSlot(RuntimeItem item, int targetSlot);
         bool AddItemAt(RuntimeItem item, int targetSlot);
         bool TryAddNextAvailableSlot(RuntimeItem item);
