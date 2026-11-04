@@ -250,7 +250,8 @@ namespace BagBack100.Player
         /// </summary>
         public int GetSplitMaxAmount(ISlotItemContainer source, RuntimeItem item)
         {
-            if (_container == null || source == null || item == null || item.ItemData == null || !ContainsInSource(source, item)) return 0;
+            // 1개짜리는 어디서든 나눌 것이 없다(창고·파우치에서도 나누기가 사실상 이동이 되지 않게, 유저 결정)
+            if (_container == null || source == null || item == null || item.ItemData == null || item.Count <= 1 || !ContainsInSource(source, item)) return 0;
             int max = ReferenceEquals(source, this) ? item.Count - 1 : item.Count;
             return Mathf.Max(0, Mathf.Min(max, _container.GetEmptySlotCapacity(item.ItemData)));
         }
