@@ -7,10 +7,10 @@ using BagBack100.Core;
 namespace BagBack100.UI
 {
     /// <summary>
-    /// Role: 층계 던전 HUD. 현재 층 상시 표시, 층 진입 배너, 층 전환 페이드. 이벤트를 받아 화면만 갱신한다.
+    /// Role: 층계 던전 HUD. 현재 층 상시 표시, 층 진입 배너, 층 전환 페이드, 층 클리어·탈출구 등장 알림. 이벤트를 받아 화면만 갱신한다.
     ///       문구 서식: {0} = 지역 번호, {1} = 층, {2} = 지역 이름 (한글 TMP 폰트가 들어오면 {2} 서식으로 바꾼다).
-    /// Dependencies: GlobalEvents
-    /// Events: 없음 (구독: GlobalEvents.OnFloorTransitionStarted, GlobalEvents.OnFloorEntered)
+    /// Dependencies: GlobalEvents, UIToast
+    /// Events: 없음 (구독: GlobalEvents.OnFloorTransitionStarted, GlobalEvents.OnFloorEntered, GlobalEvents.OnFloorCleared)
     /// </summary>
     public class FloorHUD : MonoBehaviour
     {
@@ -22,10 +22,15 @@ namespace BagBack100.UI
         [SerializeField] private TextMeshProUGUI _bannerText;
         [Tooltip("층 전환 암전용 전체 화면 이미지")]
         [SerializeField] private Image _fadeImage;
+        [Tooltip("층 클리어·탈출구 등장 알림 (가방 패널 밖 HUD 캔버스의 UIToast)")]
+        [SerializeField] private UIToast _toast;
 
         [Header("Text Format")]
         [SerializeField] private string _labelFormat = "Stage {0}-{1}F";
         [SerializeField] private string _bannerFormat = "Stage {0} - {1}F";
+        // 한글 TMP 폰트가 들어오면 "층 클리어" / "탈출구가 열렸습니다"로 바꾼다
+        [SerializeField] private string _clearMessage = "Floor Clear";
+        [SerializeField] private string _exitOpenedMessage = "Floor Clear - Exit opened!";
 
         [Header("Banner Timing (실시간 초)")]
         [SerializeField, Min(0f)] private float _bannerFadeSeconds = 0.3f;
@@ -39,12 +44,14 @@ namespace BagBack100.UI
         {
             GlobalEvents.OnFloorTransitionStarted += HandleTransitionStarted;
             GlobalEvents.OnFloorEntered += HandleFloorEntered;
+            GlobalEvents.OnFloorCleared += HandleFloorCleared;
         }
 
         private void OnDisable()
         {
             GlobalEvents.OnFloorTransitionStarted -= HandleTransitionStarted;
             GlobalEvents.OnFloorEntered -= HandleFloorEntered;
+            GlobalEvents.OnFloorCleared -= HandleFloorCleared;
         }
 
         private void Awake()
@@ -71,6 +78,11 @@ namespace BagBack100.UI
                 if (_bannerRoutine != null) StopCoroutine(_bannerRoutine);
                 _bannerRoutine = StartCoroutine(BannerRoutine());
             }
+        }
+
+        private void HandleFloorCleared(int floor, bool exitOpened)
+        {
+            if (_toast != null) _toast.Show(exitOpened ? _exitOpenedMessage : _clearMessage);
         }
 
         private void StartFade(float target)

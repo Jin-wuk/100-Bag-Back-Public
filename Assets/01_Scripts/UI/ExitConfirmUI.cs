@@ -16,8 +16,9 @@ namespace BagBack100.UI
     {
         [Tooltip("확인창으로 쓸 대화상자 (가방 패널 밖, 던전 HUD 캔버스에 둔다 — 가방이 닫히면 비활성화되지 않게)")]
         [SerializeField] private ItemQuantityDialogUI _dialog;
-        [SerializeField] private string _title = "탈출할까요?";
-        [SerializeField] private string _confirmLabel = "탈출";
+        // 던전 HUD에 한글 TMP 폰트가 없어 영어 기본값을 둔다 (폰트가 들어오면 "탈출할까요?" / "탈출")
+        [SerializeField] private string _title = "Leave the dungeon?";
+        [SerializeField] private string _confirmLabel = "Leave";
 
         private PlayerInput _playerInput;
         private DungeonExit _pendingExit;
