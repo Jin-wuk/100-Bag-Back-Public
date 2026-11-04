@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Gem Tooth
   itemIcon: {fileID: 21300000, guid: e026ffc5c5158034d9ac7a92b76b8f02, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 1

@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Prismatic Core
   itemIcon: {fileID: 21300000, guid: 9d48ac2bb09000a43ba8e6827fdbb8c7, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 2

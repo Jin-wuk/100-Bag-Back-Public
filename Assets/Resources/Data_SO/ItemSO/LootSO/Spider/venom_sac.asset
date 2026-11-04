@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Venom Sac
   itemIcon: {fileID: 21300000, guid: 5284c600287ab49428de48a074722a0f, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 2
   baseValue: 0
   rarity: 0

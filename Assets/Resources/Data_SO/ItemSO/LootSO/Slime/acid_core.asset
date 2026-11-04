@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Acid Core
   itemIcon: {fileID: 21300000, guid: f4095cd354842774ebc1ba2f6d58485c, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 1

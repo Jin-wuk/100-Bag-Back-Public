@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Ornate Gold Plate
   itemIcon: {fileID: 21300000, guid: b16df2732a539564dbe3e18c8ddacba9, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 1

@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Splintered Lid
   itemIcon: {fileID: 21300000, guid: 27fb3ba9b6c0af242ad0b5f498f6107c, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 2
   baseValue: 0
   rarity: 0

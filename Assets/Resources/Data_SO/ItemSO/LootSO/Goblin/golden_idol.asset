@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Golden Idol
   itemIcon: {fileID: 21300000, guid: 90ffb8182b4eb684e9a190a732f30c7f, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 2

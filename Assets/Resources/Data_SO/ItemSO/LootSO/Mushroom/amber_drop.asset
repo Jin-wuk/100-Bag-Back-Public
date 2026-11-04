@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Amber Drop
   itemIcon: {fileID: 21300000, guid: 526bda6e45657584a93ea43aaf415deb, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 1

@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Goblin Ear
   itemIcon: {fileID: 21300000, guid: 0bbf621e13b3bdb42925905ba693150d, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 2
   baseValue: 0
   rarity: 0

@@ -10,7 +10,8 @@
 | `SaveData.cs` (`PlayerSessionData`) | 씬 전환 간 영속 정적 컨테이너. 가방(`InventoryItems`), 장착 장비(`EquippedItems`), 창고(`StorageItems`), 보안 파우치(`PouchItems`), 퀵슬롯 등록, 지갑 골드(`Gold`, 시작 1000, `OnGoldChanged`), 현재 지역·층, 직전 결과(`LastRunResult`). 사망 시 `ClearPlayerLoadoutOnDeath()`로 가방·장착 장비만 비움 |
 | `RunResult.cs` | 한 판의 결과 기록(POCO). 탈출이면 가져온 전리품과 총 가치, 사망이면 잃은 것과 파우치로 지킨 것. 아이템 사본으로 저장 |
 | `RuntimeItem.cs` | 획득한 아이템 1개: 원본 SO + 고유 ID + 슬롯 위치 + 개수 |
-| `SlotContainer.cs` / `ISlotItemContainer.cs` | 칸 배열, 겹치기(`maxStack`), 이동·교환, 크기 변경(`Resize`, 줄어들면 넘친 아이템 반환). 가방·창고·파우치가 공유 |
+| `SlotContainer.cs` / `ISlotItemContainer.cs` | 칸 배열, 겹치기(`StackLimitOf`: 기본 `maxStack`, 최소 겹침 한도를 받은 창고는 겹치는 아이템·재료를 그 수까지), 이동·교환, 크기 변경(`Resize`, 줄어들면 넘친 아이템 반환). 한도를 넘는 묶음은 한 칸에 넣지 않고 `TryAddAuto`가 나눠 배치. `GetAcceptableAmount`로 받을 수 있는 수량 조회. 가방·창고·파우치가 공유 |
+| `SlotItemTransfer.cs` | 컨테이너 사이 이동(static). 전량이 들어가면 그대로 옮기고, 아니면 들어갈 수량만 새 묶음으로 떼어 옮긴 뒤 원본에서 덜어냄 |
 | `GameEnums.cs` | `ItemCategory`, `EquipType`(8부위), `ItemRarity`, `ArmorBranch`, `GameState` 등 |
 
 ## 2. 플레이어 — `Player/`, `Combat/`, `Core/`
@@ -43,19 +44,19 @@
 | --- | --- |
 | `HubSystem.cs` | `OnHubObjectClicked` 분기(던전 포탈, 창고, 대장간, 잡화상). 플레이어가 없는 기지에서도 가방·장비·창고·파우치·퀵슬롯 매니저 존재 보장 |
 | `HubTradeSystem.cs` | 판매: `baseValue` × 수량 → 지갑 골드. 구매: `ShopCatalogSO` 가격, 가방 → 창고 순으로 넣고 둘 다 차면 취소. `OnTradeFailed`, `OnTradeCompleted` |
-| `StorageManager.cs` | 창고. `StorageItems`와 동기화 |
+| `StorageManager.cs` | 창고(30칸). `StorageItems`와 동기화. `_stackLimit`(10)을 `SlotContainer` 최소 겹침 한도로 넘겨 재료를 등급과 무관하게 겹침 |
 
 ## 5. UI — `UI/`
 
 | 스크립트 | 역할 |
 | --- | --- |
-| `ItemContainerUIBase.cs` / `IItemContainerUI.cs` / `IItemDropTarget.cs` | 컨테이너 UI 공통: 드래그 앤 드롭, 더블클릭, `E` 빠른 이동, 드롭 대상(휴지통·판매 칸·퀵슬롯) |
+| `ItemContainerUIBase.cs` / `IItemContainerUI.cs` / `IItemDropTarget.cs` | 컨테이너 UI 공통: 드래그 앤 드롭, 더블클릭, `E` 빠른 이동, 드롭 대상(휴지통·판매 칸·퀵슬롯). 다른 컨테이너로의 이동은 모두 `SlotItemTransfer`(일부만 들어가도 이동, 드래그는 이동 전 아이콘 원위치). `IItemContainerUI.SlotContainer`로 원본 컨테이너를 넘김 |
 | `InventoryUIController.cs` | 가방 뷰. 우클릭 시 `ItemContextMenuUI`(버리기·판매) |
 | `StorageUIController.cs` / `SecurePouchUIController.cs` / `EquipmentUIController.cs` / `EquipmentSlotUI.cs` / `DraggableItemUI.cs` | 창고, 파우치, 장비창, 장비 칸, 끌리는 아이템 |
 | `ItemQuantityDialogUI.cs` / `TrashSlotUI.cs` / `SellSlotUI.cs` | 수량 선택 확인창, 휴지통(확인 후 영구 삭제), 판매 칸 |
 | `QuickSlotBarUI.cs` / `QuickSlotSlotUI.cs` | 퀵슬롯 HUD: 아이콘, 가방 내 총 수량, 공용 쿨타임 |
 | `ShopPanelUI.cs` / `GoldDisplayUI.cs` / `RunResultUI.cs` / `UIToast.cs` | 잡화상 목록, 지갑 골드, 결과 화면(한 번 표시 후 비움), 알림 |
-| `DungeonUIManager.cs` | 던전 가방 패널. 열려 있는 동안 이동 차단 + `GamePauseService` 일시정지 요청 |
+| `DungeonUIManager.cs` | 던전 가방 패널. 열려 있는 동안 이동 차단 + `GamePauseService` 일시정지 요청. 플레이어의 `PlayerCombatState`를 캐싱해 전투 중이면 Tab·보상 화면 열기를 거부하고 `UIToast`(던전 HUD의 FloorToast)로 안내. 닫기는 항상 허용 |
 | `PlayerStatsUIController.cs` | HP·MP·스탯 텍스트 |
 
 ---

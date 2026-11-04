@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Ectoplasm
   itemIcon: {fileID: 21300000, guid: 9f8d0544135c81f4d9c4e832e0006c1d, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 2
   baseValue: 0
   rarity: 0

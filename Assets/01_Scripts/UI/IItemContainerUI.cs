@@ -10,6 +10,9 @@ namespace BagBack100.UI
     /// </summary>
     public interface IItemContainerUI
     {
+        /// <summary>이 UI가 그리는 데이터 컨테이너 (다른 컨테이너로 옮길 때 원본으로 넘긴다)</summary>
+        ISlotItemContainer SlotContainer { get; }
+
         bool CanPlaceItem(RuntimeItem item, int slotIndex);
         void MoveItemFrom(RuntimeItem item, int targetSlotIndex, IItemContainerUI sourceContainer);
         void RemoveItem(RuntimeItem item);

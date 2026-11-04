@@ -9,7 +9,8 @@ namespace BagBack100.UI
     /// Role: 슬롯형 컨테이너(인벤토리·창고·보안 파우치) UI의 공통 뷰. 그리드 생성, 아이템 아이콘 배치,
     ///       드래그 앤 드롭(내부 이동 / 다른 컨테이너 이동 / IItemDropTarget 드롭), E키 빠른 이동을 처리한다.
     ///       데이터 변경은 ISlotItemContainer 커맨드로만 요청한다.
-    /// Dependencies: ISlotItemContainer, DraggableItemUI, IItemContainerUI, IItemDropTarget
+    ///       컨테이너 사이 이동은 SlotItemTransfer로 하며, 대상이 다 못 받으면 들어갈 만큼만 옮긴다.
+    /// Dependencies: ISlotItemContainer, SlotItemTransfer, DraggableItemUI, IItemContainerUI, IItemDropTarget
     /// Events: 없음
     /// </summary>
     public abstract class ItemContainerUIBase : MonoBehaviour, IItemContainerUI
@@ -70,7 +71,10 @@ namespace BagBack100.UI
 
         // ================= IItemContainerUI =================
 
-        public bool CanPlaceItem(RuntimeItem item, int slotIndex) => _container != null && _container.CanPlaceItemAtSlot(item, slotIndex);
+        public ISlotItemContainer SlotContainer => _container;
+
+        // 다른 컨테이너에서 끌어온 아이템 전용. 전량이 아니어도 일부라도 들어가면 놓을 수 있다 (나머지는 원래 칸에 남음)
+        public bool CanPlaceItem(RuntimeItem item, int slotIndex) => _container != null && _container.GetAcceptableAmount(item, slotIndex) > 0;
 
         public void RemoveItem(RuntimeItem item) => _container?.RemoveItem(item);
 
@@ -88,9 +92,8 @@ namespace BagBack100.UI
 
         public void MoveItemFrom(RuntimeItem item, int targetSlot, IItemContainerUI sourceContainer)
         {
-            if (_container == null || !_container.CanPlaceItemAtSlot(item, targetSlot)) return;
-            sourceContainer.RemoveItem(item);
-            _container.AddItemAt(item, targetSlot);
+            if (_container == null || sourceContainer == null) return;
+            SlotItemTransfer.Move(sourceContainer.SlotContainer, _container, item, targetSlot);
         }
 
         // ================= Rendering =================
@@ -266,10 +269,8 @@ namespace BagBack100.UI
                 int otherSlot = otherContainer.GetSlotIndex(hitObject.transform);
                 if (otherSlot >= 0 && otherContainer.CanPlaceItem(item, otherSlot))
                 {
-                    _heldItemUI.SetHeldState(false);
-                    Destroy(_heldItemUI.gameObject);
-                    _itemUIs.Remove(item);
-                    _heldItemUI = null;
+                    // 일부만 옮겨지면 원래 묶음이 남으므로 아이콘을 먼저 원위치한다. 전량이 옮겨지면 RefreshUI가 아이콘을 정리한다
+                    ReturnHeldItemToSlot();
                     otherContainer.MoveItemFrom(item, otherSlot, this);
                     return true;
                 }
@@ -321,15 +322,14 @@ namespace BagBack100.UI
             RuntimeItem item = _container.GetItemAtSlot(hoveredSlot);
             if (item == null) return;
 
-            var target = ResolveQuickTransferTarget();
-            if (target == null || !target.CanAddItem(item)) return;
+            SlotItemTransfer.Move(_container, ResolveQuickTransferTarget(), item, -1);
+        }
 
-            int originalSlot = item.SlotIndex;
-            _container.RemoveItem(item);
-            if (!target.TryAddNextAvailableSlot(item))
-            {
-                _container.AddItemAt(item, originalSlot);
-            }
+        /// <summary>더블클릭 등으로 이 컨테이너의 아이템을 target으로 보낸다. 다 안 들어가면 들어갈 만큼만 옮긴다.</summary>
+        protected void TransferTo(ISlotItemContainer target, RuntimeItem item)
+        {
+            if (IsHoldingItem || item == null || _container == null) return;
+            SlotItemTransfer.Move(_container, target, item, -1);
         }
 
         private Camera GetUICamera()

@@ -281,7 +281,8 @@ flowchart TD
 | --- | --- |
 | `ItemDataSO` 계열 | 아이템 원본 데이터 (읽기 전용). `EquipmentDataSO` → `WeaponDataSO`·`ArmorDataSO`·`BackpackDataSO`·`AccessoryDataSO`, `ConsumableDataSO`(회복량, 지속 회복 시간, 공용 쿨타임) |
 | `RuntimeItem` | 획득한 아이템 1개. 원본 SO 참조 + 고유 ID + 슬롯 위치 + 개수 |
-| `SlotContainer` / `ISlotItemContainer` | 칸 배열·겹치기·이동·크기 변경 공통 로직. 가방·창고·파우치가 같이 씀 |
+| `SlotContainer` / `ISlotItemContainer` | 칸 배열·겹치기·이동·크기 변경 공통 로직. 가방·창고·파우치가 같이 씀. 컨테이너별 최소 겹침 한도(창고 10)와 받을 수 있는 수량(`GetAcceptableAmount`) |
+| `SlotItemTransfer` | 컨테이너 사이 이동. 대상이 다 못 받으면 들어갈 만큼만 떼어 옮김(E키·더블클릭·드래그 공통) |
 | `InventoryManager` | 가방. 배낭 장착에 따른 칸 수, 줍기, 버리기 요청 |
 | `EquipmentManager` | 8부위 장착 장비. 던전에서는 장착·해제 잠금 |
 | `SecurePouchManager` | 보안 파우치(2칸, 장비 불가) |
@@ -296,14 +297,14 @@ flowchart TD
 | --- | --- |
 | `HubSystem` | 기지 오브젝트 클릭 분기, 기지용 매니저 보장 |
 | `HubTradeSystem` | 대장간 판매(아이템 → 지갑 골드), 잡화상 구매(`ShopCatalogSO`) |
-| `StorageManager` | 기지 창고 |
+| `StorageManager` | 기지 창고. 가방과 별도 겹침 한도(10) |
 | `InteractableController` / `OutlineEffect` / `HubObjectType` | 기지 오브젝트 클릭·외곽선·종류 |
 | `ItemContainerUIBase` / `IItemContainerUI` / `IItemDropTarget` | 가방·창고·파우치 UI의 드래그 앤 드롭 공통 처리 |
 | `InventoryUIController` / `StorageUIController` / `SecurePouchUIController` / `EquipmentUIController` | 각 컨테이너 뷰 (`DraggableItemUI`, `EquipmentSlotUI`) |
 | `ItemContextMenuUI` / `ItemQuantityDialogUI` / `TrashSlotUI` / `SellSlotUI` | 우클릭 메뉴(버리기·판매), 수량 선택 확인창, 휴지통, 판매 칸 |
 | `QuickSlotBarUI` / `QuickSlotSlotUI` | 퀵슬롯 HUD (수량, 쿨타임) |
 | `ShopPanelUI` / `GoldDisplayUI` / `RunResultUI` / `UIToast` | 잡화상 목록, 지갑 골드, 결과 화면, 알림 |
-| `DungeonUIManager` | 던전 가방 패널 열기·닫기와 일시정지 요청 |
+| `DungeonUIManager` | 던전 가방 패널 열기·닫기와 일시정지 요청. 전투 중(`PlayerCombatState`)이면 열기 거부 + HUD 토스트 |
 | `ExitConfirmUI` | 탈출 확인창. `DungeonExit.OnExitRequested`를 받아 일시정지·입력 잠금 후 확인/취소를 포탈에 전달 |
 | `PlayerStatsUIController` | HP·MP·스탯 텍스트 |
 | `UISortingOverride` | UI 정렬 순서 보정 |

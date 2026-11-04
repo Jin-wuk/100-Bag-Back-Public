@@ -23,6 +23,8 @@ namespace BagBack100.Hub
 
         [Header("Base Settings")]
         [SerializeField] private int _baseMaxSlots = 30;
+        [Tooltip("창고에서 겹치는 아이템·재료를 최소 이 수까지 겹친다 (가방 겹침 2/1/1과 별도, 기획 07 6절)")]
+        [Min(1)] [SerializeField] private int _stackLimit = 10;
 
         public int MaxSlots => _container != null ? _container.Capacity : _baseMaxSlots;
 
@@ -39,7 +41,7 @@ namespace BagBack100.Hub
 
         private void RestoreFromSession()
         {
-            _container = new SlotContainer(_baseMaxSlots);
+            _container = new SlotContainer(_baseMaxSlots, _stackLimit);
 
             _hiddenOverflow.Clear();
             _container.Load(PlayerSessionData.StorageItems, _hiddenOverflow);
@@ -60,6 +62,8 @@ namespace BagBack100.Hub
         }
 
         public bool CanAddItem(RuntimeItem item) => _container.CanAdd(item);
+
+        public int GetAcceptableAmount(RuntimeItem item, int targetSlot) => _container.GetAcceptableAmount(item, targetSlot);
 
         public bool CanPlaceItemAtSlot(RuntimeItem item, int targetSlot) => _container.CanPlaceAt(item, targetSlot);
 

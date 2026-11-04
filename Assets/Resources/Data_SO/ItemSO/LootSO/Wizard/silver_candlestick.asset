@@ -16,6 +16,6 @@ MonoBehaviour:
   itemName: Silver Candlestick
   itemIcon: {fileID: 21300000, guid: c210e2df87bf0cf45ab1a8e7d47300da, type: 3}
   category: 2
-  maxStack: 10
+  maxStack: 1
   baseValue: 0
   rarity: 1
