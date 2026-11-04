@@ -31,6 +31,14 @@ namespace BagBack100.UI
             if (existing != null) OnManagerCreated(existing);
         }
 
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            // 창고 아이템의 나누기 메뉴·수량 창이 창고가 닫힌 뒤에도 남지 않게 한다 (가방 패널은 열려 있을 수 있음)
+            var invUI = FindObjectOfType<InventoryUIController>();
+            if (invUI != null) invUI.CloseItemActions();
+        }
+
         protected override void OnDestroy()
         {
             StorageManager.OnManagerCreated -= OnManagerCreated;

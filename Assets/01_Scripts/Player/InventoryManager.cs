@@ -269,8 +269,9 @@ namespace BagBack100.Player
             // 가방 → 가방이면 원본에 1개 이상 남으므로 RemoveAmount가 원본 개체를 지우지 않는다
             if (!ReferenceEquals(source, this))
             {
-                NotifyInventoryChanged();
+                // 원본 차감을 먼저 끝내 알림을 받는 쪽이 "가방에 추가됐는데 원본은 그대로"인 중간 상태를 보지 않게 한다
                 source.RemoveAmount(item, amount);
+                NotifyInventoryChanged();
             }
             else
             {

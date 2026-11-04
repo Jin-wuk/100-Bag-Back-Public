@@ -43,6 +43,15 @@ namespace BagBack100.UI
         {
             base.OnDisable();
             // 메뉴·대화상자가 프리팹 어디에 놓이든 가방이 닫히면 함께 닫아 남은 콜백이 실행되지 않게 한다
+            CloseItemActions();
+        }
+
+        /// <summary>
+        /// 열린 우클릭 메뉴·수량 창을 닫는다. 창고·파우치 패널만 닫히고 가방은 열려 있는 경우(허브에서 대장간 전환 등)
+        /// 닫힌 패널의 아이템에 대한 나누기 확인이 늦게 실행되지 않도록 그 패널이 호출한다.
+        /// </summary>
+        public void CloseItemActions()
+        {
             if (_contextMenu != null) _contextMenu.Close();
             if (_quantityDialog != null) _quantityDialog.Close();
         }
