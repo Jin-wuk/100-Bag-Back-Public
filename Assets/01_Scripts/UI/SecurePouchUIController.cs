@@ -55,6 +55,14 @@ namespace BagBack100.UI
             TransferTo(FindInventory(), clickedItem.Item);
         }
 
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            // 파우치 아이템의 나누기 메뉴·수량 창이 파우치 패널이 닫힌 뒤에도 남지 않게 한다 (창고 UI와 같은 처리)
+            var invUI = FindObjectOfType<InventoryUIController>();
+            if (invUI != null) invUI.CloseItemActions();
+        }
+
         // 나누기: 메뉴·수량 창은 가방 패널 것을 쓰고, 나눈 수량은 가방 빈칸으로 간다
         public override void OnItemRightClicked(DraggableItemUI clickedItem, UnityEngine.EventSystems.PointerEventData eventData)
         {
