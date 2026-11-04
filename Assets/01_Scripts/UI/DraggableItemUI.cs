@@ -82,8 +82,13 @@ namespace BagBack100.UI
             }
         }
 
+        // 수량 창(나누기·버리기·판매)이 떠 있는 동안에는 뒤쪽 아이템을 끌거나 누르지 못하게 한다.
+        // 창을 띄운 뒤 원본 수량·빈칸이 바뀌면 확인이 아무 일 없이 닫히므로 입력 입구에서 막는다 (유저 승인)
+        private static bool IsInputLocked => ItemQuantityDialogUI.IsAnyOpen;
+
         public void OnBeginDrag(PointerEventData eventData)
         {
+            if (IsInputLocked) return;
             if (eventData.button == PointerEventData.InputButton.Left)
             {
                 if (_uiController != null) _uiController.OnItemBeginDrag(this, eventData);
@@ -108,6 +113,7 @@ namespace BagBack100.UI
 
         public void OnPointerClick(PointerEventData eventData)
         {
+            if (IsInputLocked) return;
             if (eventData.button == PointerEventData.InputButton.Left)
             {
                 if (eventData.clickCount == 2)
