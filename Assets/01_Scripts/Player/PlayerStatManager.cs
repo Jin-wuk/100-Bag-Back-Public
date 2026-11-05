@@ -7,7 +7,7 @@ using BagBack100.Core;
 namespace BagBack100.Player
 {
     /// <summary>
-    /// Role: 플레이어 기본 스탯 + 장비 보너스 합산, HP/MP 관리, 피격(방어력 경감, 보스 처치 후 무적), 사망 처리(가방·장비 증발 후 허브 복귀).
+    /// Role: 플레이어 기본 스탯 + 장비 보너스 합산, HP/MP 관리, 피격(방어력 경감, 피격 무적, 보스 처치 후 무적), 사망 처리(가방·장비 증발 후 허브 복귀).
     /// Dependencies: EquipmentManager, InventoryManager, CombatMath, PlayerSessionData
     /// Events: OnManagerCreated(static), OnStatsChanged, GlobalEvents.OnEntityDamaged
     /// </summary>
@@ -26,6 +26,14 @@ namespace BagBack100.Player
         [SerializeField] private float _baseAttackSpeed = 1f; // 초당 공격 횟수
         [SerializeField] private int _baseRange = 1;
 
+        [Header("Hit Invincibility (모든 피격 동일, 유저 결정 2026-11-05)")]
+        [Tooltip("피격 후 모든 피해를 무시하는 시간(초)")]
+        [SerializeField, Min(0f)] private float _hitInvincibleDuration = 0.5f;
+        [Tooltip("피격 직후 빨갛게 표시하는 시간(초)")]
+        [SerializeField, Min(0f)] private float _hitFlashDuration = 0.1f;
+        [Tooltip("무적 중 깜빡임 간격(초)")]
+        [SerializeField, Min(0.01f)] private float _hitBlinkInterval = 0.08f;
+
         [Header("Death Settings")]
         [SerializeField] private string _hubSceneName = "02_HubScene";
 
@@ -43,11 +51,18 @@ namespace BagBack100.Player
         private InventoryManager _inventoryManager;
         private bool _isInitialized = false;
         private bool _isDead = false;
+        private float _hitInvincibleEndTime;
+        private SpriteRenderer _hitFeedbackRenderer;
+        private Color _hitFeedbackBaseColor = Color.white;
+        private Coroutine _hitFeedbackRoutine;
 
         private void Awake()
         {
             _equipmentManager = GetComponent<EquipmentManager>();
             _inventoryManager = GetComponent<InventoryManager>();
+            _hitFeedbackRenderer = GetComponentInChildren<SpriteRenderer>();
+            // 차징 연출이 색을 바꾸므로 복구 기준은 피격 순간의 색이 아니라 여기서 저장한 기본색이다
+            if (_hitFeedbackRenderer != null) _hitFeedbackBaseColor = _hitFeedbackRenderer.color;
             CalculateStats();
             OnManagerCreated?.Invoke(this);
         }
@@ -66,6 +81,7 @@ namespace BagBack100.Player
             {
                 _equipmentManager.OnEquipmentChanged -= CalculateStats;
             }
+            StopHitFeedback();
         }
 
         private void Start()
@@ -112,11 +128,14 @@ namespace BagBack100.Player
         public bool IsInvincible { get; private set; }
         public void SetInvincible(bool value) => IsInvincible = value;
 
+        // 스케일 시간 기준이라 가방·확인창 일시정지 중에는 무적 시간도 흐르지 않는다
+        public bool IsHitInvincible => Time.time < _hitInvincibleEndTime;
+
         /// <param name="damage">방어력 경감 전 원본 피해</param>
         /// <returns>방어력 경감 후 실제로 깎인 체력. 사망 상태이거나 피해가 0 이하면 0 (흡혈 등 후속 효과 판정용)</returns>
         public int TakeDamage(int damage)
         {
-            if (_isDead || damage <= 0 || IsInvincible) return 0;
+            if (_isDead || damage <= 0 || IsInvincible || IsHitInvincible) return 0;
 
             // 방어력 경감 후 값이 이후 HP 차감·데미지 텍스트·반환값의 기준이 된다
             damage = CombatMath.Mitigate(damage, CurrentDefense);
@@ -135,10 +154,11 @@ namespace BagBack100.Player
                 return dealt;
             }
 
-            var renderer = GetComponentInChildren<SpriteRenderer>();
-            if (renderer != null)
+            _hitInvincibleEndTime = Time.time + _hitInvincibleDuration;
+            if (_hitFeedbackRenderer != null)
             {
-                StartCoroutine(FlashRedRoutine(renderer));
+                StopHitFeedback();
+                _hitFeedbackRoutine = StartCoroutine(HitFeedbackRoutine());
             }
             return dealt;
         }
@@ -170,12 +190,46 @@ namespace BagBack100.Player
             }
         }
 
-        private System.Collections.IEnumerator FlashRedRoutine(SpriteRenderer renderer)
+        // 프레임마다 판정해 일시정지(timeScale 0) 중에는 항상 보이게 한다. 꺼진 순간에 멈춰 캐릭터가 사라지는 것을 막는다
+        private System.Collections.IEnumerator HitFeedbackRoutine()
         {
-            Color original = renderer.color;
-            renderer.color = Color.red;
-            yield return new WaitForSeconds(0.1f);
-            renderer.color = original;
+            float startTime = Time.time;
+            float endTime = Mathf.Max(_hitInvincibleEndTime, startTime + _hitFlashDuration);
+            bool isFlashing = _hitFlashDuration > 0f;
+            if (isFlashing) _hitFeedbackRenderer.color = Color.red;
+
+            while (Time.time < endTime)
+            {
+                float elapsed = Time.time - startTime;
+                if (isFlashing && elapsed >= _hitFlashDuration)
+                {
+                    isFlashing = false;
+                    _hitFeedbackRenderer.color = _hitFeedbackBaseColor;
+                }
+
+                bool isBlinkOff = Time.timeScale > 0f && elapsed >= _hitFlashDuration
+                    && Mathf.FloorToInt((elapsed - _hitFlashDuration) / _hitBlinkInterval) % 2 == 0;
+                _hitFeedbackRenderer.enabled = !isBlinkOff;
+                yield return null;
+            }
+
+            _hitFeedbackRoutine = null;
+            RestoreHitFeedbackVisual();
+        }
+
+        private void StopHitFeedback()
+        {
+            if (_hitFeedbackRoutine == null) return;
+            StopCoroutine(_hitFeedbackRoutine);
+            _hitFeedbackRoutine = null;
+            RestoreHitFeedbackVisual();
+        }
+
+        private void RestoreHitFeedbackVisual()
+        {
+            if (_hitFeedbackRenderer == null) return;
+            _hitFeedbackRenderer.color = _hitFeedbackBaseColor;
+            _hitFeedbackRenderer.enabled = true;
         }
 
         public void Heal(int amount)

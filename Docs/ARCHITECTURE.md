@@ -181,7 +181,7 @@ flowchart LR
 | `PlayerController` | 상태 관리, 선입력 버퍼, 3타 콤보·차징 공격, 무기 히트박스 계산 |
 | `PlayerMovement` | 셀 단위 이동과 보행 연출(바운스, 틸트, 스쿼시) |
 | `EntityCombat` | 공격 판정과 후딜레이. 후딜레이는 `Time.unscaledDeltaTime`으로 계산해 히트스톱 영향을 받지 않음 |
-| `PlayerStatManager` | HP/MP, 장비 스탯 합산, 피격(`CombatMath`로 방어력 경감, 보스 처치 후 무적이면 무시), 사망 처리 |
+| `PlayerStatManager` | HP/MP, 장비 스탯 합산, 피격(`CombatMath`로 방어력 경감, 피격 무적·보스 처치 후 무적이면 무시), 사망 처리 |
 | `PlayerCombatState` | 마지막 타격·피격 후 5초간 전투 중 판정 |
 | `CombatMath` | 방어력 점감·음수 방어력 증폭 공식 (상태 없는 정적 함수) |
 | `GamePauseService` | `Time.timeScale` 단일 소유. 일시정지 요청자 집합과 히트스톱을 함께 관리 |

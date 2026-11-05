@@ -58,5 +58,6 @@ flowchart LR
 | [Hub.md](Hub.md) | 기지 구성, 판매·구매, 창고 |
 | [UI_Direction.md](UI_Direction.md) | 창고·상점·툴팁·테크트리 화면의 목표 구성 (미구현) |
 | [Roadmap.md](Roadmap.md) | 아직 구현하지 않은 기획, 아이디어 백로그 |
+| [08 지역 1 보스 기획안](../Architecture/08_Region1_Boss_Design.md) | 숲 지역 나무 보스·중간 보스 초안 (미구현) |
 
 코드 구조는 [ARCHITECTURE.md](../ARCHITECTURE.md)를 참고하세요.
