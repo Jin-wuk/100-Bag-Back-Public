@@ -32,5 +32,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 383059750893ca5448f47af073a15ada, type: 2}
   - {fileID: 11400000, guid: ae0b1cbccf780c248b84d377bdbe87bc, type: 2}
   traits: []
-  dropPoolID: 0
+  dropPoolID: 103
   goldDropBase: 18

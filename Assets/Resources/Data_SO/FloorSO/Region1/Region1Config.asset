@@ -61,5 +61,15 @@ MonoBehaviour:
     _chestRolls: 2
     _chestChance: 0.4
     _monsterCount: 7
+  _hpPerFloor: 0.1
+  _atkPerFloor: 0.05
+  _firstFloorRarity:
+    _common: 70
+    _rare: 25
+    _legendary: 5
+  _lastRuleFloorRarity:
+    _common: 50
+    _rare: 38
+    _legendary: 12
   _chestDropPoolId: 1000
   _debugAllowDuplicateDesigns: 1

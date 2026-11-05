@@ -29,6 +29,11 @@ namespace BagBack100.Data.Models
         
         [Tooltip("X축(0~1): 랜덤 주사위, Y축(0~1): 결과 가중치\n우하향(오목한) 곡선일수록 최소 횟수가 자주 나옵니다.")]
         public AnimationCurve rollProbabilityCurve = AnimationCurve.Linear(0, 0, 1, 1);
+
+        [Tooltip("켜면 entries의 등급을 현재 층의 등급 비율(RegionConfigSO)로 먼저 고르고, 그 등급 안에서 dropWeight로 고른다")]
+        public bool useFloorRarity;
+        [Tooltip("useFloorRarity 그룹에서 굴림마다 실제로 드랍할 확률")]
+        [Range(0f, 1f)] public float dropChance = 1f;
         
         public List<DropEntry> entries = new List<DropEntry>();
     }
