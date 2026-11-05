@@ -5,12 +5,13 @@ using BagBack100.Data.Models;
 using BagBack100.Data.Core;
 using BagBack100.Map;
 using BagBack100.Dungeon; // [추가] FogOfWar 연동을 위한 네임스페이스
+using BagBack100.Dungeon.Data;
 
 namespace BagBack100.Combat
 {
     /// <summary>
-    /// Role: 몬스터 사망·상자 열림 시 드랍 풀 추첨과 필드 아이템 스폰, 바닥 드랍 요청 처리. 드랍 풀 데이터 검증 경고.
-    /// Dependencies: DropPoolSO, ItemDataSO, TileSystem, Pathfinder, FogVisibilityObject, LootableItem
+    /// Role: 몬스터 사망·상자 열림 시 드랍 풀 추첨(층별 등급 비율 포함)과 필드 아이템 스폰, 바닥 드랍 요청 처리. 드랍 풀 데이터 검증 경고.
+    /// Dependencies: DropPoolSO, ItemDataSO, RegionConfigSO, PlayerSessionData, TileSystem, Pathfinder, FogVisibilityObject, LootableItem
     /// Events: 없음 (구독: GlobalEvents.OnMonsterDied, GlobalEvents.OnChestOpened, GlobalEvents.OnItemDroppedOnGround, GlobalEvents.OnItemDiscardRequested)
     /// </summary>
     public class LootSystem : MonoBehaviour
@@ -23,6 +24,10 @@ namespace BagBack100.Combat
 
         private Dictionary<int, DropPoolSO> _dropPools = new Dictionary<int, DropPoolSO>();
         private Dictionary<int, ItemDataSO> _itemDataCache = new Dictionary<int, ItemDataSO>();
+        private Dictionary<int, RegionConfigSO> _regions = new Dictionary<int, RegionConfigSO>();
+        // 지역 데이터를 찾지 못할 때 쓰는 기획 기본 비율 (기획 07 5절)
+        private static readonly RarityWeights DefaultRarityWeights = new RarityWeights(70f, 25f, 5f);
+        private static readonly ItemRarity[] AllRarities = { ItemRarity.Common, ItemRarity.Rare, ItemRarity.Legendary };
 
         private void Awake()
         {
@@ -42,6 +47,11 @@ namespace BagBack100.Combat
             foreach (var item in items)
             {
                 _itemDataCache[item.itemID] = item;
+            }
+
+            foreach (var region in Resources.LoadAll<RegionConfigSO>(""))
+            {
+                _regions[region.RegionId] = region;
             }
 
             WarnCraftOnlyItemsInDropPools(dropPools);
@@ -126,9 +136,7 @@ namespace BagBack100.Combat
                 {
                     if (fixedDrop.itemID <= 0) continue;
 
-                    int minAmt = fixedDrop.minAmount > 0 ? fixedDrop.minAmount : 1;
-                    int maxAmt = fixedDrop.maxAmount >= minAmt ? fixedDrop.maxAmount : minAmt;
-                    int amount = Random.Range(minAmt, maxAmt + 1);
+                    int amount = RollAmount(fixedDrop.minAmount, fixedDrop.maxAmount);
 
                     if (amount > 0) SpawnLootableItem(fixedDrop.itemID, amount, position, avoidOriginCell);
                 }
@@ -157,6 +165,12 @@ namespace BagBack100.Combat
 
                     if (rolls <= 0) continue;
 
+                    if (group.useFloorRarity)
+                    {
+                        for (int i = 0; i < rolls; i++) RollFloorRarityEntry(group, position, avoidOriginCell);
+                        continue;
+                    }
+
                     int totalWeight = 0;
                     for (int w = 0; w < group.entries.Count; w++) totalWeight += group.entries[w].dropWeight;
                     if (totalWeight <= 0)
@@ -177,9 +191,7 @@ namespace BagBack100.Combat
                             {
                                 if (entry.itemID > 0)
                                 {
-                                    int minAmt = entry.minAmount > 0 ? entry.minAmount : 1;
-                                    int maxAmt = entry.maxAmount >= minAmt ? entry.maxAmount : minAmt;
-                                    int amount = Random.Range(minAmt, maxAmt + 1);
+                                    int amount = RollAmount(entry.minAmount, entry.maxAmount);
 
                                     Debug.Log($"[LootSystem] '{group.groupName}' 확률 롤: 총 가중치 {totalWeight} 중 주사위 {randomValue} 나옴 👉 ItemID {entry.itemID} ({amount}개) 당첨!");
                                     SpawnLootableItem(entry.itemID, amount, position, avoidOriginCell);
@@ -194,6 +206,90 @@ namespace BagBack100.Combat
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// 등급을 층 비율로 먼저 고르고 그 등급 안에서 dropWeight로 고른다. 그룹에 없거나 비율이 0인 등급은 빼고 재정규화한다
+        /// (보스 풀처럼 일반 등급이 없는 그룹도 같은 경로를 쓴다).
+        /// </summary>
+        private void RollFloorRarityEntry(DropGroup group, Vector3 position, bool avoidOriginCell)
+        {
+            if (Random.value >= group.dropChance) return;
+
+            RarityWeights weights = GetCurrentRarityWeights();
+            float totalRarity = 0f;
+            foreach (ItemRarity rarity in AllRarities)
+            {
+                if (GroupWeightOfRarity(group, rarity, weights) > 0) totalRarity += weights.Get(rarity);
+            }
+            if (totalRarity <= 0f)
+            {
+                Debug.LogWarning($"[LootSystem] '{group.groupName}' 그룹에 현재 층 비율로 뽑을 수 있는 항목이 없습니다.");
+                return;
+            }
+
+            float rarityRoll = Random.value * totalRarity;
+            foreach (ItemRarity rarity in AllRarities)
+            {
+                int groupWeight = GroupWeightOfRarity(group, rarity, weights);
+                if (groupWeight <= 0) continue;
+
+                rarityRoll -= weights.Get(rarity);
+                // 부동소수 오차로 끝까지 못 뽑히는 일이 없도록 마지막 유효 등급까지 내려가면 그 등급을 쓴다
+                if (rarityRoll >= 0f && !IsLastValidRarity(group, rarity, weights)) continue;
+
+                int entryRoll = Random.Range(0, groupWeight);
+                foreach (var entry in group.entries)
+                {
+                    if (!IsEntryOfRarity(entry, rarity)) continue;
+                    entryRoll -= entry.dropWeight;
+                    if (entryRoll >= 0) continue;
+
+                    SpawnLootableItem(entry.itemID, RollAmount(entry.minAmount, entry.maxAmount), position, avoidOriginCell);
+                    return;
+                }
+                return;
+            }
+        }
+
+        private RarityWeights GetCurrentRarityWeights()
+        {
+            return _regions.TryGetValue(PlayerSessionData.CurrentRegionId, out var region)
+                ? region.GetRarityWeights(PlayerSessionData.CurrentFloor)
+                : DefaultRarityWeights;
+        }
+
+        private int GroupWeightOfRarity(DropGroup group, ItemRarity rarity, RarityWeights weights)
+        {
+            if (weights.Get(rarity) <= 0f) return 0;
+            int total = 0;
+            foreach (var entry in group.entries)
+            {
+                if (IsEntryOfRarity(entry, rarity)) total += entry.dropWeight;
+            }
+            return total;
+        }
+
+        private bool IsLastValidRarity(DropGroup group, ItemRarity rarity, RarityWeights weights)
+        {
+            for (int i = (int)rarity + 1; i < AllRarities.Length; i++)
+            {
+                if (GroupWeightOfRarity(group, AllRarities[i], weights) > 0) return false;
+            }
+            return true;
+        }
+
+        private bool IsEntryOfRarity(DropEntry entry, ItemRarity rarity)
+        {
+            return entry.itemID > 0 && entry.dropWeight > 0
+                && _itemDataCache.TryGetValue(entry.itemID, out var data) && data.rarity == rarity;
+        }
+
+        private static int RollAmount(int min, int max)
+        {
+            int minAmt = min > 0 ? min : 1;
+            int maxAmt = max >= minAmt ? max : minAmt;
+            return Random.Range(minAmt, maxAmt + 1);
         }
 
         private void HandleItemDroppedOnGround(RuntimeItem item, Vector3 position)
