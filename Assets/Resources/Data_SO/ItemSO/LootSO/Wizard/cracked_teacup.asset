@@ -17,5 +17,5 @@ MonoBehaviour:
   itemIcon: {fileID: 21300000, guid: 79603c8af68aa8d4f8d4d35245d13af4, type: 3}
   category: 2
   maxStack: 2
-  baseValue: 0
+  baseValue: 20
   rarity: 0
