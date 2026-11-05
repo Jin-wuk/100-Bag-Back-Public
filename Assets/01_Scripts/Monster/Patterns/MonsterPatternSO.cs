@@ -4,8 +4,10 @@ using UnityEngine;
 namespace BagBack100.Monster
 {
     /// <summary>
-    /// 모든 몬스터 공격/스킬 패턴의 기반이 되는 추상 ScriptableObject (조립식 레고 블록).
-    /// MonsterDataSO의 patterns 리스트에 조합하여 코드 수정 없이 다양한 몬스터를 생성합니다.
+    /// Role: 모든 몬스터 공격/스킬 패턴의 기반이 되는 추상 ScriptableObject (조립식 레고 블록).
+    ///       MonsterDataSO의 patterns 리스트에 조합하여 코드 수정 없이 다양한 몬스터를 생성합니다.
+    /// Dependencies: MonsterController (층 배율이 적용된 Attack)
+    /// Events: 없음
     /// </summary>
     public abstract class MonsterPatternSO : ScriptableObject
     {

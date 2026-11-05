@@ -214,7 +214,8 @@ namespace BagBack100.Combat
         /// </summary>
         private void RollFloorRarityEntry(DropGroup group, Vector3 position, bool avoidOriginCell)
         {
-            if (Random.value >= group.dropChance) return;
+            // Random.value는 1.0도 나오므로 확정 드랍(1)은 굴리지 않는다
+            if (group.dropChance < 1f && Random.value >= group.dropChance) return;
 
             RarityWeights weights = GetCurrentRarityWeights();
             float totalRarity = 0f;
@@ -229,14 +230,15 @@ namespace BagBack100.Combat
             }
 
             float rarityRoll = Random.value * totalRarity;
-            foreach (ItemRarity rarity in AllRarities)
+            for (int r = 0; r < AllRarities.Length; r++)
             {
+                ItemRarity rarity = AllRarities[r];
                 int groupWeight = GroupWeightOfRarity(group, rarity, weights);
                 if (groupWeight <= 0) continue;
 
                 rarityRoll -= weights.Get(rarity);
                 // 부동소수 오차로 끝까지 못 뽑히는 일이 없도록 마지막 유효 등급까지 내려가면 그 등급을 쓴다
-                if (rarityRoll >= 0f && !IsLastValidRarity(group, rarity, weights)) continue;
+                if (rarityRoll >= 0f && HasValidRarityAfter(group, r, weights)) continue;
 
                 int entryRoll = Random.Range(0, groupWeight);
                 foreach (var entry in group.entries)
@@ -270,13 +272,13 @@ namespace BagBack100.Combat
             return total;
         }
 
-        private bool IsLastValidRarity(DropGroup group, ItemRarity rarity, RarityWeights weights)
+        private bool HasValidRarityAfter(DropGroup group, int rarityIndex, RarityWeights weights)
         {
-            for (int i = (int)rarity + 1; i < AllRarities.Length; i++)
+            for (int i = rarityIndex + 1; i < AllRarities.Length; i++)
             {
-                if (GroupWeightOfRarity(group, AllRarities[i], weights) > 0) return false;
+                if (GroupWeightOfRarity(group, AllRarities[i], weights) > 0) return true;
             }
-            return true;
+            return false;
         }
 
         private bool IsEntryOfRarity(DropEntry entry, ItemRarity rarity)
