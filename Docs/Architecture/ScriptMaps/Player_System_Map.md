@@ -22,7 +22,7 @@
 | `PlayerController.cs` | 상태(`Idle`/`Moving`/`Attacking`/`Charging`)와 단일 슬롯 선입력 버퍼(`BufferedCommand`, 0.22초). 3타 콤보(1.0/1.15/1.5배, 1.5초 유지), 차징(0.6초, 전방 2칸, 2.0배), 무기 히트박스(`WeaponHitboxPattern`) 계산 |
 | `PlayerMovement.cs` | 칸 단위 이동과 보행 연출(바운스, 틸트, 스쿼시) |
 | `EntityCombat.cs` | 공격 판정과 후딜레이(`Time.unscaledDeltaTime`). 공격 대상이 `IAttackInteractable`(상자)이면 피해 대신 상호작용 호출. 몬스터용 즉시 타격(`ApplyImmediateHit`) |
-| `PlayerStatManager.cs` | 기본 스탯 + 장비 합산, 피격 시(`IsInvincible`이면 무시, `DungeonGenerator`가 켜고 끔) `CombatMath.Mitigate`로 방어력 경감 후 실제 적용 피해 반환, `OnEntityDamaged` 발행. HP 0이면 결과 기록 → 가방·장비 초기화 → 기지 복귀 |
+| `PlayerStatManager.cs` | 기본 스탯 + 장비 합산, 피격 시(`IsInvincible`은 `DungeonGenerator`가 켜고 끔, `IsHitInvincible`은 피격마다 0.5초, 둘 중 하나면 무시) `CombatMath.Mitigate`로 방어력 경감 후 실제 적용 피해 반환, `OnEntityDamaged` 발행. HP 0이면 결과 기록 → 가방·장비 초기화 → 기지 복귀 |
 | `PlayerCombatState.cs` | `OnEntityDamaged`를 구독해 마지막 타격·피격 후 5초간 전투 중 판정, `OnCombatStateChanged` |
 | `CombatMath.cs` | `DEF/(100+DEF)` 점감, 음수 방어력 증폭(최대 2.0배), 관통력 |
 | `GamePauseService.cs` | `Time.timeScale` 단일 소유. 일시정지 요청자 집합 + 히트스톱 |
