@@ -274,6 +274,8 @@ namespace BagBack100.Dungeon
         {
             // 이전 층 몬스터가 파괴되며 들어오는 제거 이벤트가 클리어를 띄우지 않도록 판정부터 끈다
             _clearTracker.End();
+            // 보스 처치 후 무적은 그 층을 떠나는 순간 끝난다 (기획 07 Q24)
+            SetPlayerInvincible(false);
             _currentStairs = null;
             _hasExitMarker = false;
             Projectile.ReleaseAll();
@@ -328,7 +330,7 @@ namespace BagBack100.Dungeon
             var errors = new List<string>();
             // 5층 중간 보스층은 6층으로 가는 계단이 필요하고, 10층만 계단이 없어도 된다
             StairsRequirement stairs = _currentFloorNumber >= RegionConfigSO.BossFloor ? StairsRequirement.Optional : StairsRequirement.Required;
-            if (!FloorDesignValidator.ValidateLayout(_currentFloor, stairs, _regionConfig.GetRule(_currentFloorNumber).ChestRolls, errors))
+            if (!FloorDesignValidator.ValidateLayout(_currentFloor, stairs, _regionConfig.GetRule(_currentFloorNumber).ChestRolls, errors, RegionConfigSO.IsBossFloor(_currentFloorNumber)))
             {
                 Debug.LogError($"[DungeonGenerator] 층 프리팹 규격 오류 ({design.name}):\n{string.Join("\n", errors)}");
             }
@@ -345,7 +347,7 @@ namespace BagBack100.Dungeon
 
             Vector3Int playerStartCell = LayoutToGridCell(layout, startMarker);
             // 몬스터 생성(Awake의 OnSpawned)보다 먼저 등록부를 연다
-            _clearTracker.Begin(IsBossFloor(_currentFloorNumber));
+            _clearTracker.Begin(RegionConfigSO.IsBossFloor(_currentFloorNumber));
             SpawnPlayerAtCell(playerStartCell);
 
             Dictionary<Vector3Int, int> reachableSteps = BuildReachableTileMap(playerStartCell, 5000);
@@ -379,8 +381,45 @@ namespace BagBack100.Dungeon
             DungeonZone[] monsterZones = layout.Zones;
             HashSet<Vector3Int> allZonedCells = new HashSet<Vector3Int>();
             Dictionary<DungeonZone, List<Vector3Int>> zoneValidCells = BuildZoneValidCells(monsterZones, reachableSteps, allZonedCells);
-            SpawnZoneEntities(monsterZones, zoneValidCells, allZonedCells, reachableSteps, occupiedCells, _spawnRoot);
+            // 잡몹이 보스와도 간격을 지키도록 보스를 먼저 놓고 같은 목록을 넘긴다
+            List<Vector3Int> spawnedMonsterCells = new List<Vector3Int>();
+            SpawnBoss(layout, reachableSteps, occupiedCells, spawnedMonsterCells);
+            SpawnZoneEntities(monsterZones, zoneValidCells, allZonedCells, reachableSteps, occupiedCells, spawnedMonsterCells, _spawnRoot);
             InitializeFogOfWar(playerStartCell);
+            // 보스층은 안개 없이 시작한다 (기획 07 Q20). 전환 일시정지 중이라 페이드 없이 바로 걷는다
+            if (RegionConfigSO.IsBossFloor(_currentFloorNumber) && FogOfWarSystem.Instance != null)
+            {
+                FogOfWarSystem.Instance.RevealAll(true);
+            }
+        }
+
+        /// <summary>
+        /// 보스층의 BossSpawn 마커에 지역 설정의 보스를 놓는다. 몬스터 Awake에서 클리어 등록부에 자동 등록된다.
+        /// 프리팹·마커가 없거나 칸을 쓸 수 없으면 보스 없이 진행한다(FloorClearTracker가 전원 처치 규칙으로 동작).
+        /// </summary>
+        private void SpawnBoss(FloorLayout layout, Dictionary<Vector3Int, int> reachableSteps, HashSet<Vector3Int> occupiedCells, List<Vector3Int> spawnedMonsterCells)
+        {
+            if (!RegionConfigSO.IsBossFloor(_currentFloorNumber)) return;
+
+            GameObject prefab = _regionConfig.GetBossPrefab(_currentFloorNumber);
+            FloorMarker marker = layout.GetSingleMarker(FloorMarkerType.BossSpawn);
+            if (prefab == null || marker == null)
+            {
+                Debug.LogWarning($"[DungeonGenerator] {_currentFloorNumber}층 보스 프리팹 또는 BossSpawn 마커가 없어 전원 처치 규칙으로 진행합니다.");
+                return;
+            }
+
+            Vector3Int cell = LayoutToGridCell(layout, marker);
+            bool isUnusableCell = !reachableSteps.TryGetValue(cell, out int steps) || steps <= _startSafeStepRadius || occupiedCells.Contains(cell);
+            if (isUnusableCell)
+            {
+                Debug.LogWarning($"[DungeonGenerator] {_currentFloorNumber}층 BossSpawn 칸({cell.x},{cell.y})에 보스를 놓을 수 없어 전원 처치 규칙으로 진행합니다.");
+                return;
+            }
+
+            Instantiate(prefab, _grid.GetCellCenterWorld(cell), Quaternion.identity, _spawnRoot);
+            occupiedCells.Add(cell);
+            spawnedMonsterCells.Add(cell);
         }
 
         // 층 프리팹은 Grid 원점에 생성되지만, 원점이 바뀌어도 맞도록 월드 좌표를 거쳐 Grid 칸으로 바꾼다.
@@ -437,15 +476,13 @@ namespace BagBack100.Dungeon
             }
         }
 
-        private static bool IsBossFloor(int floor) => floor == RegionConfigSO.MidBossFloor || floor >= RegionConfigSO.BossFloor;
-
         /// <summary>
         /// 층 클리어 (FloorClearTracker 콜백, 층마다 1회). 보스층이면 남은 잡몹·소환수를 전리품 없이 제거하고
         /// 날아가는 투사체·예고 장판을 지운다. 이어서 안개 해제, 전투 상태 해제, 계단 잠금 해제.
         /// </summary>
         private void HandleFloorCleared(IReadOnlyList<Monster.MonsterController> remaining)
         {
-            bool isBossFloor = IsBossFloor(_currentFloorNumber);
+            bool isBossFloor = RegionConfigSO.IsBossFloor(_currentFloorNumber);
             if (isBossFloor)
             {
                 for (int i = 0; i < remaining.Count; i++)
@@ -454,6 +491,7 @@ namespace BagBack100.Dungeon
                 }
                 Projectile.ReleaseAll();
                 AttackWarningUI.ReleaseAll();
+                SetPlayerInvincible(true);
             }
 
             if (FogOfWarSystem.Instance != null) FogOfWarSystem.Instance.RevealAll();
@@ -467,6 +505,11 @@ namespace BagBack100.Dungeon
 
             bool exitOpened = TryOpenExit(isBossFloor);
             GlobalEvents.OnFloorCleared?.Invoke(_currentFloorNumber, exitOpened);
+        }
+
+        private void SetPlayerInvincible(bool value)
+        {
+            if (_player != null && _player.TryGetComponent<PlayerStatManager>(out var stats)) stats.SetInvincible(value);
         }
 
         /// <summary>
@@ -542,10 +585,9 @@ namespace BagBack100.Dungeon
             HashSet<Vector3Int> allZonedCells,
             Dictionary<Vector3Int, int> reachableSteps,
             HashSet<Vector3Int> occupiedCells,
+            List<Vector3Int> spawnedMonsterCells,
             Transform parent)
         {
-            List<Vector3Int> spawnedMonsterCells = new List<Vector3Int>();
-
             // 층계 던전: 몬스터 수는 지역의 층별 규칙(FloorRule.MonsterCount)이 정하고, 층 디자인의 구역은 배치 가능 영역으로만 쓴다.
             // 같은 디자인이 다른 층에 나와도 층에 맞는 수가 나오게 하기 위함. 예전 통맵의 "구역 밖 복도 추가 스폰"은 쓰지 않는다.
             // 규칙 표가 없는 10층(보스층)은 F6 전까지 구역에 적힌 수를 그대로 쓴다.
