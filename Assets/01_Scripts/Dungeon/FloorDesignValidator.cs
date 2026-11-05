@@ -20,7 +20,7 @@ namespace BagBack100.Dungeon
     {
         /// <summary>계단과 탈출구 사이 최소 체비쇼프 거리. 반경 1칸(3x3) 드랍 제외 영역이 서로 겹치지 않는 거리.</summary>
         public const int MinStairsExitDistance = 3;
-        /// <summary>보스 마커는 시작점에서 이 걸음 수보다 멀어야 한다 (DungeonGenerator._startSafeStepRadius 기본값과 같음).</summary>
+        /// <summary>보스 마커는 시작점에서 이 걸음 수보다 멀어야 한다. 런타임 SpawnBoss도 같은 값으로 판정한다.</summary>
         public const int StartSafeSteps = 5;
 
         private static readonly List<FloorMarker> MarkerBuffer = new List<FloorMarker>();

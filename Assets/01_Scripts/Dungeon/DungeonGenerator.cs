@@ -410,7 +410,8 @@ namespace BagBack100.Dungeon
             }
 
             Vector3Int cell = LayoutToGridCell(layout, marker);
-            bool isUnusableCell = !reachableSteps.TryGetValue(cell, out int steps) || steps <= _startSafeStepRadius || occupiedCells.Contains(cell);
+            // 마커는 층 디자인에서 직접 찍은 위치이므로, 씬마다 다를 수 있는 잡몹용 _startSafeStepRadius 대신 검증기와 같은 기준을 쓴다
+            bool isUnusableCell = !reachableSteps.TryGetValue(cell, out int steps) || steps <= FloorDesignValidator.StartSafeSteps || occupiedCells.Contains(cell);
             if (isUnusableCell)
             {
                 Debug.LogWarning($"[DungeonGenerator] {_currentFloorNumber}층 BossSpawn 칸({cell.x},{cell.y})에 보스를 놓을 수 없어 전원 처치 규칙으로 진행합니다.");
