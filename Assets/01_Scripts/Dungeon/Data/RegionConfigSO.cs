@@ -1,9 +1,45 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using BagBack100.Data.Core;
 
 namespace BagBack100.Dungeon.Data
 {
+    /// <summary>드랍 등급 비율 한 벌 (일반/희귀/전설). 합이 100이 아니어도 상대 비율로 쓴다.</summary>
+    [Serializable]
+    public struct RarityWeights
+    {
+        [SerializeField, Min(0f)] private float _common;
+        [SerializeField, Min(0f)] private float _rare;
+        [SerializeField, Min(0f)] private float _legendary;
+
+        public RarityWeights(float common, float rare, float legendary)
+        {
+            _common = common;
+            _rare = rare;
+            _legendary = legendary;
+        }
+
+        public float Get(ItemRarity rarity)
+        {
+            switch (rarity)
+            {
+                case ItemRarity.Common: return Mathf.Max(0f, _common);
+                case ItemRarity.Rare: return Mathf.Max(0f, _rare);
+                case ItemRarity.Legendary: return Mathf.Max(0f, _legendary);
+                default: return 0f;
+            }
+        }
+
+        public static RarityWeights Lerp(RarityWeights from, RarityWeights to, float t)
+        {
+            return new RarityWeights(
+                Mathf.Lerp(from._common, to._common, t),
+                Mathf.Lerp(from._rare, to._rare, t),
+                Mathf.Lerp(from._legendary, to._legendary, t));
+        }
+    }
+
     /// <summary>
     /// 1~9층 중 한 층의 규칙 한 줄. 5층은 보스층이라 탈출구(100%)·상자(없음) 값은 쓰지 않고 몬스터 수(잡몹)만 쓴다.
     /// </summary>
@@ -34,7 +70,7 @@ namespace BagBack100.Dungeon.Data
     }
 
     /// <summary>
-    /// Role: 지역 1곳의 층 구성 정적 데이터 (디자인 풀, 보스층 디자인, 1~9층 탈출구·상자 표, 상자 드랍 풀, 디버그 옵션).
+    /// Role: 지역 1곳의 층 구성 정적 데이터 (디자인 풀, 보스층 디자인, 층별 몬스터 배율·드랍 등급 비율, 1~9층 탈출구·상자 표, 상자 드랍 풀, 디버그 옵션).
     /// Dependencies: FloorDesignSO
     /// Events: 없음
     /// </summary>
@@ -69,6 +105,16 @@ namespace BagBack100.Dungeon.Data
         [Header("Floor Rules (index 0 = 1F, 9칸)")]
         [SerializeField] private FloorRule[] _floorRules = new FloorRule[RuleFloorCount];
 
+        [Header("Floor Scaling (유저 결정 2026-11-05, 플레이 테스트로 조정)")]
+        [Tooltip("층이 1 오를 때마다 더하는 몬스터 HP 배율 (1층 1.0)")]
+        [SerializeField, Min(0f)] private float _hpPerFloor = 0.10f;
+        [Tooltip("층이 1 오를 때마다 더하는 몬스터 ATK 배율 (1층 1.0)")]
+        [SerializeField, Min(0f)] private float _atkPerFloor = 0.05f;
+        [Tooltip("1층 드랍 등급 비율 (일반/희귀/전설)")]
+        [SerializeField] private RarityWeights _firstFloorRarity = new RarityWeights(70f, 25f, 5f);
+        [Tooltip("9층 드랍 등급 비율. 1~9층은 선형 보간, 10층은 이 값")]
+        [SerializeField] private RarityWeights _lastRuleFloorRarity = new RarityWeights(50f, 38f, 12f);
+
         [Header("Chest")]
         [Tooltip("이 지역 상자를 열었을 때 쓰는 DropPoolSO의 dropPoolID")]
         [SerializeField] private int _chestDropPoolId = DefaultChestDropPoolId;
@@ -98,6 +144,15 @@ namespace BagBack100.Dungeon.Data
 
         /// <summary>5층 중간 보스층·10층 보스층 여부 (귀환석 사용 불가 등 보스층 규칙 판정용).</summary>
         public static bool IsBossFloor(int floor) => floor == MidBossFloor || floor == BossFloor;
+
+        public float GetHpMultiplier(int floor) => 1f + _hpPerFloor * Mathf.Max(0, floor - 1);
+        public float GetAtkMultiplier(int floor) => 1f + _atkPerFloor * Mathf.Max(0, floor - 1);
+
+        public RarityWeights GetRarityWeights(int floor)
+        {
+            float t = Mathf.Clamp01((floor - 1f) / (RuleFloorCount - 1f));
+            return RarityWeights.Lerp(_firstFloorRarity, _lastRuleFloorRarity, t);
+        }
 
         /// <summary>1~9층 규칙. 범위 밖(10층 등)은 기본값(전부 0).</summary>
         public FloorRule GetRule(int floor)

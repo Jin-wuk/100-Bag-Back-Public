@@ -418,9 +418,19 @@ namespace BagBack100.Dungeon
                 return;
             }
 
-            Instantiate(prefab, _grid.GetCellCenterWorld(cell), Quaternion.identity, _spawnRoot);
+            SpawnEntity(prefab, _grid.GetCellCenterWorld(cell), _spawnRoot);
             occupiedCells.Add(cell);
             spawnedMonsterCells.Add(cell);
+        }
+
+        // 몬스터면 현재 층 배율을 적용한다. 함정 등 다른 엔티티도 같은 경로로 생성된다
+        private void SpawnEntity(GameObject prefab, Vector3 worldPos, Transform parent)
+        {
+            GameObject spawned = Instantiate(prefab, worldPos, Quaternion.identity, parent);
+            if (spawned.TryGetComponent<Monster.MonsterController>(out var monster))
+            {
+                monster.ApplyFloorScaling(_regionConfig.GetHpMultiplier(_currentFloorNumber), _regionConfig.GetAtkMultiplier(_currentFloorNumber));
+            }
         }
 
         // 층 프리팹은 Grid 원점에 생성되지만, 원점이 바뀌어도 맞도록 월드 좌표를 거쳐 Grid 칸으로 바꾼다.
@@ -821,7 +831,7 @@ namespace BagBack100.Dungeon
                 if (prefab == null) continue;
 
                 Vector3 worldPos = _grid.GetCellCenterWorld(cell);
-                Instantiate(prefab, worldPos, Quaternion.identity, parent);
+                SpawnEntity(prefab, worldPos, parent);
 
                 occupiedCells.Add(cell);
                 if (spawnedMonsterCells != null)

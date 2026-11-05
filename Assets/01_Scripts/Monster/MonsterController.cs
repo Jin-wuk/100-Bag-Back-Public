@@ -64,6 +64,12 @@ namespace BagBack100.Monster
         public bool IsSummon { get; private set; }
         public bool IsBoss => _monsterData != null && _monsterData.type == MonsterType.Boss;
 
+        // 층 배율을 적용한 실제 HP 상한·공격력. 방어력은 배율을 받지 않는다 (기획 07 F4)
+        private float _hpMultiplier = 1f;
+        private float _atkMultiplier = 1f;
+        public int MaxHp => _monsterData == null ? 0 : Mathf.Max(1, Mathf.RoundToInt(_monsterData.hp * _hpMultiplier));
+        public int Attack => _monsterData == null ? 0 : Mathf.Max(1, Mathf.RoundToInt(_monsterData.atk * _atkMultiplier));
+
         // 런타임 상태 플래그
         public bool IsExecutingPattern => _isExecutingPattern;
         public bool IsInRecoveryWindow => _isInRecoveryWindow;
@@ -135,11 +141,19 @@ namespace BagBack100.Monster
             InitializeStatsFromData();
         }
 
+        /// <summary>층 생성 직후 DungeonGenerator가 호출한다. Start의 초기화도 같은 배율을 쓰므로 호출 순서와 무관하다.</summary>
+        public void ApplyFloorScaling(float hpMultiplier, float atkMultiplier)
+        {
+            _hpMultiplier = hpMultiplier;
+            _atkMultiplier = atkMultiplier;
+            InitializeStatsFromData();
+        }
+
         private void InitializeStatsFromData()
         {
             if (_monsterData == null) return;
-            CurrentHp = _monsterData.hp;
-            CurrentShield = _monsterData.HasTrait("SHIELD") ? Mathf.Max(1, _monsterData.hp / 2) : 0;
+            CurrentHp = MaxHp;
+            CurrentShield = _monsterData.HasTrait("SHIELD") ? Mathf.Max(1, MaxHp / 2) : 0;
         }
 
         private void Start()
@@ -445,7 +459,7 @@ namespace BagBack100.Monster
             SpawnWarning(cellWorldPos, telegraph);
             yield return new WaitForSeconds(telegraph);
 
-            DealDamageToPlayerAtCell(targetCell, _monsterData.atk, (cellWorldPos - transform.position).normalized, false);
+            DealDamageToPlayerAtCell(targetCell, Attack, (cellWorldPos - transform.position).normalized, false);
         }
 
         // =====================================================================
@@ -1083,7 +1097,7 @@ namespace BagBack100.Monster
 
             yield return new WaitForSeconds(fuseTime);
 
-            int explosionDmg = _monsterData != null ? _monsterData.atk * 2 : 15;
+            int explosionDmg = _monsterData != null ? Attack * 2 : 15;
             DealDamageToPlayerIfInCells(blastCells, explosionDmg, Vector3.up, true);
             FinalizeDeath();
         }
@@ -1133,7 +1147,7 @@ namespace BagBack100.Monster
         public void Heal(int amount)
         {
             if (_monsterData == null || _isDead) return;
-            CurrentHp = Mathf.Min(_monsterData.hp, CurrentHp + amount);
+            CurrentHp = Mathf.Min(MaxHp, CurrentHp + amount);
         }
 
         public void SetVisibleByFog(bool isVisible)

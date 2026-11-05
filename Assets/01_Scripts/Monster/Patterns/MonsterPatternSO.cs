@@ -56,7 +56,7 @@ namespace BagBack100.Monster
         protected int CalculateDamage(MonsterController monster)
         {
             if (monster == null || monster.Data == null) return 1;
-            return Mathf.Max(1, Mathf.RoundToInt(monster.Data.atk * damageMultiplier));
+            return Mathf.Max(1, Mathf.RoundToInt(monster.Attack * damageMultiplier));
         }
 
         protected float GetEffectiveTelegraphDuration(MonsterController monster)
