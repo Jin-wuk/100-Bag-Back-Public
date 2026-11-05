@@ -40,6 +40,7 @@ namespace BagBack100.Dungeon
                 case FloorMarkerType.UpStairs:       return new Color(0.7f, 0.4f, 1f, 0.7f);
                 case FloorMarkerType.Exit:           return new Color(0.2f, 0.9f, 1f, 0.7f);
                 case FloorMarkerType.ChestCandidate: return new Color(1f, 0.85f, 0.1f, 0.7f);
+                case FloorMarkerType.BossSpawn:      return new Color(1f, 0.25f, 0.25f, 0.7f);
                 default:                             return Color.white;
             }
         }

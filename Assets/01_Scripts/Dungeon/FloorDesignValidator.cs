@@ -11,7 +11,7 @@ namespace BagBack100.Dungeon
     }
 
     /// <summary>
-    /// Role: 층 프리팹 규격 검증 (마커 개수·위치, 계단–탈출구 거리, 상자 후보 수, 상자로 막혀도 계단·탈출구 도달 가능, 지역 풀 구성).
+    /// Role: 층 프리팹 규격 검증 (마커 개수·위치, 계단–탈출구 거리, 상자 후보 수, 상자로 막혀도 계단·탈출구 도달 가능, 보스 마커 위치, 지역 풀 구성·보스 프리팹).
     ///       에디터 메뉴와 런타임 생성기가 함께 쓰므로 UnityEditor API를 쓰지 않는다.
     /// Dependencies: FloorLayout, FloorMarker, RegionConfigSO, FloorDesignSO
     /// Events: 없음
@@ -20,11 +20,13 @@ namespace BagBack100.Dungeon
     {
         /// <summary>계단과 탈출구 사이 최소 체비쇼프 거리. 반경 1칸(3x3) 드랍 제외 영역이 서로 겹치지 않는 거리.</summary>
         public const int MinStairsExitDistance = 3;
+        /// <summary>보스 마커는 시작점에서 이 걸음 수보다 멀어야 한다 (DungeonGenerator._startSafeStepRadius 기본값과 같음).</summary>
+        public const int StartSafeSteps = 5;
 
         private static readonly List<FloorMarker> MarkerBuffer = new List<FloorMarker>();
 
         public static bool ValidateLayout(
-            FloorLayout layout, StairsRequirement stairs, int requiredChestCandidates, List<string> errors)
+            FloorLayout layout, StairsRequirement stairs, int requiredChestCandidates, List<string> errors, bool isBossFloor = false)
         {
             int errorCountBefore = errors.Count;
             if (layout == null)
@@ -48,6 +50,8 @@ namespace BagBack100.Dungeon
             CheckMarkerCount(layout, FloorMarkerType.PlayerStart, 1, 1, name, errors);
             CheckMarkerCount(layout, FloorMarkerType.Exit, 1, 1, name, errors);
             CheckMarkerCount(layout, FloorMarkerType.UpStairs, stairs == StairsRequirement.Required ? 1 : 0, 1, name, errors);
+            int bossMarkers = isBossFloor ? 1 : 0;
+            CheckMarkerCount(layout, FloorMarkerType.BossSpawn, bossMarkers, bossMarkers, name, errors);
 
             layout.CollectMarkers(FloorMarkerType.ChestCandidate, MarkerBuffer);
             if (MarkerBuffer.Count < requiredChestCandidates)
@@ -81,8 +85,27 @@ namespace BagBack100.Dungeon
                 }
             }
 
-            CheckReachableWithChestsBlocked(layout, name, errors);
+            FloorMarker bossMarker = isBossFloor ? layout.GetSingleMarker(FloorMarkerType.BossSpawn) : null;
+            if (bossMarker != null)
+            {
+                Vector3Int bossCell = layout.GetLocalCell(bossMarker);
+                if (stairs == StairsRequirement.Required) CheckBossMarkerDistance(layout, bossCell, stairsMarker, name, errors);
+                CheckBossMarkerDistance(layout, bossCell, exitMarker, name, errors);
+            }
+
+            CheckReachableWithChestsBlocked(layout, name, errors, bossMarker);
             return errors.Count == errorCountBefore;
+        }
+
+        // 계단·탈출구 주변 스폰 금지 반경과 겹치면 런타임에 보스가 놓이지 않는다
+        private static void CheckBossMarkerDistance(FloorLayout layout, Vector3Int bossCell, FloorMarker other, string name, List<string> errors)
+        {
+            if (other == null) return;
+            int distance = ChebyshevDistance(bossCell, layout.GetLocalCell(other));
+            if (distance < MinStairsExitDistance)
+            {
+                errors.Add($"[{name}] 보스 마커–{other.Type} 거리 {distance}칸 < 최소 {MinStairsExitDistance}칸.");
+            }
         }
 
         private static readonly Vector3Int[] CardinalDirs = { Vector3Int.up, Vector3Int.right, Vector3Int.down, Vector3Int.left };
@@ -90,13 +113,14 @@ namespace BagBack100.Dungeon
         private static readonly HashSet<Vector3Int> BlockedBuffer = new HashSet<Vector3Int>();
         private static readonly HashSet<Vector3Int> VisitedBuffer = new HashSet<Vector3Int>();
         private static readonly Queue<Vector3Int> QueueBuffer = new Queue<Vector3Int>();
+        private static readonly Dictionary<Vector3Int, int> StepsBuffer = new Dictionary<Vector3Int, int>();
 
         /// <summary>
         /// 상자는 열린 뒤에도 칸을 막으므로, 상자 후보 칸이 전부 막힌 최악의 경우에도
         /// 시작점에서 위층 계단·탈출구와 나머지 모든 바닥 칸에 걸어갈 수 있어야 한다
         /// (1칸 통로에 상자 후보를 두면 길이 끊기거나, 고립 칸에 몬스터·드랍이 생겨 클리어·습득이 막힌다).
         /// </summary>
-        private static void CheckReachableWithChestsBlocked(FloorLayout layout, string name, List<string> errors)
+        private static void CheckReachableWithChestsBlocked(FloorLayout layout, string name, List<string> errors, FloorMarker bossMarker)
         {
             FloorMarker start = layout.GetSingleMarker(FloorMarkerType.PlayerStart);
             if (start == null) return;
@@ -107,12 +131,14 @@ namespace BagBack100.Dungeon
             blocked.Clear();
             visited.Clear();
             queue.Clear();
+            StepsBuffer.Clear();
 
             layout.CollectMarkers(FloorMarkerType.ChestCandidate, MarkerBuffer);
             for (int i = 0; i < MarkerBuffer.Count; i++) blocked.Add(layout.GetLocalCell(MarkerBuffer[i]));
 
             Vector3Int startCell = layout.GetLocalCell(start);
             visited.Add(startCell);
+            StepsBuffer[startCell] = 0;
             queue.Enqueue(startCell);
             while (queue.Count > 0)
             {
@@ -122,12 +148,25 @@ namespace BagBack100.Dungeon
                     Vector3Int next = curr + CardinalDirs[i];
                     if (visited.Contains(next) || blocked.Contains(next) || !layout.IsLocalCellWalkable(next)) continue;
                     visited.Add(next);
+                    StepsBuffer[next] = StepsBuffer[curr] + 1;
                     queue.Enqueue(next);
                 }
             }
 
             CheckMarkerReached(layout, FloorMarkerType.UpStairs, visited, name, errors);
             CheckMarkerReached(layout, FloorMarkerType.Exit, visited, name, errors);
+            if (bossMarker != null)
+            {
+                Vector3Int bossCell = layout.GetLocalCell(bossMarker);
+                if (!StepsBuffer.TryGetValue(bossCell, out int bossSteps))
+                {
+                    errors.Add($"[{name}] 시작점에서 보스 마커({bossCell.x},{bossCell.y})에 갈 수 없습니다.");
+                }
+                else if (bossSteps <= StartSafeSteps)
+                {
+                    errors.Add($"[{name}] 보스 마커가 시작점에서 {bossSteps}걸음 (필요: {StartSafeSteps}걸음 초과).");
+                }
+            }
 
             if (layout.FloorTilemap == null) return;
             int isolated = 0;
@@ -170,7 +209,7 @@ namespace BagBack100.Dungeon
             {
                 errors.Add($"[{design.name}] 구간 {design.Band}가 들어간 풀({expectedBand})과 다릅니다.");
             }
-            ValidateLayout(design.LayoutPrefab, stairs, region.GetMaxChestRolls(expectedBand), errors);
+            ValidateLayout(design.LayoutPrefab, stairs, region.GetMaxChestRolls(expectedBand), errors, expectedBand == FloorBand.Boss);
             return errors.Count == errorCountBefore;
         }
 
@@ -195,7 +234,22 @@ namespace BagBack100.Dungeon
             CheckSharedLayouts(region, errors, warnings);
             ValidateDesign(region.MidBossFloorDesign, FloorBand.Boss, StairsRequirement.Required, region, errors);
             ValidateDesign(region.BossFloorDesign, FloorBand.Boss, StairsRequirement.Optional, region, errors);
+            CheckBossPrefab(region.MidBossPrefab, RegionConfigSO.MidBossFloor, region, warnings);
+            CheckBossPrefab(region.BossPrefab, RegionConfigSO.BossFloor, region, warnings);
             return errors.Count == errorCountBefore;
+        }
+
+        // 보스가 없어도 층은 전원 처치 규칙으로 진행되므로 오류가 아니라 경고로 둔다
+        private static void CheckBossPrefab(GameObject prefab, int floor, RegionConfigSO region, List<string> warnings)
+        {
+            if (prefab == null)
+            {
+                warnings.Add($"[{region.name}] {floor}층 보스 프리팹이 없습니다. 전원 처치 규칙으로 동작합니다.");
+            }
+            else if (!prefab.TryGetComponent(out BagBack100.Monster.MonsterController monster) || !monster.IsBoss)
+            {
+                warnings.Add($"[{region.name}] {floor}층 보스 프리팹 {prefab.name}의 데이터가 Boss 등급이 아닙니다. 전원 처치 규칙으로 동작합니다.");
+            }
         }
 
         private static void ValidatePool(IReadOnlyList<FloorDesignSO> pool, FloorBand band, RegionConfigSO region, List<string> errors)

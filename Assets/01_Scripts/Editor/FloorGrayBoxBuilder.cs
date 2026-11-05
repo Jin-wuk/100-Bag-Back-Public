@@ -77,7 +77,7 @@ namespace BagBack100.EditorTools
             "#.....##........##.....#",
             "#......................#",
             "#......................#",
-            "#......................#",
+            "#...........B..........#",
             "#......................#",
             "#......................#",
             "#.....##........##.....#",
@@ -126,9 +126,9 @@ namespace BagBack100.EditorTools
                 },
                 new FloorSpec
                 {
-                    // 보스 대체용 구역 (T7에서 보스 배치로 교체)
+                    // 보스는 BossSpawn 마커 + 지역 보스 프리팹. 구역은 잡몹 배치 영역 (10층은 구역 수 = 잡몹 2, 기획 07 2절)
                     Name = "Floor_GrayBox_Boss01", Map = Boss01Map, Band = FloorBand.Boss,
-                    Zones = new[] { new ZoneSpec(8, 9, 8, 5, 1) }
+                    Zones = new[] { new ZoneSpec(8, 9, 8, 5, 2) }
                 },
             };
         }
@@ -663,6 +663,7 @@ namespace BagBack100.EditorTools
                             case 'U': CreateMarker(markers, "UpStairs", FloorMarkerType.UpStairs, x, y); break;
                             case 'E': CreateMarker(markers, "Exit", FloorMarkerType.Exit, x, y); break;
                             case 'C': CreateMarker(markers, $"Chest_{chestIndex++}", FloorMarkerType.ChestCandidate, x, y); break;
+                            case 'B': CreateMarker(markers, "BossSpawn", FloorMarkerType.BossSpawn, x, y); break;
                         }
                     }
                 }
