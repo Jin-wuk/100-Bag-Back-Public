@@ -161,12 +161,15 @@ namespace BagBack100.Dungeon
                 _fadingCells.Remove(_completedFadeBuffer[i]);
             }
 
-            if (_maskDirty && _fogMaskTexture != null)
-            {
-                _fogMaskTexture.SetPixels32(_maskPixels);
-                _fogMaskTexture.Apply(false);
-                _maskDirty = false;
-            }
+            FlushMask();
+        }
+
+        private void FlushMask()
+        {
+            if (!_maskDirty || _fogMaskTexture == null) return;
+            _fogMaskTexture.SetPixels32(_maskPixels);
+            _fogMaskTexture.Apply(false);
+            _maskDirty = false;
         }
 
         public void Initialize(Grid grid, Tilemap floorTilemap, Tilemap wallTilemap, LayerMask obstacleMask, Vector3Int playerStartCell)
@@ -388,8 +391,10 @@ namespace BagBack100.Dungeon
         /// <summary>
         /// 층 클리어 시 현재 층의 안개를 전부 걷는다(기획 07 Q20: 클리어 신호이자 계단·탈출구 위치 공개).
         /// 미탐험 구역의 상자·바닥 아이템도 보이도록 오브젝트 가시성까지 갱신한다.
+        /// immediate: 페이드 없이 바로 걷는다. 보스층 시작(기획 07 Q20)은 층 전환 일시정지(timeScale 0) 중에 호출되는데,
+        /// 페이드는 Time.deltaTime으로 진행되므로 그대로면 화면이 밝아지는 동안 보스층이 암전으로 보인다.
         /// </summary>
-        public void RevealAll()
+        public void RevealAll(bool immediate = false)
         {
             if (!_isInitialized || _fogTilemap == null) return;
 
@@ -406,7 +411,14 @@ namespace BagBack100.Dungeon
                 Vector3Int cell = _previousVisibleBuffer[i];
                 _currentlyVisibleCells.Add(cell);
                 SetCellFogStateInternal(cell, FogState.Visible, _visibleColor.a);
+                if (immediate)
+                {
+                    _fadingCells.Remove(cell);
+                    _currentAlphas[cell] = _visibleColor.a;
+                    ApplyCellVisualAlpha(cell, _visibleColor.a);
+                }
             }
+            if (immediate) FlushMask();
 
             _isRevealed = true;
             RefreshMonstersVisibility();

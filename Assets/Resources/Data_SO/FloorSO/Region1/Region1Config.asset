@@ -22,6 +22,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 178e32a5a55d7ce4294c25d246da9647, type: 2}
   _midBossFloor: {fileID: 11400000, guid: 5a3335ce97d8c214db269cc2c6069782, type: 2}
   _bossFloor: {fileID: 11400000, guid: 5a3335ce97d8c214db269cc2c6069782, type: 2}
+  _midBossPrefab: {fileID: 3674727902322081959, guid: c1b93a4db86cf294e8340ce5d7c80d33, type: 3}
+  _bossPrefab: {fileID: 3674727902322081959, guid: c1b93a4db86cf294e8340ce5d7c80d33, type: 3}
   _floorRules:
   - _exitChance: 0.1
     _chestRolls: 1

@@ -7,7 +7,8 @@ namespace BagBack100.Dungeon
         PlayerStart,    // 층 진입 시 플레이어 위치
         UpStairs,       // 위층 계단 (10층 보스층은 무시)
         Exit,           // 탈출 포탈 위치 (클리어 시 확률로 활성화)
-        ChestCandidate  // 상자 후보 위치 (B안 굴림 당첨 시 후보 중 1곳)
+        ChestCandidate, // 상자 후보 위치 (B안 굴림 당첨 시 후보 중 1곳)
+        BossSpawn       // 보스층(5·10층) 보스 위치. 프리팹에 int로 저장되므로 뒤에만 추가
     }
 
     /// <summary>
@@ -39,6 +40,7 @@ namespace BagBack100.Dungeon
                 case FloorMarkerType.UpStairs:       return new Color(0.7f, 0.4f, 1f, 0.7f);
                 case FloorMarkerType.Exit:           return new Color(0.2f, 0.9f, 1f, 0.7f);
                 case FloorMarkerType.ChestCandidate: return new Color(1f, 0.85f, 0.1f, 0.7f);
+                case FloorMarkerType.BossSpawn:      return new Color(1f, 0.25f, 0.25f, 0.7f);
                 default:                             return Color.white;
             }
         }

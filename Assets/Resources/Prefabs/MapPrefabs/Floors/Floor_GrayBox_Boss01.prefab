@@ -32,6 +32,51 @@ Transform:
   - {fileID: 2361354723594518323}
   m_Father: {fileID: 5565692127479967285}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1238677462714695595
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3363480420887718188}
+  - component: {fileID: 6597243900046011362}
+  m_Layer: 0
+  m_Name: BossSpawn
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3363480420887718188
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1238677462714695595}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 12.5, y: 11.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 369519498640645153}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6597243900046011362
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1238677462714695595}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed7ebb400aca9f249a2e2eccaa8cb063, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _type: 4
 --- !u!1 &3545585574075343710
 GameObject:
   m_ObjectHideFlags: 0
@@ -5329,6 +5374,7 @@ Transform:
   - {fileID: 6678764492475862027}
   - {fileID: 343132205154346754}
   - {fileID: 268793271795821973}
+  - {fileID: 3363480420887718188}
   m_Father: {fileID: 5565692127479967285}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6694415595980673927
@@ -5377,7 +5423,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _zoneType: 1
   _size: {x: 8, y: 5}
-  _monsterCount: 1
+  _monsterCount: 2
   _trapCount: 0
   _overrideMonsterPool: []
 --- !u!1 &7947054921468290596

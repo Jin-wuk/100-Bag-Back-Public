@@ -3,13 +3,14 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using BagBack100.Core;
+using BagBack100.Dungeon.Data;
 
 namespace BagBack100.UI
 {
     /// <summary>
     /// Role: 층계 던전 HUD. 현재 층 상시 표시, 층 진입 배너, 층 전환 페이드, 층 클리어·탈출구 등장 알림. 이벤트를 받아 화면만 갱신한다.
     ///       문구 서식: {0} = 지역 번호, {1} = 층, {2} = 지역 이름 (한글 TMP 폰트가 들어오면 {2} 서식으로 바꾼다).
-    /// Dependencies: GlobalEvents, UIToast
+    /// Dependencies: GlobalEvents, UIToast, RegionConfigSO(보스층 판정)
     /// Events: 없음 (구독: GlobalEvents.OnFloorTransitionStarted, GlobalEvents.OnFloorEntered, GlobalEvents.OnFloorCleared)
     /// </summary>
     public class FloorHUD : MonoBehaviour
@@ -31,6 +32,8 @@ namespace BagBack100.UI
         // 한글 TMP 폰트가 들어오면 "층 클리어" / "탈출구가 열렸습니다"로 바꾼다
         [SerializeField] private string _clearMessage = "Floor Clear";
         [SerializeField] private string _exitOpenedMessage = "Floor Clear - Exit opened!";
+        // 보스층은 처치 후 그 층을 떠날 때까지 무적이고 탈출구가 항상 열린다 (기획 07 Q29). 무적 표시는 이 문구만 (유저 결정)
+        [SerializeField] private string _bossClearMessage = "Boss defeated - You are safe";
 
         [Header("Banner Timing (실시간 초)")]
         [SerializeField, Min(0f)] private float _bannerFadeSeconds = 0.3f;
@@ -82,7 +85,9 @@ namespace BagBack100.UI
 
         private void HandleFloorCleared(int floor, bool exitOpened)
         {
-            if (_toast != null) _toast.Show(exitOpened ? _exitOpenedMessage : _clearMessage);
+            if (_toast == null) return;
+            if (RegionConfigSO.IsBossFloor(floor)) _toast.Show(_bossClearMessage);
+            else _toast.Show(exitOpened ? _exitOpenedMessage : _clearMessage);
         }
 
         private void StartFade(float target)
