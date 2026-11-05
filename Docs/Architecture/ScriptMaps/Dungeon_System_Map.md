@@ -8,7 +8,7 @@
 graph TD
     %% Scriptable Objects
     subgraph DataLayer["Data Layer"]
-        RC["RegionConfigSO.cs<br>- 1~5 / 6~9 Design Pools<br>- 5F/10F Boss Designs & Boss Prefabs<br>- 1~9F Exit/Chest Rules<br>- Chest DropPool ID"]
+        RC["RegionConfigSO.cs<br>- 1~5 / 6~9 Design Pools<br>- 5F/10F Boss Designs & Boss Prefabs<br>- 1~9F Exit/Chest Rules<br>- Floor Scaling & Rarity<br>- Chest DropPool ID"]
         CDP["DropPool_Chest_Region1<br>(DropPoolSO, ID 1000)"]
         FD["FloorDesignSO.cs<br>- Floor Prefab / Band / Weight"]
     end
@@ -18,7 +18,7 @@ graph TD
         DG["DungeonGenerator.cs<br>- Floor Draw (Weighted, No Repeat per Run)<br>- Floor Transition<br>- Flood Fill (BFS) & Zone Spawning<br>- Chest B-Plan Rolls"]
         FV["FloorDesignValidator.cs<br>- Marker Count / Walkable / Stairs-Exit Distance / Boss Marker<br>- Pool Size / Shared Layouts"]
         FOW["FogOfWarSystem.cs<br>- 3-State Fog: Unexplored / Explored / Visible<br>- Bresenham LOS & Dynamic Mask Texture<br>- North 2-Tile Elevation Offset"]
-        LS["LootSystem.cs<br>- Field Loot Spawner (Monster / Chest)<br>- Auto FogVisibilityObject Attach"]
+        LS["LootSystem.cs<br>- Field Loot Spawner (Monster / Chest)<br>- Floor Rarity Roll<br>- Auto FogVisibilityObject Attach"]
     end
 
     %% Views & Objects
@@ -72,6 +72,8 @@ graph TD
     *   플레이어의 마지막 도착 칸은 `OnPlayerCellChanged`로 추적하고, 1층은 `PlayerController.Start`보다 배치가 먼저라 `SpawnPlayerAtCell`에서 직접 넣는다(겹침 가드 기준).
 
     *   **보스층 공통(F6a)**: `SetupFloorLayout`에서 잡몹보다 먼저 `SpawnBoss`(`BossSpawn` 마커 + `RegionConfigSO.GetBossPrefab`, 칸을 쓸 수 없으면 경고 후 전원 처치 규칙), 안개 초기화 뒤 `RevealAll(immediate: true)`(층 전환 일시정지 중에는 페이드가 돌지 않으므로 즉시 반영).
+
+    *   **층 배율(F4)**: `SpawnEntity`가 몬스터 생성 직후 `ApplyFloorScaling(GetHpMultiplier, GetAtkMultiplier)` 적용. 드랍 등급 비율은 `LootSystem`이 드랍 순간 `PlayerSessionData.CurrentRegionId/CurrentFloor`로 `RegionConfigSO.GetRarityWeights`를 조회한다(System 간 직접 참조 없음).
 
 ### 2.2. `FogOfWarSystem` (`MonoBehaviour`)
 *   **역할**: 플레이어의 타일 이동 이벤트(`GlobalEvents.OnPlayerCellChanged`) 및 시야원들을 추적하여 3단계 전장의 안개(`Unexplored`, `Explored`, `Visible`)와 엔티티 가시성을 총괄 제어하는 코어 비전 매니저.
@@ -127,7 +129,7 @@ graph TD
 
 ### 2.10. `FloorDesignSO` / `RegionConfigSO` (`ScriptableObject`)
 *   **`FloorDesignSO`**: 층 프리팹, 구간(`Early` 1~5 / `Late` 6~9 / `Boss`), 가중치.
-*   **`RegionConfigSO`**: 지역 번호·이름, 1~5 풀, 6~9 풀, 5층·10층 보스 디자인과 보스 프리팹, 1~9층 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 상자 드랍 풀 ID, 디버그 "디자인 중복 허용".
+*   **`RegionConfigSO`**: 지역 번호·이름, 1~5 풀, 6~9 풀, 5층·10층 보스 디자인과 보스 프리팹, 층 배율(`_hpPerFloor`, `_atkPerFloor`, 1층·9층 `RarityWeights`), 1~9층 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 상자 드랍 풀 ID, 디버그 "디자인 중복 허용".
 
 ### 2.11. `FloorDesignValidator` (static)
 *   **역할**: 런타임·에디터 공용 규격 검증. 시작점 1, 탈출구 1, 계단 1(10층 보스층은 0~1), 마커 칸 보행 가능·중복 없음, 계단–탈출구 체비쇼프 거리 ≥ 3, 상자 후보 ≥ 구간 최대 굴림 횟수, 풀 구간 일치. `BossSpawn`은 보스층 1개·일반층 0개, 시작점 5걸음 초과, 계단·탈출구와 3칸 이상. 지역 검증은 보스 프리팹 누락·비 Boss 데이터를 경고.

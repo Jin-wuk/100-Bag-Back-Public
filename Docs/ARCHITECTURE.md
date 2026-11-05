@@ -234,6 +234,7 @@ classDiagram
 - **행동 루프**: 어그로 판정(거리 + 시야) → 쿨타임을 통과한 패턴 중 가중치 랜덤 선택 → 전조(장판·조준선) → 실행 → 후딜레이 → 패턴이 없으면 이동 성향대로 1칸 이동
 - **상태 소유 규칙**: 패턴 SO는 여러 몬스터가 공유하므로 설정값과 로직만 가집니다. 좌표 버퍼, 쿨타임 같은 인스턴스별 값은 `MonsterController`가 가집니다.
 - **인터럽트**: 행동 루프에서 시작한 하위 코루틴은 `StartActionCoroutine()`으로 추적하고, 회피·기절·사망 시 한꺼번에 중단합니다.
+- 층 배율은 `DungeonGenerator`가 생성 직후 `MonsterController.ApplyFloorScaling`으로 넣고, 피해·HP 상한은 데이터 대신 `MonsterController.Attack`·`MaxHp`를 읽습니다. 소환 패턴을 구현하면 소환자 배율을 넘겨야 합니다.
 - 새 몬스터는 `MonsterDataSO`에 패턴 SO를 조합해 만들고, 새 패턴은 `MonsterPatternSO`를 상속한 클래스 하나로 추가합니다.
 
 ### 5.3 던전 · 전장의 안개
@@ -257,7 +258,7 @@ flowchart TD
 
 | 클래스 | 책임 |
 | --- | --- |
-| `RegionConfigSO` | 지역 하나의 설정: 초반(1~4층)·후반(6~9층) 디자인 풀, 5층·10층 고정 디자인, 층별 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률, 몬스터 수), 상자 드랍 풀 ID |
+| `RegionConfigSO` | 지역 하나의 설정: 초반(1~4층)·후반(6~9층) 디자인 풀, 5층·10층 고정 디자인, 층별 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률, 몬스터 수), 층 배율(몬스터 HP·ATK, 드랍 등급 비율), 상자 드랍 풀 ID |
 | `FloorDesignSO` | 층 디자인 하나: 층 프리팹, 가중치 |
 | `FloorLayout` / `FloorMarker` | 층 프리팹 루트(바닥·벽 타일맵, 마커, 구역)와 칸 역할 마커(시작점·위층 계단·탈출구·상자 후보·보스 위치) |
 | `DungeonZone` | 몬스터 배치 영역. 1~9층은 층별 규칙의 몬스터 수를 구역 칸 수 비율로 나눠 놓음 (구역 자체 수는 10층만, 함정은 미배치) |
@@ -288,7 +289,7 @@ flowchart TD
 | `SecurePouchManager` | 보안 파우치(2칸, 장비 불가) |
 | `QuickSlotManager` | 퀵슬롯 1·2·3. 아이템 개체가 아니라 itemID에 연결 |
 | `ConsumableController` | 소모품 사용 규칙. 포션(전투 중 지속 회복 + 공용 쿨타임, 비전투 즉시 회복), 귀환석(비전투·보스층 아님 확인 → 확인창 요청 → 확인 시 소모 후 탈출) |
-| `LootSystem` | 몬스터 사망·상자 열림·버리기 이벤트를 받아 바닥 아이템 생성 (`DropPoolSO` 기반) |
+| `LootSystem` | 몬스터 사망·상자 열림·버리기 이벤트를 받아 바닥 아이템 생성 (`DropPoolSO` 기반). `useFloorRarity` 그룹은 세션의 지역·층으로 `RegionConfigSO` 등급 비율을 조회해 추첨 |
 | `LootableItem` | 바닥 아이템. 밟으면 획득 이벤트 발행 |
 
 ### 5.5 기지 · UI
