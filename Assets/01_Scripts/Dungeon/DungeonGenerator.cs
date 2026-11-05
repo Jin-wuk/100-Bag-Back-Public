@@ -15,7 +15,7 @@ namespace BagBack100.Dungeon
     ///       마커(시작점·계단·탈출구·상자 후보)와 몬스터 구역(DungeonZone)으로 배치한다.
     ///       위층 계단(FloorStairs)으로 같은 씬 안에서 다음 층을 다시 만든다(층 전환).
     ///       층 클리어(FloorClearTracker) 시 보스층 정리, 안개 해제, 전투 상태 해제, 계단 잠금 해제, 탈출구 굴림을 처리한다.
-    /// Dependencies: RegionConfigSO, FloorDesignSO, FloorLayout, FloorMarker, FloorStairs, FloorChest, FloorDesignValidator, DungeonZone,
+    /// Dependencies: RegionConfigSO, FloorDesignSO, FloorLayout, FloorMarker, FloorStairs, FloorChest, FloorDesignValidator, DungeonZone, PlayerStatManager(보스 처치 후 무적),
     ///               FloorClearTracker, FogOfWarSystem, TileSystem, GamePauseService, PlayerController, PlayerCombatState, PlayerSessionData
     /// Events: GlobalEvents.OnFloorTransitionStarted, GlobalEvents.OnFloorEntered, GlobalEvents.OnFloorCleared
     /// </summary>
