@@ -181,7 +181,7 @@ flowchart LR
 | `PlayerController` | 상태 관리, 선입력 버퍼, 3타 콤보·차징 공격, 무기 히트박스 계산 |
 | `PlayerMovement` | 셀 단위 이동과 보행 연출(바운스, 틸트, 스쿼시) |
 | `EntityCombat` | 공격 판정과 후딜레이. 후딜레이는 `Time.unscaledDeltaTime`으로 계산해 히트스톱 영향을 받지 않음 |
-| `PlayerStatManager` | HP/MP, 장비 스탯 합산, 피격(`CombatMath`로 방어력 경감), 사망 처리 |
+| `PlayerStatManager` | HP/MP, 장비 스탯 합산, 피격(`CombatMath`로 방어력 경감, 보스 처치 후 무적이면 무시), 사망 처리 |
 | `PlayerCombatState` | 마지막 타격·피격 후 5초간 전투 중 판정 |
 | `CombatMath` | 방어력 점감·음수 방어력 증폭 공식 (상태 없는 정적 함수) |
 | `GamePauseService` | `Time.timeScale` 단일 소유. 일시정지 요청자 집합과 히트스톱을 함께 관리 |
@@ -259,9 +259,9 @@ flowchart TD
 | --- | --- |
 | `RegionConfigSO` | 지역 하나의 설정: 초반(1~4층)·후반(6~9층) 디자인 풀, 5층·10층 고정 디자인, 층별 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률, 몬스터 수), 상자 드랍 풀 ID |
 | `FloorDesignSO` | 층 디자인 하나: 층 프리팹, 가중치 |
-| `FloorLayout` / `FloorMarker` | 층 프리팹 루트(바닥·벽 타일맵, 마커, 구역)와 칸 역할 마커(시작점·위층 계단·탈출구·상자 후보) |
+| `FloorLayout` / `FloorMarker` | 층 프리팹 루트(바닥·벽 타일맵, 마커, 구역)와 칸 역할 마커(시작점·위층 계단·탈출구·상자 후보·보스 위치) |
 | `DungeonZone` | 몬스터 배치 영역. 1~9층은 층별 규칙의 몬스터 수를 구역 칸 수 비율로 나눠 놓음 (구역 자체 수는 10층만, 함정은 미배치) |
-| `DungeonGenerator` | 층 추첨·생성·교체, 마커와 구역 배치, 같은 씬 층 전환, 층 클리어 처리(보스층 정리·안개 해제·계단 열기·탈출구 굴림) |
+| `DungeonGenerator` | 층 추첨·생성·교체, 마커와 구역 배치, 같은 씬 층 전환, 보스 배치(`BossSpawn` 마커 + `RegionConfigSO` 보스 프리팹), 보스층 안개 없이 시작, 층 클리어 처리(보스층 정리·무적·안개 해제·계단 열기·탈출구 굴림) |
 | `FloorClearTracker` | 현재 층의 살아 있는 몬스터 등록부와 클리어 판정 (POCO, `DungeonGenerator` 소유) |
 | `FloorDesignValidator` | 층 규격 검증. 에디터 메뉴(`FloorGrayBoxBuilder`)와 런타임이 함께 씀 |
 | `FloorStairs` | 위층 계단. 잠긴 채 생성, 클리어 시 열림. 칸 도착으로 지역 이벤트만 던짐 |

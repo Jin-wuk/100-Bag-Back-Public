@@ -8,7 +8,7 @@
 graph TD
     %% Scriptable Objects
     subgraph DataLayer["Data Layer"]
-        RC["RegionConfigSO.cs<br>- 1~5 / 6~9 Design Pools<br>- 5F/10F Boss Designs<br>- 1~9F Exit/Chest Rules<br>- Chest DropPool ID"]
+        RC["RegionConfigSO.cs<br>- 1~5 / 6~9 Design Pools<br>- 5F/10F Boss Designs & Boss Prefabs<br>- 1~9F Exit/Chest Rules<br>- Chest DropPool ID"]
         CDP["DropPool_Chest_Region1<br>(DropPoolSO, ID 1000)"]
         FD["FloorDesignSO.cs<br>- Floor Prefab / Band / Weight"]
     end
@@ -16,7 +16,7 @@ graph TD
     %% Managers & Core Logic
     subgraph LogicLayer["Logic Layer"]
         DG["DungeonGenerator.cs<br>- Floor Draw (Weighted, No Repeat per Run)<br>- Floor Transition<br>- Flood Fill (BFS) & Zone Spawning<br>- Chest B-Plan Rolls"]
-        FV["FloorDesignValidator.cs<br>- Marker Count / Walkable / Stairs-Exit Distance<br>- Pool Size / Shared Layouts"]
+        FV["FloorDesignValidator.cs<br>- Marker Count / Walkable / Stairs-Exit Distance / Boss Marker<br>- Pool Size / Shared Layouts"]
         FOW["FogOfWarSystem.cs<br>- 3-State Fog: Unexplored / Explored / Visible<br>- Bresenham LOS & Dynamic Mask Texture<br>- North 2-Tile Elevation Offset"]
         LS["LootSystem.cs<br>- Field Loot Spawner (Monster / Chest)<br>- Auto FogVisibilityObject Attach"]
     end
@@ -24,7 +24,7 @@ graph TD
     %% Views & Objects
     subgraph ViewLayer["View / Object Layer"]
         FL["FloorLayout.cs<br>- Floor Prefab Root<br>- Floor/Wall Tilemaps, Markers, Zones"]
-        FM["FloorMarker.cs<br>- PlayerStart / UpStairs / Exit / ChestCandidate"]
+        FM["FloorMarker.cs<br>- PlayerStart / UpStairs / Exit / ChestCandidate / BossSpawn"]
         DZ["DungeonZone.cs<br>- Floor Path: Combat / Corridor<br>- Box Bounds & Gizmos"]
         FC["FloorChest.cs<br>- Blocks Tile (TileSystem)<br>- Open by Player Attack<br>- OnChestOpened"]
         DE["DungeonExit.cs<br>- Cell Arrival Detection<br>- Exit Request / Scene Transition"]
@@ -68,8 +68,10 @@ graph TD
     *   **층 전환(T2)**: `UpStairs` 마커에 `FloorStairs`(10층 제외)를 두고, 밟히면 `FloorStairs.OnStairsEntered` → `AscendRoutine`: `GamePauseService.Request` + `PlayerInput.IsInputLocked` → `GlobalEvents.OnFloorTransitionStarted(fade)` → 페이드 시간 대기(실시간) → `ClearFloor()`(투사체·예고 장판 `ReleaseAll`, 이전 층 루트 비활성·분리·파괴, `Physics2D.SyncTransforms`, `TileSystem.ClearAll`로 점유·위험 칸·바닥 아이템 정리) → 다음 층 `BuildFloor`/`SetupFloorLayout` → `GlobalEvents.OnFloorEntered` → 페이드 시간 대기 → 잠금 해제.
     *   플레이어는 1층에서만 생성하고 2층부터는 `PlayerController.ResetForFloorTransition`(이동 코루틴·차징·선입력 정지, 위치 이동, 타일 등록, 카메라 `SnapToTarget`)으로 재사용한다 → HP·MP·쿨타임·HoT 유지.
     *   현재 층은 `PlayerSessionData.CurrentRegionId/CurrentFloor`에 기록(결과 화면 지역·층 표시, 07 문서 F7용).
-    *   **층 클리어(T4, F3)**: `FloorClearTracker`(POCO)를 층 생명주기에 연결 — 플레이어 스폰 직전 `Begin(보스층 여부)`, 층 진입 알림 뒤 `Arm()`, `ClearFloor` 맨 앞에서 `End()`(이전 층 몬스터 파괴가 클리어를 띄우지 않게). 클리어 콜백 `HandleFloorCleared`: 보스층이면 남은 몬스터 `DespawnWithoutLoot` + 투사체·예고 장판 `ReleaseAll` → `FogOfWarSystem.RevealAll` → `PlayerCombatState.ExitCombat` → 계단 `Unlock(마지막 도착 칸)` → `TryOpenExit`(보스층 100%, 그 외 `FloorRule.ExitChance`, 성공 시 포탈 생성·`Activate(칸, 마지막 도착 칸)`) → `GlobalEvents.OnFloorCleared(층, 탈출구 열림)`.
+    *   **층 클리어(T4, F3)**: `FloorClearTracker`(POCO)를 층 생명주기에 연결 — 플레이어 스폰 직전 `Begin(보스층 여부)`, 층 진입 알림 뒤 `Arm()`, `ClearFloor` 맨 앞에서 `End()`(이전 층 몬스터 파괴가 클리어를 띄우지 않게). 클리어 콜백 `HandleFloorCleared`: 보스층이면 남은 몬스터 `DespawnWithoutLoot` + 투사체·예고 장판 `ReleaseAll` + `PlayerStatManager.SetInvincible(true)`(`ClearFloor`에서 해제) → `FogOfWarSystem.RevealAll` → `PlayerCombatState.ExitCombat` → 계단 `Unlock(마지막 도착 칸)` → `TryOpenExit`(보스층 100%, 그 외 `FloorRule.ExitChance`, 성공 시 포탈 생성·`Activate(칸, 마지막 도착 칸)`) → `GlobalEvents.OnFloorCleared(층, 탈출구 열림)`.
     *   플레이어의 마지막 도착 칸은 `OnPlayerCellChanged`로 추적하고, 1층은 `PlayerController.Start`보다 배치가 먼저라 `SpawnPlayerAtCell`에서 직접 넣는다(겹침 가드 기준).
+
+    *   **보스층 공통(F6a)**: `SetupFloorLayout`에서 잡몹보다 먼저 `SpawnBoss`(`BossSpawn` 마커 + `RegionConfigSO.GetBossPrefab`, 칸을 쓸 수 없으면 경고 후 전원 처치 규칙), 안개 초기화 뒤 `RevealAll(immediate: true)`(층 전환 일시정지 중에는 페이드가 돌지 않으므로 즉시 반영).
 
 ### 2.2. `FogOfWarSystem` (`MonoBehaviour`)
 *   **역할**: 플레이어의 타일 이동 이벤트(`GlobalEvents.OnPlayerCellChanged`) 및 시야원들을 추적하여 3단계 전장의 안개(`Unexplored`, `Explored`, `Visible`)와 엔티티 가시성을 총괄 제어하는 코어 비전 매니저.
@@ -120,15 +122,15 @@ graph TD
 
 ### 2.9. `FloorLayout` / `FloorMarker` (`MonoBehaviour`)
 *   **`FloorLayout`**: 층 프리팹 루트. `Floor`·`Wall` 타일맵 참조, 마커·구역 수집(지연 캐싱, Edit Mode에서는 매번 재수집), 루트 기준 칸 좌표(`GetLocalCell`, 셀 크기 1).
-*   **`FloorMarker`**: `PlayerStart` / `UpStairs` / `Exit` / `ChestCandidate`. 칸 중앙(+0.5)에 둔다.
+*   **`FloorMarker`**: `PlayerStart` / `UpStairs` / `Exit` / `ChestCandidate` / `BossSpawn`. 칸 중앙(+0.5)에 둔다.
 *   **층 프리팹 규격**: 루트(`FloorLayout`, Grid 없음) 아래 `Floor`, `Wall`(레이어 Wall, `TilemapCollider2D`), `Markers`, `Zones`. 타일맵은 루트 기준 위치·회전 0, 스케일 1.
 
 ### 2.10. `FloorDesignSO` / `RegionConfigSO` (`ScriptableObject`)
 *   **`FloorDesignSO`**: 층 프리팹, 구간(`Early` 1~5 / `Late` 6~9 / `Boss`), 가중치.
-*   **`RegionConfigSO`**: 지역 번호·이름, 1~5 풀, 6~9 풀, 5층·10층 보스 디자인, 1~9층 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 상자 드랍 풀 ID, 디버그 "디자인 중복 허용".
+*   **`RegionConfigSO`**: 지역 번호·이름, 1~5 풀, 6~9 풀, 5층·10층 보스 디자인과 보스 프리팹, 1~9층 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 상자 드랍 풀 ID, 디버그 "디자인 중복 허용".
 
 ### 2.11. `FloorDesignValidator` (static)
-*   **역할**: 런타임·에디터 공용 규격 검증. 시작점 1, 탈출구 1, 계단 1(10층 보스층은 0~1), 마커 칸 보행 가능·중복 없음, 계단–탈출구 체비쇼프 거리 ≥ 3, 상자 후보 ≥ 구간 최대 굴림 횟수, 풀 구간 일치.
+*   **역할**: 런타임·에디터 공용 규격 검증. 시작점 1, 탈출구 1, 계단 1(10층 보스층은 0~1), 마커 칸 보행 가능·중복 없음, 계단–탈출구 체비쇼프 거리 ≥ 3, 상자 후보 ≥ 구간 최대 굴림 횟수, 풀 구간 일치. `BossSpawn`은 보스층 1개·일반층 0개, 시작점 5걸음 초과, 계단·탈출구와 3칸 이상. 지역 검증은 보스 프리팹 누락·비 Boss 데이터를 경고.
 *   **풀 장수(T3)**: 구간 고유 프리팹 수 < 구간 층 수(4) → 오류, = 4 → 경고(추천 6장 이상). 1~5 풀과 6~9 풀이 같은 프리팹을 쓰면 오류(6~9층 후보 부족 방지). 디버그 중복 허용이면 오류 대신 경고. 경고는 별도 목록으로 에디터 메뉴가 LogWarning.
 
 ### 2.12. `FloorStairs` (`MonoBehaviour`, Controller)
