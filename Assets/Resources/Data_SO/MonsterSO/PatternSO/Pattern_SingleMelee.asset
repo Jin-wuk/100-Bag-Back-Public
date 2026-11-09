@@ -15,7 +15,8 @@ MonoBehaviour:
   patternName: SingleMelee
   weight: 10
   minRange: 1
-  maxRange: 2
+  maxRange: 1
+  orthogonalOnly: 1
   patternCooldown: 3
   telegraphDuration: 0.7
   recoveryDuration: 0.5
