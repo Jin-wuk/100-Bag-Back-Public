@@ -26,7 +26,7 @@ MonoBehaviour:
   defenseBonus: 0
   speedBonus: 0
   rangeBonus: 0
-  baseAttackSpeed: 1
+  baseAttackSpeed: 1.82
   weaponPrefab: {fileID: 5652963309051762746, guid: bafb2bceacc5e0c40930aa2c1279a60f, type: 3}
   hitboxPattern: 0
   shakeMultiplier: 1
