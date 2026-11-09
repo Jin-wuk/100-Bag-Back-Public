@@ -13,7 +13,8 @@ namespace BagBack100.Player
         Idle,
         Moving,
         Attacking,
-        Charging
+        Charging,
+        Dashing
     }
 
     public enum BufferedCommandType
@@ -74,7 +75,7 @@ namespace BagBack100.Player
     [RequireComponent(typeof(EntityCombat))]
     [RequireComponent(typeof(PlayerStatManager))]
     /// <summary>
-    /// Role: 플레이어 상태(Idle/Moving/Attacking/Charging)와 전투 입력 총괄. 선입력 버퍼, 3타 콤보, 우클릭 차징, 일시정지 시 입력·차징 정리.
+    /// Role: 플레이어 상태(Idle/Moving/Attacking/Charging/Dashing)와 전투 입력 총괄. 선입력 버퍼, 3타 콤보, 우클릭 차징, 2칸 대시(쿨타임, 공격 후 잠금·걸음·차징 끊기), 일시정지 시 입력·차징 정리.
     /// Dependencies: PlayerInput, PlayerMovement, EntityCombat, PlayerStatManager, EquipmentManager, GamePauseService, TileSystem
     /// Events: GlobalEvents.OnPlayerCellChanged (구독: GamePauseService.OnPauseChanged)
     /// </summary>
@@ -101,6 +102,14 @@ namespace BagBack100.Player
         [SerializeField] private int _chargeLineLength = 2;
         [Tooltip("차징 강공격 데미지 배율")]
         [SerializeField] private float _chargeDamageMultiplier = 2.0f;
+
+        [Header("Dash (09 기획안 2절, 수치는 실험 초기값)")]
+        [Tooltip("대시 최대 칸 수. 경로 위 몬스터는 넘어가고 벽·상자에서 멈춘다")]
+        [SerializeField, Min(1)] private int _dashDistance = 2;
+        [Tooltip("최대 칸 수를 이동할 때 걸리는 시간(초). 덜 가면 칸 수에 비례해 줄어든다")]
+        [SerializeField, Min(0.01f)] private float _dashDuration = 0.12f;
+        [Tooltip("대시 쿨타임(초). 발동 순간 시작, 일시정지 중에는 흐르지 않음")]
+        [SerializeField, Min(0f)] private float _dashCooldown = 3f;
 
         [Header("Ranged / Special Settings")]
         [SerializeField] private GameObject _projectilePrefab;
@@ -131,6 +140,12 @@ namespace BagBack100.Player
         private readonly List<Vector3Int> _weaponHitboxCellBuffer = new List<Vector3Int>(8);
         private readonly List<GameObject> _meleeTargetBuffer = new List<GameObject>(8);
 
+        // 대시 쿨타임과 이동 잠금 해제 (공격 주기는 그대로 두고 이동 잠금만 푼다)
+        private float _dashCooldownRemaining = 0f;
+        private bool _moveLockReleased = false;
+        private bool IsMoveLocked => _combat.IsAttackOnCooldown && !_moveLockReleased;
+        public float DashCooldownNormalized => _dashCooldown > 0f ? Mathf.Clamp01(_dashCooldownRemaining / _dashCooldown) : 0f;
+
         public float ChargeProgress { get; private set; } = 0f;
         public int ChargeLineLength => _chargeLineLength;
         public Vector3 FacingDirection => _facingDirection;
@@ -147,6 +162,7 @@ namespace BagBack100.Player
             _baseSpriteScale = _spriteRenderer != null ? _spriteRenderer.transform.localScale : Vector3.one;
             
             _input.OnMoveInput += HandleMoveInput;
+            _input.OnDashInput += HandleDashInput;
             _input.OnAimInput += HandleAimInput;
             _input.OnAttackInput += HandleAttackInput;
             _input.OnChargeStartInput += HandleChargeStartInput;
@@ -154,6 +170,7 @@ namespace BagBack100.Player
             _input.OnSpecialAttackKeyPressed += HandleSpecialAttack;
             _movement.OnMovementFinished += HandleMovementFinished;
             _movement.OnTileReached += HandleTileReached;
+            _movement.OnDashFinished += HandleDashFinished;
             _combat.OnAttackFinished += HandleAttackFinished;
             BagBack100.Core.GamePauseService.OnPauseChanged += HandlePauseChanged;
         }
@@ -188,6 +205,7 @@ namespace BagBack100.Player
             if (_input != null)
             {
                 _input.OnMoveInput -= HandleMoveInput;
+                _input.OnDashInput -= HandleDashInput;
                 _input.OnAimInput -= HandleAimInput;
                 _input.OnAttackInput -= HandleAttackInput;
                 _input.OnChargeStartInput -= HandleChargeStartInput;
@@ -198,6 +216,7 @@ namespace BagBack100.Player
             {
                 _movement.OnMovementFinished -= HandleMovementFinished;
                 _movement.OnTileReached -= HandleTileReached;
+                _movement.OnDashFinished -= HandleDashFinished;
             }
             if (_combat != null)
             {
@@ -208,15 +227,31 @@ namespace BagBack100.Player
             if (_grid != null && BagBack100.Core.TileSystem.Instance != null)
             {
                 BagBack100.Core.TileSystem.Instance.ReleaseTile(_grid.WorldToCell(transform.position), gameObject);
+                // 걷기 예약 칸·대시 착지 칸이 남지 않게 함께 놓는다
+                if (_movement != null) BagBack100.Core.TileSystem.Instance.ReleaseTile(_movement.ReservedCell, gameObject);
+            }
+        }
+
+        private void Update()
+        {
+            // EntityCombat 공격 주기와 같은 기준: 히트스톱에는 흐르고 가방 일시정지에는 멈춘다
+            if (_dashCooldownRemaining > 0f && !BagBack100.Core.GamePauseService.IsPaused)
+            {
+                _dashCooldownRemaining = Mathf.Max(0f, _dashCooldownRemaining - Time.unscaledDeltaTime);
             }
         }
 
         private void HandleAttackFinished()
         {
+            _moveLockReleased = false;
+
             if (CurrentState == PlayerState.Attacking)
             {
                 CurrentState = PlayerState.Idle;
             }
+
+            // 대시로 잠금을 끊고 걷거나 대시하는 중이면, 칸 사이에서 공격이 나가지 않게 도착·착지 때 소비한다
+            if (CurrentState == PlayerState.Moving || CurrentState == PlayerState.Dashing) return;
 
             // 모션 락(Attack Recovery) 해제 프레임에 유효한 선입력(이동 또는 다음 콤보/차징)이 있다면 즉시 소비
             TryConsumeBufferedCommand();
@@ -239,7 +274,7 @@ namespace BagBack100.Player
             if (CurrentState == PlayerState.Charging) return;
 
             // 공격 모션 락(Motion Lock) 중에는 현재 공격이 절대 취소되지 않으며, 모션 종료 직후 실행될 단일 선입력 슬롯을 '이동'으로 덮어씀
-            if (CurrentState == PlayerState.Attacking || _combat.IsAttackOnCooldown)
+            if (CurrentState == PlayerState.Attacking || CurrentState == PlayerState.Dashing || IsMoveLocked)
             {
                 _inputBuffer.SetMove(moveDir, Time.unscaledTime);
                 return;
@@ -257,7 +292,7 @@ namespace BagBack100.Player
 
         private void ExecuteStepMove(Vector2Int moveDir)
         {
-            if (_grid == null || CurrentState == PlayerState.Attacking || CurrentState == PlayerState.Charging || _combat.IsAttackOnCooldown) return;
+            if (_grid == null || CurrentState == PlayerState.Attacking || CurrentState == PlayerState.Charging || CurrentState == PlayerState.Dashing || IsMoveLocked) return;
 
             Vector3Int currentCellPos = _grid.WorldToCell(transform.position);
             Vector3Int targetCellPos = currentCellPos + new Vector3Int(moveDir.x, moveDir.y, 0);
@@ -274,7 +309,7 @@ namespace BagBack100.Player
             if (CurrentState == PlayerState.Charging) return;
 
             // 이동 중이거나 공격 모션 락 중일 때: 단일 슬롯 선입력 버퍼에 최신 공격 좌표를 덮어쓰기 (광클 누적 방지)
-            if (CurrentState == PlayerState.Moving || CurrentState == PlayerState.Attacking || _combat.IsAttackOnCooldown)
+            if (CurrentState == PlayerState.Moving || CurrentState == PlayerState.Attacking || CurrentState == PlayerState.Dashing || _combat.IsAttackOnCooldown)
             {
                 _inputBuffer.SetAttack(targetCell, Time.unscaledTime);
                 return;
@@ -411,13 +446,92 @@ namespace BagBack100.Player
 
         #endregion
 
+        #region Space: Dash
+
+        private void HandleDashInput(Vector2Int dir)
+        {
+            if (_grid == null || dir == Vector2Int.zero) return;
+            if (BagBack100.Core.GamePauseService.IsPaused) return;
+            if (CurrentState == PlayerState.Dashing || _dashCooldownRemaining > 0f) return;
+            if (_stats != null && _stats.IsDead) return;
+
+            var tiles = BagBack100.Core.TileSystem.Instance;
+
+            // 시작 칸은 몬스터 피격 판정과 같은 기준(현재 위치가 속한 칸). 걷기 출발 칸을 그새 몬스터가 차지했으면 예약한 목적지 칸
+            Vector3Int startCell = _grid.WorldToCell(transform.position);
+            startCell.z = 0;
+            if (_movement.IsMoving && tiles != null)
+            {
+                GameObject occupant = tiles.GetEntityAtTile(startCell);
+                if (occupant != null && occupant != gameObject) startCell = _movement.ReservedCell;
+            }
+
+            // 착지 칸이 없으면 발동하지 않고 쿨타임도 쓰지 않는다
+            if (!TryFindDashLanding(startCell, dir, out Vector3Int landingCell, out int steps)) return;
+
+            if (CurrentState == PlayerState.Charging)
+            {
+                if (_chargeCoroutine != null)
+                {
+                    StopCoroutine(_chargeCoroutine);
+                    _chargeCoroutine = null;
+                }
+                _isChargeReady = false;
+                CancelChargeVisuals(Color.white, _baseSpriteScale);
+            }
+
+            if (_combat.IsAttackOnCooldown) _moveLockReleased = true;
+
+            CurrentState = PlayerState.Dashing;
+            _dashCooldownRemaining = _dashCooldown;
+            _movement.Dash(startCell, landingCell, _dashDuration * steps / Mathf.Max(1, _dashDistance));
+        }
+
+        /// <summary>
+        /// 시작 칸에서 dir로 최대 _dashDistance칸을 본다. 벽·바닥 없음·상자에서 멈추고, 다른 엔티티가 있는 칸은 지나가되 착지 후보가 아니다.
+        /// 가장 먼 빈 칸(또는 자신이 점유한 칸)이 착지 칸이다. 기획 09 2절 착지 표와 같은 결과.
+        /// </summary>
+        private bool TryFindDashLanding(Vector3Int startCell, Vector2Int dir, out Vector3Int landingCell, out int steps)
+        {
+            landingCell = startCell;
+            steps = 0;
+            var tiles = BagBack100.Core.TileSystem.Instance;
+
+            for (int i = 1; i <= _dashDistance; i++)
+            {
+                Vector3Int cell = new Vector3Int(startCell.x + dir.x * i, startCell.y + dir.y * i, 0);
+                if (BagBack100.Core.Pathfinder.IsObstacle(_grid, new Vector2Int(cell.x, cell.y), _movement.ObstacleLayerMask))
+                {
+                    break;
+                }
+
+                GameObject occupant = tiles != null ? tiles.GetEntityAtTile(cell) : null;
+                if (occupant != null && occupant != gameObject) continue;
+
+                landingCell = cell;
+                steps = i;
+            }
+            return steps > 0;
+        }
+
+        private void HandleDashFinished()
+        {
+            if (CurrentState == PlayerState.Dashing)
+            {
+                CurrentState = PlayerState.Idle;
+            }
+            TryConsumeBufferedCommand();
+        }
+
+        #endregion
+
         #region Right-Click: Hold Charge 2-Tile Line Attack
 
         private void HandleChargeStartInput()
         {
             if (CurrentState == PlayerState.Charging) return;
 
-            if (CurrentState == PlayerState.Moving || CurrentState == PlayerState.Attacking || _combat.IsAttackOnCooldown)
+            if (CurrentState == PlayerState.Moving || CurrentState == PlayerState.Attacking || CurrentState == PlayerState.Dashing || _combat.IsAttackOnCooldown)
             {
                 _inputBuffer.SetCharge(Time.unscaledTime);
                 return;
@@ -557,6 +671,7 @@ namespace BagBack100.Player
             _isChargeReady = false;
             CancelChargeVisuals(Color.white, _baseSpriteScale);
             _inputBuffer.Clear();
+            _moveLockReleased = false;
             CurrentState = PlayerState.Idle;
 
             transform.position = worldPos;
@@ -693,6 +808,9 @@ namespace BagBack100.Player
                     }
                 }
             }
+
+            // 대시 착지는 HandleDashFinished에서 상태를 되돌린 뒤 소비한다
+            if (CurrentState == PlayerState.Dashing) return;
             
             // 타일 안착 시 유효 시간(Window) 내의 선입력 커맨드가 있다면 즉시 소비
             TryConsumeBufferedCommand();
@@ -724,6 +842,13 @@ namespace BagBack100.Player
             if (!_inputBuffer.IsValid(Time.unscaledTime, _inputBufferWindow))
             {
                 _inputBuffer.Clear();
+                return;
+            }
+
+            // 대시로 이동 잠금만 끊은 경우 공격 주기가 남아 있다. 공격·차징은 버리지 않고 주기 종료(HandleAttackFinished) 때 소비한다
+            if (_combat.IsAttackOnCooldown &&
+                (_inputBuffer.Type == BufferedCommandType.Attack || _inputBuffer.Type == BufferedCommandType.Charge))
+            {
                 return;
             }
 
