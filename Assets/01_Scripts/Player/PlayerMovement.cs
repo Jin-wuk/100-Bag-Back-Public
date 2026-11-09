@@ -222,6 +222,7 @@ namespace BagBack100.Player
             }
 
             transform.position = _dashTargetWorld;
+            ResetVisuals();
             _isDashing = false;
             _isMoving = false;
             _moveCoroutine = null;
