@@ -269,7 +269,7 @@ MonoBehaviour:
   _baseAttack: 10
   _baseDefense: 5
   _baseSpeed: 8
-  _baseAttackSpeed: 1
+  _baseAttackSpeed: 1.82
   _baseRange: 1
   _hubSceneName: 02_HubScene
 --- !u!114 &4486916414795881682
