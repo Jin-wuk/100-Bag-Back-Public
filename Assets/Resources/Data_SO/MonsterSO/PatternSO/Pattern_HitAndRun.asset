@@ -16,6 +16,7 @@ MonoBehaviour:
   weight: 65
   minRange: 1
   maxRange: 1
+  orthogonalOnly: 1
   patternCooldown: 2.8
   telegraphDuration: 0.45
   recoveryDuration: 0.4

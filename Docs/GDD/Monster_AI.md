@@ -33,6 +33,7 @@ flowchart TD
 | `globalPatternCooldown` | `MonsterDataSO` | 패턴 사이 최소 간격. 이 시간 동안에도 이동은 계속함 |
 | `weight` | `MonsterPatternSO` | 가중치 랜덤 선택 비율 |
 | `minRange` / `maxRange` | `MonsterPatternSO` | 패턴을 쓸 수 있는 플레이어와의 타일 거리 |
+| `orthogonalOnly` | `MonsterPatternSO` | 체크 시 거리를 대각선 없이 상하좌우(맨해튼) 거리로 잼 |
 | `patternCooldown` | `MonsterPatternSO` | 패턴별 재사용 대기 |
 | `telegraphDuration` | `MonsterPatternSO` | 공격 전 예고 시간 |
 | `recoveryDuration` | `MonsterPatternSO` | 공격 후 멈춰 있는 시간 (플레이어의 반격 타이밍) |
@@ -69,7 +70,7 @@ flowchart TD
 
 모든 공격은 예고 후 실행되고, 실행 후 후딜레이가 있습니다.
 
-단일 근접과 치고 빠지기는 지금 대각선(단일 근접은 2칸 거리까지)에서도 시작합니다. 상하좌우 인접 칸에서만 시작하도록 바꾸기로 결정했습니다(구현 전, [09 문서](../Architecture/09_Crowd_Combat_And_Dash_Design.md)).
+단일 근접과 치고 빠지기는 상하좌우 인접 칸에서만 시작합니다(`orthogonalOnly`, 사거리 1). 대각선에서는 광역 내려치기만 닿습니다. 근거는 [09 문서](../Architecture/09_Crowd_Combat_And_Dash_Design.md)입니다.
 
 | 패턴 | 예고 방식 | 피하는 법 |
 | --- | --- | --- |

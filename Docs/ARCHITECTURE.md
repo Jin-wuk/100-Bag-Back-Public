@@ -304,6 +304,7 @@ flowchart TD
 | `InventoryUIController` / `StorageUIController` / `SecurePouchUIController` / `EquipmentUIController` | 각 컨테이너 뷰 (`DraggableItemUI`, `EquipmentSlotUI`) |
 | `ItemContextMenuUI` / `ItemQuantityDialogUI` / `TrashSlotUI` / `SellSlotUI` | 우클릭 메뉴(버리기·판매·나누기, 가방 패널에 하나를 창고·파우치도 공용), 수량 선택 확인창, 휴지통, 판매 칸 |
 | `QuickSlotBarUI` / `QuickSlotSlotUI` | 퀵슬롯 HUD (수량, 쿨타임) |
+| `DashCooldownUI` | 대시 쿨타임 HUD |
 | `ShopPanelUI` / `GoldDisplayUI` / `RunResultUI` / `UIToast` | 잡화상 목록, 지갑 골드, 결과 화면, 알림 |
 | `DungeonUIManager` | 던전 가방 패널 열기·닫기와 일시정지 요청. 전투 중(`PlayerCombatState`)이면 열기 거부 + HUD 토스트. 소모품 사용 실패 사유(`ConsumableController.OnUseFailed`)도 토스트로 표시 |
 | `ExitConfirmUI` | 던전을 떠나는 확인창. `DungeonExit.OnExitRequested`(포탈)와 `ConsumableController.OnReturnStoneRequested`(귀환석)를 받아 일시정지·입력 잠금 후 확인/취소를 요청한 쪽에 전달 |

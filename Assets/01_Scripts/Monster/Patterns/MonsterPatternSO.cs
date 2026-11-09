@@ -24,6 +24,8 @@ namespace BagBack100.Monster
         [Tooltip("패턴 발동 가능한 최대 그리드 거리")]
         [Min(1)]
         public int maxRange = 1;
+        [Tooltip("체크 시 거리를 맨해튼(상하좌우)으로 잰다. 근접 패턴이 대각선이나 2칸 밖에서 시작하지 않게 한다 (09 기획안)")]
+        public bool orthogonalOnly = false;
 
         [Header("타이밍 및 딜타임 (공정성 제어)")]
         [Tooltip("이 패턴 자체의 개별 재사용 대기시간(초)")]
@@ -47,7 +49,10 @@ namespace BagBack100.Monster
         public virtual bool CanExecute(MonsterController monster, int gridDistanceToPlayer)
         {
             if (monster == null || monster.Player == null || monster.Grid == null) return false;
-            return gridDistanceToPlayer >= minRange && gridDistanceToPlayer <= maxRange;
+            int dist = orthogonalOnly
+                ? MonsterLocomotion.GetManhattanDistance(monster.GetCurrentCell(), monster.GetPlayerCell())
+                : gridDistanceToPlayer;
+            return dist >= minRange && dist <= maxRange;
         }
 
         /// <summary>

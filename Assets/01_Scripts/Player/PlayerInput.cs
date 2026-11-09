@@ -7,9 +7,9 @@ using BagBack100.UI;
 namespace BagBack100.Player
 {
     /// <summary>
-    /// Role: 플레이어 입력 수집. WASD 이동, 마우스 8방향 조준·좌클릭 공격·우클릭 차징, Tab 가방, Z 원거리, 1·2·3 퀵슬롯을 이벤트로 전달.
+    /// Role: 플레이어 입력 수집. WASD 이동, Space 대시, 마우스 8방향 조준·좌클릭 공격·우클릭 차징, Tab 가방, Z 원거리, 1·2·3 퀵슬롯을 이벤트로 전달.
     /// Dependencies: Grid, MovementPreview, EventSystem
-    /// Events: OnInputCreated(static), OnMoveInput, OnAimInput, OnAttackInput, OnChargeStartInput, OnChargeReleaseInput,
+    /// Events: OnInputCreated(static), OnMoveInput, OnDashInput, OnAimInput, OnAttackInput, OnChargeStartInput, OnChargeReleaseInput,
     ///         OnSpecialAttackKeyPressed, OnInventoryToggle, OnQuickSlotInput
     /// </summary>
     public class PlayerInput : MonoBehaviour
@@ -17,6 +17,7 @@ namespace BagBack100.Player
         public static event Action<PlayerInput> OnInputCreated;
 
         public event Action<Vector2Int> OnMoveInput;
+        public event Action<Vector2Int> OnDashInput;
         public event Action<Vector3> OnAimInput;
         public event Action<Vector3Int> OnAttackInput;
         public event Action OnChargeStartInput;
@@ -37,6 +38,8 @@ namespace BagBack100.Player
         
         private float _lastMoveInputTime;
         private float _moveInputDelay = 0.15f; // 연속 이동 입력 딜레이 방지
+        // 0.15초 입력 간격이나 차징 중 이동 무시와 상관없이, 방향키를 뗀 뒤 누른 대시도 방금 누른 방향으로 나가게 매 프레임 기록
+        private Vector2Int _lastHeldMoveDir = Vector2Int.down;
 
         private void Awake()
         {
@@ -94,6 +97,14 @@ namespace BagBack100.Player
             else if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow)) moveDir = Vector2Int.down;
             else if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow)) moveDir = Vector2Int.left;
             else if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) moveDir = Vector2Int.right;
+
+            if (moveDir != Vector2Int.zero) _lastHeldMoveDir = moveDir;
+
+            // 대시를 이동보다 먼저 보낸다. 같은 프레임의 이동 입력은 대시 중 선입력으로 들어간다
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                OnDashInput?.Invoke(_lastHeldMoveDir);
+            }
 
             if (moveDir != Vector2Int.zero && Time.time - _lastMoveInputTime > _moveInputDelay)
             {

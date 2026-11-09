@@ -7,14 +7,15 @@ using BagBack100.Core;
 namespace BagBack100.Player
 {
     /// <summary>
-    /// Role: 플레이어 타일 경로 이동(Pathfinder), 타일 점유 예약, 걸음 연출. 층 전환 순간이동 시 StopImmediately로 즉시 끊는다.
-    /// Dependencies: Pathfinder, TileSystem
-    /// Events: OnMovementFinished, OnTileReached
+    /// Role: 플레이어 타일 경로 이동(Pathfinder), 타일 점유 예약, 걸음 연출, 대시 이동(착지 칸 점유·직선 보간). 층 전환 순간이동 시 StopImmediately로 즉시 끊는다.
+    /// Dependencies: Pathfinder, TileSystem, PlayerStatManager
+    /// Events: OnMovementFinished, OnTileReached, OnDashFinished
     /// </summary>
     public class PlayerMovement : MonoBehaviour
     {
         public event Action OnMovementFinished;
         public event Action<Vector3> OnTileReached;
+        public event Action OnDashFinished;
 
         [Header("Movement Settings")]
         [Tooltip("기본 이동 속도(10) 기준 타일 1칸 이동 시 걸리는 시간")]
@@ -47,8 +48,31 @@ namespace BagBack100.Player
         private Quaternion _baseRotation = Quaternion.identity;
         private int _stepIndex = 0;
 
+        // 걷기는 시작 순간 목적지 칸을 점유하는데 _currentPath에서는 이미 빠지므로, 대시·파괴 시 해제할 칸을 따로 기억한다
+        private Vector3Int _reservedCell;
+        private bool _hasReservedCell = false;
+        private bool _isDashing = false;
+        private Vector3 _dashTargetWorld;
+
         public bool IsMoving => _isMoving;
-        public Vector3 CurrentTargetTileWorldPos => (_isMoving && _currentPath.Count > 0) ? _currentPath[0] : transform.position;
+        public bool IsDashing => _isDashing;
+        public LayerMask ObstacleLayerMask => _obstacleLayerMask;
+        // 곡사 포격·투사체의 위치 예측이 읽는다. 대시 중에는 착지 칸을 돌려준다
+        public Vector3 CurrentTargetTileWorldPos => _isDashing
+            ? _dashTargetWorld
+            : ((_isMoving && _currentPath.Count > 0) ? _currentPath[0] : transform.position);
+
+        public Vector3Int ReservedCell
+        {
+            get
+            {
+                if (_hasReservedCell) return _reservedCell;
+                if (_grid == null) return Vector3Int.zero;
+                Vector3Int cell = _grid.WorldToCell(transform.position);
+                cell.z = 0;
+                return cell;
+            }
+        }
 
         private void Awake()
         {
@@ -130,8 +154,81 @@ namespace BagBack100.Player
             _currentPath.Clear();
             _hasPendingTarget = false;
             _isMoving = false;
+            _isDashing = false;
+            _hasReservedCell = false;
             if (_animator != null) _animator.speed = 1f;
             ResetVisuals();
+        }
+
+        /// <summary>
+        /// 착지 칸은 호출한 쪽(PlayerController)이 비어 있음을 확인한 뒤 넘긴다.
+        /// 걷던 중이면 걷기를 끊고, 착지 칸을 먼저 점유한 뒤 자신이 잡고 있던 칸(걷기 예약 칸·현재 위치 칸·시작 칸)을 놓는다.
+        /// </summary>
+        public void Dash(Vector3Int startCell, Vector3Int landingCell, float duration)
+        {
+            if (_grid == null) return;
+
+            if (_moveCoroutine != null)
+            {
+                StopCoroutine(_moveCoroutine);
+                _moveCoroutine = null;
+            }
+            _currentPath.Clear();
+            _hasPendingTarget = false;
+            ResetVisuals();
+
+            landingCell.z = 0;
+            startCell.z = 0;
+            if (TileSystem.Instance != null)
+            {
+                Vector3Int positionCell = _grid.WorldToCell(transform.position);
+                positionCell.z = 0;
+
+                TileSystem.Instance.RegisterInitialTile(landingCell, gameObject);
+                if (_hasReservedCell && _reservedCell != landingCell) TileSystem.Instance.ReleaseTile(_reservedCell, gameObject);
+                if (positionCell != landingCell) TileSystem.Instance.ReleaseTile(positionCell, gameObject);
+                if (startCell != landingCell) TileSystem.Instance.ReleaseTile(startCell, gameObject);
+            }
+            _reservedCell = landingCell;
+            _hasReservedCell = true;
+
+            _dashTargetWorld = _grid.GetCellCenterWorld(landingCell);
+            _isMoving = true;
+            _isDashing = true;
+            if (_animator != null) _animator.speed = 1f;
+            _moveCoroutine = StartCoroutine(DashCoroutine(Mathf.Max(0.01f, duration)));
+        }
+
+        private IEnumerator DashCoroutine(float duration)
+        {
+            Vector3 startPos = transform.position;
+            float elapsed = 0f;
+
+            // 걷기와 같은 Time.deltaTime 기준: 일시정지·히트스톱에 함께 멈춘다
+            while (elapsed < duration)
+            {
+                // 대시 중 사망하면 착지 처리(줍기·계단·탈출구)를 하지 않는다
+                if (_stats != null && _stats.IsDead)
+                {
+                    _isDashing = false;
+                    _isMoving = false;
+                    _moveCoroutine = null;
+                    yield break;
+                }
+
+                elapsed += Time.deltaTime;
+                transform.position = Vector3.Lerp(startPos, _dashTargetWorld, Mathf.Clamp01(elapsed / duration));
+                yield return null;
+            }
+
+            transform.position = _dashTargetWorld;
+            ResetVisuals();
+            _isDashing = false;
+            _isMoving = false;
+            _moveCoroutine = null;
+
+            OnTileReached?.Invoke(_dashTargetWorld);
+            OnDashFinished?.Invoke();
         }
 
         private IEnumerator MoveAlongPathCoroutine()
@@ -154,6 +251,9 @@ namespace BagBack100.Player
                         _currentPath.Clear();
                         break;
                     }
+                    _reservedCell = targetCell;
+                    _reservedCell.z = 0;
+                    _hasReservedCell = true;
                 }
                 else
                 {
@@ -262,6 +362,7 @@ namespace BagBack100.Player
                 _moveCoroutine = null;
             }
             _isMoving = false;
+            _isDashing = false;
             _hasPendingTarget = false;
             ResetVisuals();
         }
