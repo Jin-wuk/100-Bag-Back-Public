@@ -18,9 +18,9 @@
 
 | 스크립트 | 역할 |
 | --- | --- |
-| `PlayerInput.cs` | WASD 4방향 이동, 마우스 8방향 조준, 좌클릭 공격, 우클릭 차징 홀드/릴리즈, `Z` 투사체, `1` `2` `3` 퀵슬롯, `Tab` 가방. 입력을 이벤트로만 전달 |
-| `PlayerController.cs` | 상태(`Idle`/`Moving`/`Attacking`/`Charging`)와 단일 슬롯 선입력 버퍼(`BufferedCommand`, 0.22초). 3타 콤보(1.0/1.15/1.5배, 1.5초 유지), 차징(0.6초, 전방 2칸, 2.0배), 무기 히트박스(`WeaponHitboxPattern`) 계산 |
-| `PlayerMovement.cs` | 칸 단위 이동과 보행 연출(바운스, 틸트, 스쿼시) |
+| `PlayerInput.cs` | WASD 4방향 이동, `Space` 대시(누른 방향, 없으면 마지막으로 누른 방향), 마우스 8방향 조준, 좌클릭 공격, 우클릭 차징 홀드/릴리즈, `Z` 투사체, `1` `2` `3` 퀵슬롯, `Tab` 가방. 입력을 이벤트로만 전달 |
+| `PlayerController.cs` | 상태(`Idle`/`Moving`/`Attacking`/`Charging`/`Dashing`)와 단일 슬롯 선입력 버퍼(`BufferedCommand`, 0.22초). 3타 콤보(1.0/1.15/1.5배, 1.5초 유지), 차징(0.6초, 전방 2칸, 2.0배), 무기 히트박스(`WeaponHitboxPattern`) 계산. 대시(`HandleDashInput`: 착지 칸 계산 `TryFindDashLanding`, 쿨타임 `Update`, 공격 주기는 두고 이동 잠금만 푸는 `_moveLockReleased`). 공격 주기가 남은 공격·차징 선입력은 주기 종료 때 소비 |
+| `PlayerMovement.cs` | 칸 단위 이동과 보행 연출(바운스, 틸트, 스쿼시). 걷기 예약 칸(`ReservedCell`) 기록. 대시 이동(`Dash`: 착지 칸 점유 후 이전 칸 해제, 직선 보간, 사망 시 중단, 끝나면 `OnTileReached` → `OnDashFinished`). 대시 중 `CurrentTargetTileWorldPos`는 착지 칸(위치 예측 패턴용) |
 | `EntityCombat.cs` | 공격 판정과 후딜레이(`Time.unscaledDeltaTime`). 공격 대상이 `IAttackInteractable`(상자)이면 피해 대신 상호작용 호출. 몬스터용 즉시 타격(`ApplyImmediateHit`) |
 | `PlayerStatManager.cs` | 기본 스탯 + 장비 합산, 피격 시(`IsInvincible`은 `DungeonGenerator`가 켜고 끔, `IsHitInvincible`은 피격마다 0.5초, 둘 중 하나면 무시) `CombatMath.Mitigate`로 방어력 경감 후 실제 적용 피해 반환, `OnEntityDamaged` 발행. HP 0이면 결과 기록 → 가방·장비 초기화 → 기지 복귀 |
 | `PlayerCombatState.cs` | `OnEntityDamaged`를 구독해 마지막 타격·피격 후 5초간 전투 중 판정, `OnCombatStateChanged` |
@@ -55,6 +55,7 @@
 | `StorageUIController.cs` / `SecurePouchUIController.cs` / `EquipmentUIController.cs` / `EquipmentSlotUI.cs` / `DraggableItemUI.cs` | 창고, 파우치, 장비창, 장비 칸, 끌리는 아이템 |
 | `ItemQuantityDialogUI.cs` / `TrashSlotUI.cs` / `SellSlotUI.cs` | 수량 선택 확인창, 휴지통(확인 후 영구 삭제), 판매 칸 |
 | `QuickSlotBarUI.cs` / `QuickSlotSlotUI.cs` | 퀵슬롯 HUD: 아이콘, 가방 내 총 수량, 공용 쿨타임 |
+| `DashCooldownUI.cs` | 대시 쿨타임 HUD(`DashSlot`, 퀵슬롯 바 오른쪽). `PlayerInput.OnInputCreated`로 플레이어를 찾아 `DashCooldownNormalized`를 Filled 이미지에 채움 |
 | `ShopPanelUI.cs` / `GoldDisplayUI.cs` / `RunResultUI.cs` / `UIToast.cs` | 잡화상 목록, 지갑 골드, 결과 화면(한 번 표시 후 비움), 알림 |
 | `DungeonUIManager.cs` | 던전 가방 패널. 열려 있는 동안 이동 차단 + `GamePauseService` 일시정지 요청. 플레이어의 `PlayerCombatState`를 캐싱해 전투 중이면 Tab·보상 화면 열기를 거부하고 `UIToast`(던전 HUD의 FloorToast)로 안내. 소모품 사용 실패 사유(`ConsumableController.OnUseFailed`)도 같은 토스트로 표시. 닫기는 항상 허용(단 확인창·층 전환의 입력 잠금 중에는 Esc 무시) |
 | `PlayerStatsUIController.cs` | HP·MP·스탯 텍스트 |
