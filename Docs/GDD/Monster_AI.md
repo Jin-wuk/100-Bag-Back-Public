@@ -82,3 +82,5 @@ flowchart TD
 | `MortarAoEPatternSO` (곡사 포격) | 착탄 칸에만 장판. 플레이어 이동 방향을 예측 | 착탄 칸에서 벗어남 |
 
 새 패턴은 `MonsterPatternSO`를 상속한 클래스 하나로 추가하며, `MonsterController`는 수정하지 않습니다.
+
+> 원거리 공격은 4방향 고정과 투사체 재설계를 검토 중입니다(결정 보류). 방향과 미결 항목은 [Roadmap.md](Roadmap.md) 3절·8절에 있습니다.
