@@ -63,7 +63,7 @@ namespace BagBack100.UI
                 SetText(_leftList, BuildList(result.BroughtBack));
                 SetText(_rightHeader, string.Empty);
                 SetText(_rightList, string.Empty);
-                SetText(_summaryText, $"Total value: {result.TotalValue}G  (sell at the Blacksmith)");
+                SetText(_summaryText, $"Total value: {result.TotalValue}G  (sell at the General Store)");
                 if (_boxImage != null) _boxImage.color = _extractedColor;
             }
             else
