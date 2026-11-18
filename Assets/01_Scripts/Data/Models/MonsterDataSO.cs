@@ -5,6 +5,11 @@ using BagBack100.Monster;
 
 namespace BagBack100.Data.Models
 {
+    /// <summary>
+    /// Role: 몬스터 1종의 정적 데이터 (스탯, 이동·행동 템포, 패턴 목록, 특성, 드랍 풀, 출현 층 범위).
+    /// Dependencies: MonsterPatternSO
+    /// Events: 없음
+    /// </summary>
     [CreateAssetMenu(fileName = "NewMonsterData", menuName = "BagBack100/Data/MonsterData")]
     public class MonsterDataSO : ScriptableObject
     {
@@ -52,6 +57,17 @@ namespace BagBack100.Data.Models
         public List<string> traits = new List<string>();
         public int dropPoolID;
         public int goldDropBase;
+
+        [Header("출현 층 범위 (지역 몬스터 풀 필터)")]
+        [Tooltip("이 몬스터가 일반 스폰으로 나오는 최저 층. 층별 재료 수급을 몬스터 출현 층으로 조절한다 (10 제작소 기획안 4절)")]
+        [SerializeField, Min(1)] private int _minFloor = 1;
+        [Tooltip("이 몬스터가 일반 스폰으로 나오는 최고 층. 보스층 BossSpawn 보스에는 적용하지 않는다")]
+        [SerializeField, Min(1)] private int _maxFloor = 10;
+
+        public int MinFloor => _minFloor;
+        public int MaxFloor => _maxFloor;
+
+        public bool CanAppearOnFloor(int floor) => floor >= _minFloor && floor <= _maxFloor;
         //public AttackPatternType attackPattern = AttackPatternType.SingleTile;
 
         public bool HasTrait(string traitName)
@@ -82,6 +98,11 @@ namespace BagBack100.Data.Models
         public float GetEffectiveTelegraphMultiplier()
         {
             return HasTrait("FAST") ? 0.7f : 1f;
+        }
+
+        private void OnValidate()
+        {
+            if (_maxFloor < _minFloor) _maxFloor = _minFloor;
         }
     }
 }
