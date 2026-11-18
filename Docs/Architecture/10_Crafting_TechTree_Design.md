@@ -155,8 +155,8 @@ flowchart LR
 | 대상 | 변경 |
 | --- | --- |
 | `MonsterDataSO` | `[Min(1)] minFloor = 1`, `[Min(1)] maxFloor = 10` 필드와 `CanAppearOnFloor(int floor)`. `OnValidate`에서 `maxFloor < minFloor`이면 맞춤 |
-| `RegionConfigSO` | 기본 몬스터 풀 `List<GameObject> _monsterPool` 추가(`MonsterPool` 읽기 전용 노출). 지금 `03_DungeonScene`의 `DungeonGenerator._monsterPrefabPool` 값(3종)을 `Region1Config`로 옮김 |
-| `DungeonGenerator` | `_monsterPrefabPool` 필드 삭제, `_regionConfig.MonsterPool` 사용. `GetZoneMonsterPool(zone)` → `GetFloorMonsterPool(zone, floor)`: 구역 전용 풀이 있으면 그것, 없으면 지역 풀을 기준으로 `CanAppearOnFloor`인 프리팹만 재사용 버퍼(`_floorMonsterBuffer`)에 담아 반환. 0종이면 필터 없는 같은 풀을 반환하고 `Debug.LogWarning`. 층 생성 때만 호출(Update 아님) |
+| `RegionConfigSO` | 기본 몬스터 풀 `[SerializeField] private List<GameObject> _monsterPool` 추가(`IReadOnlyList<GameObject> MonsterPool` 노출). 지금 `03_DungeonScene`의 `DungeonGenerator._monsterPrefabPool` 값(3종)을 `Region1Config`로 옮김. `EditorInitialize`와 `FloorGrayBoxBuilder.CreateGrayBoxFloors`가 지역 설정을 다시 만들 때 기존 풀을 보존하고, 비어 있으면 기본 몬스터 프리팹 3종을 넣음 (Gemini 코드 검토 1-3) |
+| `DungeonGenerator` | `_monsterPrefabPool` 필드 삭제, `_regionConfig.MonsterPool` 사용. `GetZoneMonsterPool(zone)` → `GetFloorMonsterPool(zone, floor)`: 구역 전용 풀이 있으면 그것, 없으면 지역 풀을 기준으로 `CanAppearOnFloor`인 프리팹만 재사용 버퍼 `List<GameObject> _floorMonsterBuffer`에 담아 반환. 0종이면 **필터 없는 같은 풀을 그 버퍼에 복사**해 반환하고 `Debug.LogWarning`. 반환 타입은 항상 `List<GameObject>`라 `SpawnEntitiesInCells`의 매개변수를 바꾸지 않음. 호출부 2곳(구역별 배분, 층별 규칙이 없는 층의 구역 수 사용 분기) 모두 교체. 층 생성 때만 호출(Update 아님) |
 | `FloorDesignValidator.ValidateRegion` | 지역 풀이 비었으면 오류. 1~10층마다 지역 풀에 출현 가능한 몬스터가 1종 이상인지 검사(없으면 오류). 층 디자인의 구역 전용 풀은 그 디자인이 쓰이는 층(초반 1~4, 중간 보스 5, 후반 6~9, 보스 10)에서 0종이면 경고. 몬스터 데이터는 프리팹의 `MonsterController.Data`로 읽음 |
 | 데이터 | Heavy Brute 1~5층, Shadow Spider 3~7층, Arcane Wizard 5~10층 (초기값) |
 
@@ -164,8 +164,8 @@ flowchart LR
 
 | 대상 | 변경 |
 | --- | --- |
-| 새 `TechNodeSO` (`Data/Models`) | `string nodeId`(고유), `EquipmentDataSO resultItem`, `int tier`, `int regionId`, `TechNodeSO prerequisite`(첫 단계는 null), `List<MaterialCost> materials`(`ItemDataSO item`, `int amount`), `int unlockGold`, `int recraftGold`. 줄(무기·투구·갑옷·신발·배낭)은 `resultItem.equipType`으로 구분하므로 별도 enum을 두지 않음 |
-| 새 `TechTreeSO` (`Data/Models`) | `List<TechNodeSO> nodes`, `[Range(0,1)] float craftedSellRatio = 0.3f`. `TryGetNodeByItemId(int itemID, out TechNodeSO)`(판매가 조회), `GetSellPrice(TechNodeSO) = floor(recraftGold × ratio)`. 에디터 검증(`OnValidate`): `nodeId` 중복, 같은 노드 안 재료 중복, 선행 노드의 `equipType`이 같고 `tier`가 낮은지, `resultItem` 중복, 판매가 < 재제작 골드 |
+| 새 `TechNodeSO` (`Data/Models`) | 필드는 모두 `[SerializeField] private` + 읽기 전용 프로퍼티(가이드라인 4절). `string nodeId`(고유), `EquipmentDataSO resultItem`, `int tier`, `int regionId`, `TechNodeSO prerequisite`(첫 단계는 null), `List<MaterialCost> materials`(`ItemDataSO item`, `int amount`), `int unlockGold`, `int recraftGold`. 줄(무기·투구·갑옷·신발·배낭)은 `resultItem.equipType`으로 구분하므로 별도 enum을 두지 않음. **노드 자체 검증도 `TechNodeSO.OnValidate`**: 같은 재료 중복, 수량 0 이하, 재료·결과 장비 null, 자기 자신을 선행으로 지정 (Gemini 코드 검토 1-6) |
+| 새 `TechTreeSO` (`Data/Models`) | `[SerializeField] private` 필드 + 프로퍼티. `List<TechNodeSO> nodes`, `[Range(0,0.99)] float craftedSellRatio = 0.3f`. `GetSellPrice(TechNodeSO) = floor(recraftGold × ratio)`. 에디터 검증(`OnValidate`): `nodeId` 중복, 선행 노드의 `equipType`이 같고 `tier`가 낮은지, `resultItem` 중복, **결과 장비의 `baseValue`가 노드 판매가와 다르면 경고**. 에디터 메뉴 `BagBack100/Tech/Sync Crafted Sell Prices`가 결과 장비 SO의 `baseValue`를 노드 판매가로 맞추고 저장. 판매가를 `baseValue` 하나로 두므로 `HubTradeSystem`과 결과 화면(`RunResult.SumValue`)이 같은 값을 씀 (Gemini 코드 검토 1-5) |
 | `PlayerSessionData` | `HashSet<string>` 해금 노드 ID, `IsNodeUnlocked(string)`, `MarkNodeUnlocked(string)`. 지역 해금: `UnlockedRegionCount = 1`, `IsRegionUnlocked(int regionId)`(MVP는 지역 1만 true, 설정 API는 F8 때). 세션 메모리 |
 
 ### 10.3 C3 제작 로직
@@ -173,20 +173,21 @@ flowchart LR
 | 대상 | 변경 |
 | --- | --- |
 | `SlotContainer` | `CountByItemId(int itemID)`, `RemoveByItemId(int itemID, int amount)`: 슬롯 순서대로 여러 묶음에서 덜어냄. 합계가 모자라면 아무것도 바꾸지 않고 false |
-| `ISlotItemContainer` + 구현 3곳(`InventoryManager`·`StorageManager`·`SecurePouchManager`) | `int CountItemId(int itemID)`, `bool RemoveItemIdAmount(int itemID, int amount)` 추가. 각 매니저는 `SlotContainer`에 위임하고 **변경 알림을 1회만** 발행(세션 저장도 기존 알림 경로로 1회) |
-| 새 `CraftingSystem` (`Hub`, 2계층 System) | 허브 씬 컴포넌트. 참조: `TechTreeSO`(인스펙터), 매니저 3개(`Start`에서 한 번 탐색, `HubTradeSystem`과 같은 방식). 이벤트(시스템 지역 이벤트, `GlobalEvents` 아님): `OnCraftFailed(string)`, `OnCraftCompleted(string)`, `OnTechTreeChanged`. API: `GetState(node)` → `Hidden`/`PrerequisiteLocked`/`Unlockable`/`Unlocked`, `GetOwnedAmount(ItemDataSO)`(창고+가방+파우치), `TryUnlock(node)`, `TryRecraft(node)` |
-| 해금 순서 (`TryUnlock`) | ① 상태가 `Unlockable` ② 골드 ≥ `unlockGold` ③ 재료마다 보유 합계 ≥ 필요 ④ 새 `RuntimeItem(resultItem)`이 가방 또는 창고에 들어가는지 검사 ⑤ 아이템 추가(가방 → 창고) ⑥ 재료 차감(창고 → 가방 → 파우치, 재료별로 남은 수량을 다음 컨테이너로 넘김) ⑦ 골드 차감 ⑧ `MarkNodeUnlocked` ⑨ 이벤트. ③④까지 통과하면 ⑤~⑦은 실패하지 않음(단일 스레드, 결과 장비와 재료는 itemID가 다름). `HubTradeSystem.TryBuy`와 같은 "먼저 넣고 나중에 차감" 방식 |
+| `ISlotItemContainer` + 구현 3곳(`InventoryManager`·`StorageManager`·`SecurePouchManager`) | `int CountItemId(int itemID)`, `bool RemoveItemIdAmount(int itemID, int amount)`, `void BeginBulkChange()`, `void EndBulkChange()` 추가. `BeginBulkChange`~`EndBulkChange` 사이에서는 변경 알림·세션 저장을 미루고, 끝날 때 바뀐 것이 있으면 **1회만** 발행(중첩 카운터). `InventoryManager`의 기존 `CountItems(itemID)`는 `CountItemId`와 같은 `SlotContainer.CountByItemId`에 위임해 중복 로직을 없앰(기존 호출처 유지). `StorageManager`·`SecurePouchManager`에도 `_container == null` 가드 추가 (Gemini 코드 검토 1-1, 1-2, 1-7) |
+| 새 `CraftingSystem` (`Hub`, 2계층 System) | 허브 씬 컴포넌트. 참조: `TechTreeSO`(인스펙터), 매니저 3개(`Start`에서 한 번 탐색, `HubTradeSystem`과 같은 방식). 매니저 3개는 **지연 캐싱**(쓸 때 null이면 탐색). `SecurePouchManager`는 `HubSystem.Awake`가 동적으로 붙이므로 각 매니저의 `OnManagerCreated` 정적 이벤트도 구독해 늦게 생겨도 받음. 매니저 3개의 `OnContainerChanged`와 `PlayerSessionData.OnGoldChanged`를 `CraftingSystem`이 구독해 `OnTechTreeChanged`로 중계(UI는 `CraftingSystem`만 구독). 모든 구독은 `OnEnable`/`OnDisable` 짝. 이벤트(시스템 지역 이벤트, `GlobalEvents` 아님): `OnCraftFailed(string)`, `OnCraftCompleted(string)`, `OnTechTreeChanged`. API: `GetState(node)` → `Hidden`/`PrerequisiteLocked`/`Unlockable`/`Unlocked`, `GetOwnedAmount(ItemDataSO)`(창고+가방+파우치), `TryUnlock(node)`, `TryRecraft(node)` |
+| 해금 순서 (`TryUnlock`) | ① 상태가 `Unlockable` ② 골드 ≥ `unlockGold` ③ 재료마다 보유 합계 ≥ 필요 ④ 새 `RuntimeItem(resultItem)`이 가방 또는 창고에 들어가는지 검사 ⑤ **`MarkNodeUnlocked`를 먼저 기록**(이후 알림을 받는 UI가 중간 상태를 보지 않게) ⑥ 컨테이너 3개 `BeginBulkChange` ⑦ 아이템 추가(가방 → 창고) ⑧ 재료 차감(창고 → 가방 → 파우치, 재료별로 남은 수량을 다음 컨테이너로 넘김) ⑨ `finally`에서 `EndBulkChange`(컨테이너별 알림 1회) ⑩ 골드 차감 ⑪ `OnCraftCompleted`. ③④까지 통과하면 ⑦⑧⑩은 실패하지 않음(단일 스레드, 결과 장비와 재료는 itemID가 다름). 만약 ⑦이 실패하면 해금 기록을 되돌리고 실패 처리. `HubTradeSystem.TryBuy`와 같은 "먼저 넣고 나중에 차감" 방식 (Gemini 코드 검토 1-1) |
 | 재제작 (`TryRecraft`) | `Unlocked` 확인 → 골드 ≥ `recraftGold` → 공간 검사 → 추가 → 골드 차감 → 이벤트 |
-| `HubTradeSystem` | `TechTreeSO` 참조 추가. `GetSellPrice`를 인스턴스 메서드로 바꾸고, 제작 장비(`TryGetNodeByItemId` 성공)면 노드 판매가, 아니면 기존 `baseValue`. `CanSell`도 같은 기준. 호출처 `SellSlotUI` 수정 |
+| `HubTradeSystem` | **로직 변경 없음.** 제작 장비의 판매가는 `baseValue`에 동기화되므로(10.2) 기존 `baseValue × 수량` 계산을 그대로 씀. 클래스 주석의 "대장간 판매"만 "잡화상 판매"로 |
 
 ### 10.4 C4 제작 화면과 판매 이동
 
 | 대상 | 변경 |
 | --- | --- |
-| 새 `TechTreePanelUI` (`UI`) | 대장간 패널 안. 카테고리 탭 3개(무기 / 방어구 / 배낭). 방어구 탭은 투구·갑옷·신발 3줄. 열 = 단계, 노드 = 버튼(아이콘·이름, 상태별 색). 같은 줄의 노드 사이에 연결선(가로 막대 `Image`). 노드를 누르면 상세: 결과 장비 스탯, 재료별 `보유/필요`, 골드, 버튼 하나(`Unlock` / `Craft`, 상태·비용에 따라 `interactable`). 노드 행은 `OnEnable`·탭 전환 때만 다시 만듦. 구독: `CraftingSystem` 이벤트 3개와 매니저 3개의 `OnContainerChanged`, `PlayerSessionData.OnGoldChanged`(OnEnable/OnDisable 짝). UI는 계산하지 않고 `CraftingSystem`에 묻기만 함 |
+| 새 `TechTreePanelUI` (`UI`) | 대장간 패널 안. 카테고리 탭 3개(무기 / 방어구 / 배낭). 방어구 탭은 투구·갑옷·신발 3줄. 열 = 단계, 노드 = 버튼(아이콘·이름, 상태별 색). 같은 줄의 노드 사이에 연결선(가로 막대 `Image`). 노드를 누르면 상세: 결과 장비 스탯, 재료별 `보유/필요`, 골드, 버튼 하나(`Unlock` / `Craft`, 상태·비용에 따라 `interactable`). 노드 행은 `OnEnable`·탭 전환 때만 다시 만듦. 구독: `CraftingSystem` 이벤트 3개만(OnEnable/OnDisable 짝). `OnTechTreeChanged`를 받으면 갱신 플래그만 켜고 `LateUpdate`에서 플래그가 켜져 있을 때 1회 갱신(한 번의 해금에서 컨테이너·골드 알림이 여러 번 와도 화면 갱신은 1회, 할당 없음). UI는 계산하지 않고 `CraftingSystem`에 묻기만 함 (Gemini 코드 검토 1-1, 1-2) |
 | `HubSystem` | 로직 변경 없음. 대장간 클릭 → `_blacksmithPanel` + 가방 패널(지금과 같음). `Tab` 토글도 창고·잡화상과 같은 규칙 유지(3-4 IDEA는 일관성 쪽으로 정리). `_blacksmithPanel` 툴팁 문구만 "제작(테크트리)"로 |
-| 허브 씬 (`02_HubScene`) | `SellSlotUI` 오브젝트를 대장간 패널에서 잡화상 패널 하단으로 이동(인스펙터 참조 유지). 대장간 패널에 `TechTreePanelUI` 구성, 씬에 `CraftingSystem` 추가. unityMCP로 적용하고 `MarkSceneDirty` 후 저장 |
+| 허브 씬 (`02_HubScene`) | `SellSlot`과 판매 안내 `Hint`를 대장간 패널에서 잡화상 패널 하단으로 이동(인스펙터 참조 유지). 잡화상 구매 목록 `ShopPanel/Background/Rows`의 하단 여백을 늘려 판매 칸(180×180)과 겹치지 않게 함. 대장간 패널 제목 `Blacksmith - Sell` → `Blacksmith - Craft`, 잡화상 제목에 판매 표시. 대장간 패널에 `TechTreePanelUI` 구성, 씬에 `CraftingSystem` 추가. unityMCP로 적용하고 `MarkSceneDirty` 후 저장 (Gemini 코드 검토 1-4) |
 | `SellSlotUI` | 주석의 "대장간 판매 칸" → "잡화상 판매 칸". `IsAvailable` 조건은 그대로(잡화상이 열렸을 때만 가방 우클릭 `판매` 표시) |
+| `RunResultUI` | 생환 결과 안내 `(sell at the Blacksmith)` → `(sell at the General Store)` (Gemini 코드 검토 1-5) |
 
 ### 10.5 C5 지역 1 에셋과 상점·드랍 정리
 
@@ -194,7 +195,7 @@ flowchart LR
 | --- | --- |
 | 1단계 장비 | 기존 기본 장비 재사용: Basic Sword(21), Basic Helmet(13), Basic Armor(11), Basic Boots(16), Basic Backpack(12, +5칸) |
 | 2·3단계 장비 | 새 에셋. itemID 301~ (무기 302·303, 투구 312·313, 갑옷 322·323, 신발 332·333). 스탯은 1단계 기준 단계마다 상승(공격력 또는 방어·HP만). 무기 `baseAttackSpeed`는 0(맨손 공속 1.82 유지) 또는 1.82 이상 |
-| 노드 | `TechTree_Region1.asset` + 노드 13개(무기 3, 투구·갑옷·신발 각 3, 배낭 1) |
+| 노드 | `TechTree_Region1.asset` + 노드 13개(무기 3, 투구·갑옷·신발 각 3, 배낭 1). 만든 뒤 `Sync Crafted Sell Prices`로 결과 장비 `baseValue`를 판매가에 맞춤 |
 | 비용 초안 | 아래 표. 재료는 1단계 Brute(1~5층), 2단계 Spider(3~7층), 3단계 Wizard(5~10층) 전리품 중심. 같은 단계의 노드끼리 재료 종류를 나눠 한 재료에 몰리지 않게 함. C6에서 `balance-check` |
 | 잡화상 (`GeneralStoreCatalog`) | 무기·방어구·배낭 3단계와 MP 포션 제거. HP 포션·귀환석 유지. 테스트 재료: Brute 일반 전리품 2종(101·102)을 판매가의 2배(40G)로 추가 |
 | 상자 풀 (`FloorGrayBoxBuilder`) | 재료 수집을 `LootSO` 폴더 전체 대신 **`Region1Config` 몬스터 풀의 몬스터 드랍 풀**에 있는 하위 등급 전리품으로 제한. 보너스 아이템에서 MP 포션(3) 제거, 가중치는 합 30이 정확히 되도록 나머지를 앞 항목부터 1씩 분배. 메뉴 재실행으로 `DropPool_Chest_Region1` 갱신 |
@@ -214,13 +215,15 @@ flowchart LR
 
 ### 10.6 C7 문서
 
-8절 C7 목록대로 GDD·구조 문서를 갱신합니다. 새 클래스(`TechNodeSO`, `TechTreeSO`, `CraftingSystem`, `TechTreePanelUI`)는 `ARCHITECTURE.md`와 스크립트 맵(허브 쪽은 새 `Hub_System_Map.md` 또는 기존 맵 확장)에 추가합니다.
+8절 C7 목록과 함께 **Monsters.md(몬스터별 출현 층)·Dungeon.md(2절 배치 규칙의 층 범위 필터)**도 갱신합니다 (Gemini 코드 검토 1-7). 새 클래스(`TechNodeSO`, `TechTreeSO`, `CraftingSystem`, `TechTreePanelUI`)는 `ARCHITECTURE.md`와 스크립트 맵(허브 쪽은 새 `Hub_System_Map.md` 또는 기존 맵 확장)에 추가합니다.
 
 ### 10.7 영향 범위 근거
 
 - graphify: `HubTradeSystem` ← `SellSlotUI`, `ShopPanelUI`. `SellSlotUI` ← `InventoryUIController.TryOpenItemMenu`(우클릭 `판매` 표시). `MonsterDataSO` ← `MonsterController`. `RegionConfigSO` ← `DungeonGenerator`, `LootSystem`, `FloorDesignValidator`, `FloorGrayBoxBuilder`.
 - `ISlotItemContainer` 구현체는 `InventoryManager`·`StorageManager`·`SecurePouchManager` 3개뿐(grep). 인터페이스에 메서드를 추가해도 다른 구현체는 없음.
 - 인스펙터 연결: `DungeonGenerator._monsterPrefabPool`(던전 씬 YAML 1413줄, 프리팹 3개), `HubTradeSystem._generalStoreCatalog`, `SellSlotUI` 참조(허브 씬). C1·C4에서 unityMCP로 다시 연결합니다.
+- `SecurePouchManager`는 허브 씬에 직렬화돼 있지 않고 `HubSystem.Awake`가 동적으로 붙입니다(그래서 `CraftingSystem`은 지연 캐싱 + `OnManagerCreated` 구독).
+- `baseValue` 사용처: `HubTradeSystem.GetSellPrice`, `RunResult.SumValue`(결과 화면 가치). 제작 장비는 `baseValue`를 판매가에 동기화해 두 곳이 같은 값을 씁니다.
 - 새 전역 이벤트 없음. 제작 이벤트는 `CraftingSystem` 지역 이벤트이고 UI만 구독합니다.
 
 ## 9. 검토 기록
@@ -250,3 +253,16 @@ flowchart LR
 | 3-4 | IDEA | `Tab` 토글 예외를 대장간만 둘지 모든 사이드 패널에 둘지 | C4 설계 때 정함 | - |
 
 3차 판정: **APPROVED** (2026-11-17, gemini-4-hydrogen-xhigh)
+
+**코드 설계 검토 (gemini-4-argon-medium)**
+
+| # | 등급 | 지적 | 처리 | 반영 위치 |
+| --- | --- | --- | --- | --- |
+| 코드 1-1 | MAJOR | 재료별 차감마다 알림이 나가 UI가 중간 상태로 여러 번 갱신, 해금 기록이 차감 뒤 | 수용: 일괄 변경(Begin/EndBulkChange), 해금 기록 먼저, UI 갱신 플래그 | 10.3, 10.4 |
+| 코드 1-2 | MAJOR | 동적 추가되는 `SecurePouchManager`를 `Start`에서만 찾으면 null, 구독 누락 | 수용: 지연 캐싱 + `OnManagerCreated`, 구독은 `CraftingSystem`이 중계, null 가드 | 10.3 |
+| 코드 1-3 | MAJOR | 빌더·`EditorInitialize`가 지역 몬스터 풀을 보존·주입하지 않음, 풀 타입 불일치, 호출부 2곳 | 수용 | 10.1 |
+| 코드 1-4 | MAJOR | 잡화상 구매 목록과 판매 칸이 겹침, 대장간 제목·안내 정리 누락 | 수용 | 10.4 |
+| 코드 1-5 | MINOR | 결과 화면 문구, `RunResult.SumValue`의 `baseValue`와 노드 판매가 불일치 | 수용: 판매가를 `baseValue`에 동기화(`HubTradeSystem` 로직 변경 없음) | 10.2~10.5 |
+| 코드 1-6 | MINOR | 새 SO의 `public` 필드, 노드 단위 검증 누락 | 수용 | 10.2 |
+| 코드 1-7 | MINOR | `CountItems`와 중복 메서드, C7에 Monsters.md·Dungeon.md 누락 | 수용 | 10.3, 10.6 |
+| 코드 1-8 | IDEA | 재료가 빠지며 빈칸이 생기는 경우는 만석이어도 제작 허용 | 유저에게 제안 (지금은 기획 3절대로 거절) | - |
