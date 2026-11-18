@@ -12,7 +12,7 @@ namespace BagBack100.UI
     /// <summary>
     /// Role: 제작소(대장간) 테크트리 화면. 탭별로 장비 줄(무기 / 투구·갑옷·신발·배낭)을 그리고, 노드를 고르면 결과 장비·재료 보유/필요·골드와
     ///       해금(Unlock)·재제작(Craft) 버튼을 보여 준다. 계산은 하지 않고 CraftingSystem에 묻기만 한다.
-    /// Dependencies: CraftingSystem, TechTreeSO, UIToast
+    /// Dependencies: CraftingSystem, TechTreeSO, UIToast, PlayerSessionData(골드 표시 색 판정만 읽음)
     /// Events: 없음 (구독: CraftingSystem.OnTechTreeChanged, OnCraftFailed, OnCraftCompleted)
     /// </summary>
     public class TechTreePanelUI : MonoBehaviour
@@ -28,20 +28,36 @@ namespace BagBack100.UI
             public EquipType[] Lines => _lines;
         }
 
-        private class NodeView
+        private sealed class NodeView
         {
-            public TechNodeSO Node;
-            public Button Button;
-            public Image Background;
-            public Image Icon;
-            public TextMeshProUGUI Label;
+            public TechNodeSO Node { get; }
+            public Button Button { get; }
+            public Image Background { get; }
+            public Image Icon { get; }
+            public TextMeshProUGUI Label { get; }
+
+            public NodeView(TechNodeSO node, GameObject go)
+            {
+                Node = node;
+                Button = go.GetComponent<Button>();
+                Background = go.GetComponent<Image>();
+                Icon = go.transform.Find("Icon")?.GetComponent<Image>();
+                Label = go.transform.Find("Name")?.GetComponent<TextMeshProUGUI>();
+            }
         }
 
-        private class MaterialView
+        private sealed class MaterialView
         {
-            public ItemDataSO Item;
-            public int Need;
-            public TextMeshProUGUI Count;
+            public ItemDataSO Item { get; }
+            public int Need { get; }
+            public TextMeshProUGUI Count { get; }
+
+            public MaterialView(ItemDataSO item, int need, TextMeshProUGUI count)
+            {
+                Item = item;
+                Need = need;
+                Count = count;
+            }
         }
 
         [SerializeField] private CraftingSystem _crafting;
@@ -239,14 +255,7 @@ namespace BagBack100.UI
                 TechNodeSO node = _lineBuffer[i];
                 GameObject go = Instantiate(_nodeTemplate, nodesParent);
                 go.SetActive(true);
-                var view = new NodeView
-                {
-                    Node = node,
-                    Button = go.GetComponent<Button>(),
-                    Background = go.GetComponent<Image>(),
-                    Icon = go.transform.Find("Icon")?.GetComponent<Image>(),
-                    Label = go.transform.Find("Name")?.GetComponent<TextMeshProUGUI>()
-                };
+                var view = new NodeView(node, go);
                 if (view.Icon != null) view.Icon.sprite = node.ResultItem.itemIcon;
                 if (view.Button != null) view.Button.onClick.AddListener(() => SelectNode(node));
                 _nodeViews.Add(view);
@@ -298,12 +307,7 @@ namespace BagBack100.UI
                     _spawnedMaterials.Add(row);
                     var nameText = row.transform.Find("Name")?.GetComponent<TextMeshProUGUI>();
                     if (nameText != null) nameText.text = materials[i].Item.itemName;
-                    _materialViews.Add(new MaterialView
-                    {
-                        Item = materials[i].Item,
-                        Need = materials[i].Amount,
-                        Count = row.transform.Find("Count")?.GetComponent<TextMeshProUGUI>()
-                    });
+                    _materialViews.Add(new MaterialView(materials[i].Item, materials[i].Amount, row.transform.Find("Count")?.GetComponent<TextMeshProUGUI>()));
                 }
             }
         }
