@@ -111,7 +111,7 @@ flowchart LR
 | U5 | 재료 차감 위치 | **창고·가방·보안 파우치 합산** (1절, 3절) |
 | U6 | 제작 장비 판매가 비율 | **재제작 골드의 30%** |
 | U7 | 제작소 위치 | **대장간 = 제작소, 판매는 잡화상으로 이동** (1절). 대장간을 열면 테크트리 패널과 가방·장비 패널을 함께 띄움(재료 확인, 제작 직후 장착). 잡화상은 구매 목록 + 판매 칸. `HubSystem`의 `Tab` 토글 규칙과 토스트 배치는 C4에서 정함 (Gemini 검토 2-2, 3-4) |
-| U8 | MVP 화면 | 열(단계) + 노드 + 연결선만 있는 **단순 테크트리**. 카테고리 탭(무기·방어구·배낭) |
+| U8 | MVP 화면 | 열(단계) + 노드 + 연결선만 있는 **단순 테크트리**. 카테고리 탭(무기·방어구). 배낭은 방어구 탭의 4번째 줄 (2026-11-18 유저 결정으로 3탭 → 2탭) |
 | U9 | 비용 수치 | 층당 기대 가치(약 160G) 기준으로 Claude가 초안을 만들고 `balance-check`로 점검 (C5·C6) |
 | U10 | MP 포션 | MVP 동안 **상점·드랍에서 제외** (MP 소모처가 없음) |
 | U11 | 무기 단계별 차이 | **공격력만 상승**. 판정 형태(`hitboxPattern`)는 무기 3종 작업 때 |
@@ -183,9 +183,9 @@ flowchart LR
 
 | 대상 | 변경 |
 | --- | --- |
-| 새 `TechTreePanelUI` (`UI`) | 대장간 패널 안. 카테고리 탭 3개(무기 / 방어구 / 배낭). 방어구 탭은 투구·갑옷·신발 3줄. 열 = 단계, 노드 = 버튼(아이콘·이름, 상태별 색). 같은 줄의 노드 사이에 연결선(가로 막대 `Image`). 노드를 누르면 상세: 결과 장비 스탯, 재료별 `보유/필요`, 골드, 버튼 하나(`Unlock` / `Craft`, 상태·비용에 따라 `interactable`). 노드 행은 `OnEnable`·탭 전환 때만 다시 만듦. 구독: `CraftingSystem` 이벤트 3개만(OnEnable/OnDisable 짝). `OnTechTreeChanged`를 받으면 갱신 플래그만 켜고 `LateUpdate`에서 플래그가 켜져 있을 때 1회 갱신(한 번의 해금에서 컨테이너·골드 알림이 여러 번 와도 화면 갱신은 1회). 플래그가 꺼진 프레임은 아무것도 하지 않고, 수치 표시는 `TMP_Text.SetText("{0}/{1}", owned, need)`로 문자열 할당 없이 갱신 (Gemini 코드 검토 2-3). UI는 계산하지 않고 `CraftingSystem`에 묻기만 함 (Gemini 코드 검토 1-1, 1-2) |
+| 새 `TechTreePanelUI` (`UI`) | 대장간 패널 안. 카테고리 탭 2개(무기 / 방어구). 방어구 탭은 투구·갑옷·신발 3줄 아래에 배낭 줄을 둔 4줄(2026-11-18 유저 결정). 탭별 줄 구성은 인스펙터 배열(`TabDef`: 버튼 + `EquipType[]`)로 정함. 줄 안 노드는 지역 → 단계 순, 잠긴 지역 노드는 이름·아이콘을 `???`로 가림. 노드 폭은 배낭 4단계(지역당 1단계)가 한 줄에 들어가게 맞춤. 열 = 단계, 노드 = 버튼(아이콘·이름, 상태별 색). 같은 줄의 노드 사이에 연결선(가로 막대 `Image`). 노드를 누르면 상세: 결과 장비 스탯, 재료별 `보유/필요`, 골드, 버튼 하나(`Unlock` / `Craft`, 상태·비용에 따라 `interactable`). 노드 행은 `OnEnable`·탭 전환 때만 다시 만듦. 구독: `CraftingSystem` 이벤트 3개만(OnEnable/OnDisable 짝). `OnTechTreeChanged`를 받으면 갱신 플래그만 켜고 `LateUpdate`에서 플래그가 켜져 있을 때 1회 갱신(한 번의 해금에서 컨테이너·골드 알림이 여러 번 와도 화면 갱신은 1회). 플래그가 꺼진 프레임은 아무것도 하지 않고, 수치 표시는 `TMP_Text.SetText("{0}/{1}", owned, need)`로 문자열 할당 없이 갱신 (Gemini 코드 검토 2-3). UI는 계산하지 않고 `CraftingSystem`에 묻기만 함 (Gemini 코드 검토 1-1, 1-2) |
 | `HubSystem` | 로직 변경 없음. 대장간 클릭 → `_blacksmithPanel` + 가방 패널(지금과 같음). `Tab` 토글도 창고·잡화상과 같은 규칙 유지(3-4 IDEA는 일관성 쪽으로 정리). `_blacksmithPanel` 툴팁 문구만 "제작(테크트리)"로 |
-| 허브 씬 (`02_HubScene`) | `SellSlot`과 판매 안내 `Hint`를 대장간 패널에서 잡화상 패널 하단으로 이동(인스펙터 참조 유지). 잡화상 구매 목록 `ShopPanel/Background/Rows`의 하단 여백을 늘려 판매 칸(180×180)과 겹치지 않게 함. 대장간 패널 제목 `Blacksmith - Sell` → `Blacksmith - Craft`, 잡화상 제목에 판매 표시. 대장간 패널에 `TechTreePanelUI` 구성, 씬에 `CraftingSystem` 추가. unityMCP로 적용하고 `MarkSceneDirty` 후 저장 (Gemini 코드 검토 1-4) |
+| 허브 씬 (`02_HubScene`) | `SellSlot`과 판매 안내 `Hint`를 대장간 패널에서 잡화상 패널 하단으로 이동(인스펙터 참조 유지). 잡화상 구매 목록 `ShopPanel/Background/Rows`를 스크롤 영역(`RowsViewport`: `ScrollRect` + `RectMask2D`) 안에 넣고 하단 여백을 늘려 판매 칸(160×160)과 겹치지 않게 함. 노드가 없을 때 쓸 빈 트리 에셋 `TechTree_Region1`을 만들어 `CraftingSystem`에 연결(노드는 C5). 대장간 패널 제목 `Blacksmith - Sell` → `Blacksmith - Craft`, 잡화상 제목 `General Store - Buy & Sell`. 대장간 패널에 `TechTreePanelUI` 구성, 씬에 `CraftingSystem` 추가. unityMCP로 적용하고 `MarkSceneDirty` 후 저장 (Gemini 코드 검토 1-4) |
 | `SellSlotUI` | 주석의 "대장간 판매 칸" → "잡화상 판매 칸". `IsAvailable` 조건은 그대로(잡화상이 열렸을 때만 가방 우클릭 `판매` 표시) |
 | `RunResultUI` | 생환 결과 안내 `(sell at the Blacksmith)` → `(sell at the General Store)` (Gemini 코드 검토 1-5) |
 
