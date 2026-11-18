@@ -690,10 +690,7 @@ namespace BagBack100.Dungeon
 
             for (int i = 0; i < source.Count; i++)
             {
-                GameObject prefab = source[i];
-                if (prefab == null) continue;
-                if (!prefab.TryGetComponent(out Monster.MonsterController monster) || monster.Data == null) continue;
-                if (monster.Data.CanAppearOnFloor(_currentFloorNumber)) _floorMonsterBuffer.Add(prefab);
+                if (TryGetMonsterData(source[i], out var data) && data.CanAppearOnFloor(_currentFloorNumber)) _floorMonsterBuffer.Add(source[i]);
             }
 
             if (_floorMonsterBuffer.Count == 0)
@@ -702,10 +699,19 @@ namespace BagBack100.Dungeon
                 Debug.LogWarning($"[DungeonGenerator] {poolName}에 {_currentFloorNumber}층 출현 범위에 맞는 몬스터가 없어 범위를 무시하고 스폰합니다.");
                 for (int i = 0; i < source.Count; i++)
                 {
-                    if (source[i] != null) _floorMonsterBuffer.Add(source[i]);
+                    if (TryGetMonsterData(source[i], out _)) _floorMonsterBuffer.Add(source[i]);
                 }
             }
             return _floorMonsterBuffer;
+        }
+
+        // 풀에 몬스터가 아닌 프리팹이나 데이터가 빠진 프리팹이 섞여도 스폰에서 예외가 나지 않게 같은 조건으로 거른다
+        private static bool TryGetMonsterData(GameObject prefab, out BagBack100.Data.Models.MonsterDataSO data)
+        {
+            data = null;
+            if (prefab == null || !prefab.TryGetComponent(out Monster.MonsterController monster)) return false;
+            data = monster.Data;
+            return data != null;
         }
 
         private void InitializeFogOfWar(Vector3Int playerStartCell)

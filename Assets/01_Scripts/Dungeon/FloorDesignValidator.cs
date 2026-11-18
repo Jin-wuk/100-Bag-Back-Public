@@ -254,6 +254,7 @@ namespace BagBack100.Dungeon
             }
             else
             {
+                CheckInvalidPrefabs(pool, $"[{region.name}] 몬스터 풀", warnings);
                 for (int floor = 1; floor <= RegionConfigSO.BossFloor; floor++)
                 {
                     if (CountMonstersForFloor(pool, floor) == 0)
@@ -287,10 +288,28 @@ namespace BagBack100.Dungeon
             {
                 DungeonZone zone = zones[z];
                 if (zone == null || zone.OverrideMonsterPool == null || zone.OverrideMonsterPool.Count == 0) continue;
+                CheckInvalidPrefabs(zone.OverrideMonsterPool, $"[{region.name}] {design.name}의 구역 {zone.name} 전용 풀", warnings);
                 for (int floor = fromFloor; floor <= toFloor; floor++)
                 {
                     if (CountMonstersForFloor(zone.OverrideMonsterPool, floor) > 0) continue;
                     warnings.Add($"[{region.name}] {design.name}의 구역 {zone.name} 전용 풀에 {floor}층 출현 범위에 맞는 몬스터가 없습니다. 범위를 무시하고 스폰합니다.");
+                }
+            }
+        }
+
+        // 빈 칸이나 MonsterController·데이터가 없는 프리팹은 런타임에서 건너뛰므로, 다른 몬스터가 층을 메워도 연결 실수를 알린다
+        private static void CheckInvalidPrefabs(IReadOnlyList<GameObject> pool, string poolLabel, List<string> warnings)
+        {
+            for (int i = 0; i < pool.Count; i++)
+            {
+                GameObject prefab = pool[i];
+                if (prefab == null)
+                {
+                    warnings.Add($"{poolLabel} {i}번 칸이 비어 있습니다.");
+                }
+                else if (!prefab.TryGetComponent(out BagBack100.Monster.MonsterController monster) || monster.Data == null)
+                {
+                    warnings.Add($"{poolLabel}의 {prefab.name}에 MonsterController 또는 몬스터 데이터가 없어 스폰에서 제외됩니다.");
                 }
             }
         }
