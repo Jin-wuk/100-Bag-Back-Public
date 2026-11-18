@@ -7,7 +7,7 @@ using BagBack100.Player;
 namespace BagBack100.Hub
 {
     /// <summary>
-    /// Role: 허브 거래 처리(2계층 System). 대장간 판매(아이템 → 지갑 골드)와 잡화상 구매(골드 → 아이템).
+    /// Role: 허브 거래 처리(2계층 System). 잡화상 판매(아이템 → 지갑 골드)와 잡화상 구매(골드 → 아이템).
     ///       판매가는 아이템별 지정 가격(baseValue) × 수량, 구매가는 ShopCatalogSO의 가격.
     ///       구매한 아이템은 가방에 먼저, 가방이 차면 창고에 넣고, 둘 다 차면 구매를 취소한다.
     /// Dependencies: PlayerSessionData(지갑), InventoryManager, StorageManager, ShopCatalogSO
