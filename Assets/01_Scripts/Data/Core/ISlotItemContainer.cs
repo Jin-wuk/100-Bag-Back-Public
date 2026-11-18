@@ -28,5 +28,18 @@ namespace BagBack100.Data.Core
 
         /// <summary>스택에서 amount개를 덜어낸다. 전부면 슬롯에서 제거 (판매·삭제용)</summary>
         bool RemoveAmount(RuntimeItem item, int amount);
+
+        /// <summary>같은 itemID의 총 수량 (여러 묶음 합계)</summary>
+        int CountItemId(int itemID);
+
+        /// <summary>같은 itemID를 여러 묶음에서 amount개 덜어낸다. 합계가 모자라면 바꾸지 않고 false (제작 재료 차감)</summary>
+        bool RemoveItemIdAmount(int itemID, int amount);
+
+        /// <summary>
+        /// Begin~End 사이의 변경 알림·세션 저장을 미루고 End에서 바뀐 것이 있으면 1회만 보낸다 (중첩 가능).
+        /// 여러 컨테이너를 한 번에 바꾸는 제작에서 UI가 중간 상태를 보거나 여러 번 갱신하지 않게 한다.
+        /// </summary>
+        void BeginBulkChange();
+        void EndBulkChange();
     }
 }

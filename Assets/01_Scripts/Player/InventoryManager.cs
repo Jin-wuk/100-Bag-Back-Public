@@ -59,6 +59,11 @@ namespace BagBack100.Player
 
         private void NotifyInventoryChanged()
         {
+            if (_bulkDepth > 0)
+            {
+                _bulkDirty = true;
+                return;
+            }
             PlayerSessionData.SaveInventory(_container.Items);
             OnInventoryChanged?.Invoke();
         }
@@ -207,15 +212,31 @@ namespace BagBack100.Player
         {
             // 허브에서는 HubSystem.Awake가 이 컴포넌트의 Awake보다 먼저 퀵슬롯 UI를 갱신할 수 있다 (#21).
             // 초기화 뒤 NotifyInventoryChanged가 UI를 다시 갱신하므로 그전에는 빈 가방으로 본다.
-            if (_container == null) return 0;
+            return CountItemId(itemID);
+        }
 
-            int total = 0;
-            var items = _container.Items;
-            for (int i = 0; i < items.Count; i++)
-            {
-                if (items[i].ItemData.itemID == itemID) total += items[i].Count;
-            }
-            return total;
+        // 일괄 변경 중에는 알림·세션 저장을 미루고 EndBulkChange에서 1회만 보낸다 (ISlotItemContainer 계약)
+        private int _bulkDepth;
+        private bool _bulkDirty;
+
+        public void BeginBulkChange() => _bulkDepth++;
+
+        public void EndBulkChange()
+        {
+            if (_bulkDepth <= 0) return;
+            _bulkDepth--;
+            if (_bulkDepth > 0 || !_bulkDirty) return;
+            _bulkDirty = false;
+            NotifyInventoryChanged();
+        }
+
+        public int CountItemId(int itemID) => _container != null ? _container.CountByItemId(itemID) : 0;
+
+        public bool RemoveItemIdAmount(int itemID, int amount)
+        {
+            if (_container == null || !_container.RemoveByItemId(itemID, amount)) return false;
+            NotifyInventoryChanged();
+            return true;
         }
 
         /// <summary>같은 itemID 중 가장 앞 슬롯의 아이템 (퀵슬롯 사용 대상)</summary>

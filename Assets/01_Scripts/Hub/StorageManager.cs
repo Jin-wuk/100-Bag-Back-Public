@@ -54,6 +54,11 @@ namespace BagBack100.Hub
 
         private void NotifyStorageChanged()
         {
+            if (_bulkDepth > 0)
+            {
+                _bulkDirty = true;
+                return;
+            }
             _saveBuffer.Clear();
             _saveBuffer.AddRange(_container.Items);
             _saveBuffer.AddRange(_hiddenOverflow);
@@ -61,7 +66,31 @@ namespace BagBack100.Hub
             OnStorageChanged?.Invoke();
         }
 
-        public bool CanAddItem(RuntimeItem item) => _container.CanAdd(item);
+        // 일괄 변경 중에는 알림·세션 저장을 미루고 EndBulkChange에서 1회만 보낸다 (ISlotItemContainer 계약)
+        private int _bulkDepth;
+        private bool _bulkDirty;
+
+        public void BeginBulkChange() => _bulkDepth++;
+
+        public void EndBulkChange()
+        {
+            if (_bulkDepth <= 0) return;
+            _bulkDepth--;
+            if (_bulkDepth > 0 || !_bulkDirty) return;
+            _bulkDirty = false;
+            NotifyStorageChanged();
+        }
+
+        public int CountItemId(int itemID) => _container != null ? _container.CountByItemId(itemID) : 0;
+
+        public bool RemoveItemIdAmount(int itemID, int amount)
+        {
+            if (_container == null || !_container.RemoveByItemId(itemID, amount)) return false;
+            NotifyStorageChanged();
+            return true;
+        }
+
+        public bool CanAddItem(RuntimeItem item) => _container != null && _container.CanAdd(item);
 
         public int GetAcceptableAmount(RuntimeItem item, int targetSlot) => _container.GetAcceptableAmount(item, targetSlot);
 
