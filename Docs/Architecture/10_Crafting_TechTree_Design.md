@@ -146,6 +146,83 @@ flowchart LR
 | C6 | 밸런스 점검(`balance-check`)과 사이클 플레이 테스트 (0G·무장비 복구, 층별 몬스터 쏠림 포함) |
 | C7 | GDD·구조 문서 동기화: Hub.md(대장간 = 제작소, 판매를 잡화상으로 이동, MP 포션 제외), Items.md(배낭 표·획득 경로, MP 포션 제외), Combat.md 스탯 표(MP 회복 문구), UI_Direction.md 4절(재제작 비용·배낭 위치), Roadmap.md(방어구 3분기 줄), 07 문서 6절·Q26(배낭 3단계·상한 35칸), ARCHITECTURE.md·스크립트 맵 |
 
+## 10. 구현 설계 (코드)
+
+8절 구현 단위를 코드 수준으로 정리합니다. 커밋은 단위마다 나누고, 각 커밋은 컴파일되는 상태를 유지합니다. 단위 사이 의존: C1은 독립, C2 → C3 → C4, C5는 C1~C4 이후.
+
+### 10.1 C1 몬스터 출현 층 범위
+
+| 대상 | 변경 |
+| --- | --- |
+| `MonsterDataSO` | `[Min(1)] minFloor = 1`, `[Min(1)] maxFloor = 10` 필드와 `CanAppearOnFloor(int floor)`. `OnValidate`에서 `maxFloor < minFloor`이면 맞춤 |
+| `RegionConfigSO` | 기본 몬스터 풀 `List<GameObject> _monsterPool` 추가(`MonsterPool` 읽기 전용 노출). 지금 `03_DungeonScene`의 `DungeonGenerator._monsterPrefabPool` 값(3종)을 `Region1Config`로 옮김 |
+| `DungeonGenerator` | `_monsterPrefabPool` 필드 삭제, `_regionConfig.MonsterPool` 사용. `GetZoneMonsterPool(zone)` → `GetFloorMonsterPool(zone, floor)`: 구역 전용 풀이 있으면 그것, 없으면 지역 풀을 기준으로 `CanAppearOnFloor`인 프리팹만 재사용 버퍼(`_floorMonsterBuffer`)에 담아 반환. 0종이면 필터 없는 같은 풀을 반환하고 `Debug.LogWarning`. 층 생성 때만 호출(Update 아님) |
+| `FloorDesignValidator.ValidateRegion` | 지역 풀이 비었으면 오류. 1~10층마다 지역 풀에 출현 가능한 몬스터가 1종 이상인지 검사(없으면 오류). 층 디자인의 구역 전용 풀은 그 디자인이 쓰이는 층(초반 1~4, 중간 보스 5, 후반 6~9, 보스 10)에서 0종이면 경고. 몬스터 데이터는 프리팹의 `MonsterController.Data`로 읽음 |
+| 데이터 | Heavy Brute 1~5층, Shadow Spider 3~7층, Arcane Wizard 5~10층 (초기값) |
+
+### 10.2 C2 노드 데이터와 해금 상태
+
+| 대상 | 변경 |
+| --- | --- |
+| 새 `TechNodeSO` (`Data/Models`) | `string nodeId`(고유), `EquipmentDataSO resultItem`, `int tier`, `int regionId`, `TechNodeSO prerequisite`(첫 단계는 null), `List<MaterialCost> materials`(`ItemDataSO item`, `int amount`), `int unlockGold`, `int recraftGold`. 줄(무기·투구·갑옷·신발·배낭)은 `resultItem.equipType`으로 구분하므로 별도 enum을 두지 않음 |
+| 새 `TechTreeSO` (`Data/Models`) | `List<TechNodeSO> nodes`, `[Range(0,1)] float craftedSellRatio = 0.3f`. `TryGetNodeByItemId(int itemID, out TechNodeSO)`(판매가 조회), `GetSellPrice(TechNodeSO) = floor(recraftGold × ratio)`. 에디터 검증(`OnValidate`): `nodeId` 중복, 같은 노드 안 재료 중복, 선행 노드의 `equipType`이 같고 `tier`가 낮은지, `resultItem` 중복, 판매가 < 재제작 골드 |
+| `PlayerSessionData` | `HashSet<string>` 해금 노드 ID, `IsNodeUnlocked(string)`, `MarkNodeUnlocked(string)`. 지역 해금: `UnlockedRegionCount = 1`, `IsRegionUnlocked(int regionId)`(MVP는 지역 1만 true, 설정 API는 F8 때). 세션 메모리 |
+
+### 10.3 C3 제작 로직
+
+| 대상 | 변경 |
+| --- | --- |
+| `SlotContainer` | `CountByItemId(int itemID)`, `RemoveByItemId(int itemID, int amount)`: 슬롯 순서대로 여러 묶음에서 덜어냄. 합계가 모자라면 아무것도 바꾸지 않고 false |
+| `ISlotItemContainer` + 구현 3곳(`InventoryManager`·`StorageManager`·`SecurePouchManager`) | `int CountItemId(int itemID)`, `bool RemoveItemIdAmount(int itemID, int amount)` 추가. 각 매니저는 `SlotContainer`에 위임하고 **변경 알림을 1회만** 발행(세션 저장도 기존 알림 경로로 1회) |
+| 새 `CraftingSystem` (`Hub`, 2계층 System) | 허브 씬 컴포넌트. 참조: `TechTreeSO`(인스펙터), 매니저 3개(`Start`에서 한 번 탐색, `HubTradeSystem`과 같은 방식). 이벤트(시스템 지역 이벤트, `GlobalEvents` 아님): `OnCraftFailed(string)`, `OnCraftCompleted(string)`, `OnTechTreeChanged`. API: `GetState(node)` → `Hidden`/`PrerequisiteLocked`/`Unlockable`/`Unlocked`, `GetOwnedAmount(ItemDataSO)`(창고+가방+파우치), `TryUnlock(node)`, `TryRecraft(node)` |
+| 해금 순서 (`TryUnlock`) | ① 상태가 `Unlockable` ② 골드 ≥ `unlockGold` ③ 재료마다 보유 합계 ≥ 필요 ④ 새 `RuntimeItem(resultItem)`이 가방 또는 창고에 들어가는지 검사 ⑤ 아이템 추가(가방 → 창고) ⑥ 재료 차감(창고 → 가방 → 파우치, 재료별로 남은 수량을 다음 컨테이너로 넘김) ⑦ 골드 차감 ⑧ `MarkNodeUnlocked` ⑨ 이벤트. ③④까지 통과하면 ⑤~⑦은 실패하지 않음(단일 스레드, 결과 장비와 재료는 itemID가 다름). `HubTradeSystem.TryBuy`와 같은 "먼저 넣고 나중에 차감" 방식 |
+| 재제작 (`TryRecraft`) | `Unlocked` 확인 → 골드 ≥ `recraftGold` → 공간 검사 → 추가 → 골드 차감 → 이벤트 |
+| `HubTradeSystem` | `TechTreeSO` 참조 추가. `GetSellPrice`를 인스턴스 메서드로 바꾸고, 제작 장비(`TryGetNodeByItemId` 성공)면 노드 판매가, 아니면 기존 `baseValue`. `CanSell`도 같은 기준. 호출처 `SellSlotUI` 수정 |
+
+### 10.4 C4 제작 화면과 판매 이동
+
+| 대상 | 변경 |
+| --- | --- |
+| 새 `TechTreePanelUI` (`UI`) | 대장간 패널 안. 카테고리 탭 3개(무기 / 방어구 / 배낭). 방어구 탭은 투구·갑옷·신발 3줄. 열 = 단계, 노드 = 버튼(아이콘·이름, 상태별 색). 같은 줄의 노드 사이에 연결선(가로 막대 `Image`). 노드를 누르면 상세: 결과 장비 스탯, 재료별 `보유/필요`, 골드, 버튼 하나(`Unlock` / `Craft`, 상태·비용에 따라 `interactable`). 노드 행은 `OnEnable`·탭 전환 때만 다시 만듦. 구독: `CraftingSystem` 이벤트 3개와 매니저 3개의 `OnContainerChanged`, `PlayerSessionData.OnGoldChanged`(OnEnable/OnDisable 짝). UI는 계산하지 않고 `CraftingSystem`에 묻기만 함 |
+| `HubSystem` | 로직 변경 없음. 대장간 클릭 → `_blacksmithPanel` + 가방 패널(지금과 같음). `Tab` 토글도 창고·잡화상과 같은 규칙 유지(3-4 IDEA는 일관성 쪽으로 정리). `_blacksmithPanel` 툴팁 문구만 "제작(테크트리)"로 |
+| 허브 씬 (`02_HubScene`) | `SellSlotUI` 오브젝트를 대장간 패널에서 잡화상 패널 하단으로 이동(인스펙터 참조 유지). 대장간 패널에 `TechTreePanelUI` 구성, 씬에 `CraftingSystem` 추가. unityMCP로 적용하고 `MarkSceneDirty` 후 저장 |
+| `SellSlotUI` | 주석의 "대장간 판매 칸" → "잡화상 판매 칸". `IsAvailable` 조건은 그대로(잡화상이 열렸을 때만 가방 우클릭 `판매` 표시) |
+
+### 10.5 C5 지역 1 에셋과 상점·드랍 정리
+
+| 대상 | 변경 |
+| --- | --- |
+| 1단계 장비 | 기존 기본 장비 재사용: Basic Sword(21), Basic Helmet(13), Basic Armor(11), Basic Boots(16), Basic Backpack(12, +5칸) |
+| 2·3단계 장비 | 새 에셋. itemID 301~ (무기 302·303, 투구 312·313, 갑옷 322·323, 신발 332·333). 스탯은 1단계 기준 단계마다 상승(공격력 또는 방어·HP만). 무기 `baseAttackSpeed`는 0(맨손 공속 1.82 유지) 또는 1.82 이상 |
+| 노드 | `TechTree_Region1.asset` + 노드 13개(무기 3, 투구·갑옷·신발 각 3, 배낭 1) |
+| 비용 초안 | 아래 표. 재료는 1단계 Brute(1~5층), 2단계 Spider(3~7층), 3단계 Wizard(5~10층) 전리품 중심. 같은 단계의 노드끼리 재료 종류를 나눠 한 재료에 몰리지 않게 함. C6에서 `balance-check` |
+| 잡화상 (`GeneralStoreCatalog`) | 무기·방어구·배낭 3단계와 MP 포션 제거. HP 포션·귀환석 유지. 테스트 재료: Brute 일반 전리품 2종(101·102)을 판매가의 2배(40G)로 추가 |
+| 상자 풀 (`FloorGrayBoxBuilder`) | 재료 수집을 `LootSO` 폴더 전체 대신 **`Region1Config` 몬스터 풀의 몬스터 드랍 풀**에 있는 하위 등급 전리품으로 제한. 보너스 아이템에서 MP 포션(3) 제거, 가중치는 합 30이 정확히 되도록 나머지를 앞 항목부터 1씩 분배. 메뉴 재실행으로 `DropPool_Chest_Region1` 갱신 |
+| 몬스터 드랍 풀 | 지금 장비가 들어 있지 않아 변경 없음(확인함) |
+| 시작 상태 | 지금도 새 세션은 장비 없이 시작(시작 지급 경로 없음, 확인함). 시작 골드 1000G 유지 |
+
+**비용 초안 (노드 1개 기준)**
+
+| 단계 | 재료 | 해금 골드 | 재제작 골드 | 판매가(30%) |
+| --- | --- | --- | --- | --- |
+| 1 | Brute 일반 ×3 | 150G | 100G | 30G |
+| 2 | Spider 일반 ×3 + Brute 희귀 ×1 | 400G | 250G | 75G |
+| 3 | Wizard 일반 ×3 + Spider 희귀 ×1 + Wizard 희귀 ×1 | 900G | 500G | 150G |
+
+- 1단계 5노드를 모두 열려면 골드 750G + Brute 일반 15개입니다. 시작 1000G로는 일부만 열 수 있어 "무엇부터 열지" 고르게 됩니다(튜토리얼의 시작 무기 선택과 같은 방향).
+- 층당 기대 가치 약 160G 기준으로 1단계 1노드 ≈ 1~2층, 3단계 1노드 ≈ 6~8층 분량입니다.
+
+### 10.6 C7 문서
+
+8절 C7 목록대로 GDD·구조 문서를 갱신합니다. 새 클래스(`TechNodeSO`, `TechTreeSO`, `CraftingSystem`, `TechTreePanelUI`)는 `ARCHITECTURE.md`와 스크립트 맵(허브 쪽은 새 `Hub_System_Map.md` 또는 기존 맵 확장)에 추가합니다.
+
+### 10.7 영향 범위 근거
+
+- graphify: `HubTradeSystem` ← `SellSlotUI`, `ShopPanelUI`. `SellSlotUI` ← `InventoryUIController.TryOpenItemMenu`(우클릭 `판매` 표시). `MonsterDataSO` ← `MonsterController`. `RegionConfigSO` ← `DungeonGenerator`, `LootSystem`, `FloorDesignValidator`, `FloorGrayBoxBuilder`.
+- `ISlotItemContainer` 구현체는 `InventoryManager`·`StorageManager`·`SecurePouchManager` 3개뿐(grep). 인터페이스에 메서드를 추가해도 다른 구현체는 없음.
+- 인스펙터 연결: `DungeonGenerator._monsterPrefabPool`(던전 씬 YAML 1413줄, 프리팹 3개), `HubTradeSystem._generalStoreCatalog`, `SellSlotUI` 참조(허브 씬). C1·C4에서 unityMCP로 다시 연결합니다.
+- 새 전역 이벤트 없음. 제작 이벤트는 `CraftingSystem` 지역 이벤트이고 UI만 구독합니다.
+
 ## 9. 검토 기록
 
 | # | 등급 | 지적 | 처리 | 반영 위치 |
