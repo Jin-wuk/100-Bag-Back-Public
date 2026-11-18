@@ -27,7 +27,7 @@ namespace BagBack100.Data.Core
     }
 
     /// <summary>
-    /// Role: 씬 전환(02_HubScene <-> 03_DungeonScene) 간 인벤토리, 장착 장비, 창고, 보안 파우치, 퀵슬롯 등록, 골드 지갑, 층계 던전 진행(지역·층)을 보존하는 런타임 세션 컨테이너.
+    /// Role: 씬 전환(02_HubScene <-> 03_DungeonScene) 간 인벤토리, 장착 장비, 창고, 보안 파우치, 퀵슬롯 등록, 골드 지갑, 층계 던전 진행(지역·층), 테크트리 해금 노드·지역 진행도를 보존하는 런타임 세션 컨테이너.
     /// Dependencies: RuntimeItem, BackpackDataSO
     /// Events: OnGoldChanged(gold)
     /// </summary>
@@ -67,6 +67,29 @@ namespace BagBack100.Data.Core
         {
             CurrentRegionId = regionId;
             CurrentFloor = floor;
+        }
+
+        // 제작소 테크트리 해금 노드 ID. 사망과 무관하게 유지된다 (MVP는 세션 메모리만, 세이브 연동은 MVP 밖)
+        private static readonly HashSet<string> _unlockedNodeIds = new HashSet<string>();
+
+        public static bool IsNodeUnlocked(string nodeId)
+        {
+            return !string.IsNullOrEmpty(nodeId) && _unlockedNodeIds.Contains(nodeId);
+        }
+
+        // 새로 기록했으면 true, 이미 해금돼 있었거나 ID가 비었으면 false
+        public static bool MarkNodeUnlocked(string nodeId)
+        {
+            if (string.IsNullOrEmpty(nodeId)) return false;
+            return _unlockedNodeIds.Add(nodeId);
+        }
+
+        // 지역 진행도: 1번부터 이 수까지 해금. MVP는 지역 1만 있으므로 1로 고정하고, 늘리는 API는 F8(지역 확장) 때 추가한다
+        public static int UnlockedRegionCount { get; private set; } = 1;
+
+        public static bool IsRegionUnlocked(int regionId)
+        {
+            return regionId >= 1 && regionId <= UnlockedRegionCount;
         }
 
         // 보안 파우치: 사망해도 비우지 않는다
