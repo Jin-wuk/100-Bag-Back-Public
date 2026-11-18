@@ -130,11 +130,11 @@ namespace BagBack100.Player
             NotifyInventoryChanged();
         }
 
-        public bool CanAddItem(RuntimeItem item) => _container.CanAdd(item);
+        public bool CanAddItem(RuntimeItem item) => _container != null && _container.CanAdd(item);
 
-        public int GetAcceptableAmount(RuntimeItem item, int targetSlot) => _container.GetAcceptableAmount(item, targetSlot);
+        public int GetAcceptableAmount(RuntimeItem item, int targetSlot) => _container != null ? _container.GetAcceptableAmount(item, targetSlot) : 0;
 
-        public bool CanPlaceItemAtSlot(RuntimeItem item, int targetSlot) => _container.CanPlaceAt(item, targetSlot);
+        public bool CanPlaceItemAtSlot(RuntimeItem item, int targetSlot) => _container != null && _container.CanPlaceAt(item, targetSlot);
 
         public bool AddItemAt(RuntimeItem item, int targetSlot)
         {

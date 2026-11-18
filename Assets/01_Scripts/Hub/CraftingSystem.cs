@@ -34,6 +34,8 @@ namespace BagBack100.Hub
         private InventoryManager _inventory;
         private StorageManager _storage;
         private SecurePouchManager _pouch;
+        // 활성 상태에서만 매니저 이벤트를 구독한다. 비활성 중에 지연 캐싱으로 참조만 바뀌어도 구독이 새지 않게 한다
+        private bool _listening;
 
         // 차감 순서(창고 → 가방 → 파우치)대로 담는 재사용 배열. 호출마다 채워 할당을 없앤다
         private readonly ISlotItemContainer[] _materialSources = new ISlotItemContainer[3];
@@ -49,6 +51,7 @@ namespace BagBack100.Hub
             StorageManager.OnManagerCreated += BindStorage;
             SecurePouchManager.OnManagerCreated += BindPouch;
             PlayerSessionData.OnGoldChanged += HandleGoldChanged;
+            SetListening(true);
         }
 
         private void Start()
@@ -65,37 +68,45 @@ namespace BagBack100.Hub
             StorageManager.OnManagerCreated -= BindStorage;
             SecurePouchManager.OnManagerCreated -= BindPouch;
             PlayerSessionData.OnGoldChanged -= HandleGoldChanged;
-            BindInventory(null);
-            BindStorage(null);
-            BindPouch(null);
+            SetListening(false);
         }
 
-        // 참조가 바뀌면 이전 인스턴스의 구독을 먼저 끊는다. 파괴된 인스턴스도 C# 객체로는 남아 있으므로 ReferenceEquals로 비교한다
+        // 현재 바인딩된 매니저 이벤트를 한꺼번에 구독/해제한다. 파괴된 인스턴스도 C# 객체로는 남아 있으므로 ReferenceEquals로 비교한다
+        private void SetListening(bool listening)
+        {
+            if (_listening == listening) return;
+            _listening = listening;
+            if (!ReferenceEquals(_inventory, null)) { if (listening) _inventory.OnInventoryChanged += RelayChanged; else _inventory.OnInventoryChanged -= RelayChanged; }
+            if (!ReferenceEquals(_storage, null)) { if (listening) _storage.OnStorageChanged += RelayChanged; else _storage.OnStorageChanged -= RelayChanged; }
+            if (!ReferenceEquals(_pouch, null)) { if (listening) _pouch.OnPouchChanged += RelayChanged; else _pouch.OnPouchChanged -= RelayChanged; }
+        }
+
+        // 참조가 바뀌면 이전 인스턴스의 구독을 먼저 끊고, 활성 상태일 때만 새 인스턴스를 구독한다
         private void BindInventory(InventoryManager manager)
         {
             if (ReferenceEquals(_inventory, manager)) return;
-            if (!ReferenceEquals(_inventory, null)) _inventory.OnInventoryChanged -= RelayChanged;
+            if (_listening && !ReferenceEquals(_inventory, null)) _inventory.OnInventoryChanged -= RelayChanged;
             _inventory = manager;
-            if (!ReferenceEquals(_inventory, null)) _inventory.OnInventoryChanged += RelayChanged;
-            RelayChanged();
+            if (_listening && !ReferenceEquals(_inventory, null)) _inventory.OnInventoryChanged += RelayChanged;
+            if (_listening) RelayChanged();
         }
 
         private void BindStorage(StorageManager manager)
         {
             if (ReferenceEquals(_storage, manager)) return;
-            if (!ReferenceEquals(_storage, null)) _storage.OnStorageChanged -= RelayChanged;
+            if (_listening && !ReferenceEquals(_storage, null)) _storage.OnStorageChanged -= RelayChanged;
             _storage = manager;
-            if (!ReferenceEquals(_storage, null)) _storage.OnStorageChanged += RelayChanged;
-            RelayChanged();
+            if (_listening && !ReferenceEquals(_storage, null)) _storage.OnStorageChanged += RelayChanged;
+            if (_listening) RelayChanged();
         }
 
         private void BindPouch(SecurePouchManager manager)
         {
             if (ReferenceEquals(_pouch, manager)) return;
-            if (!ReferenceEquals(_pouch, null)) _pouch.OnPouchChanged -= RelayChanged;
+            if (_listening && !ReferenceEquals(_pouch, null)) _pouch.OnPouchChanged -= RelayChanged;
             _pouch = manager;
-            if (!ReferenceEquals(_pouch, null)) _pouch.OnPouchChanged += RelayChanged;
-            RelayChanged();
+            if (_listening && !ReferenceEquals(_pouch, null)) _pouch.OnPouchChanged += RelayChanged;
+            if (_listening) RelayChanged();
         }
 
         // 지연 캐싱: Start 전에 호출되거나 매니저가 다시 만들어졌어도 쓸 때 다시 찾는다
