@@ -55,9 +55,14 @@ namespace BagBack100.Data.Models
                 {
                     TechNodeSO other = _nodes[j];
                     if (other == null) continue;
-                    if (other == node) warnings.Add($"[{name}] 노드 {node.name}가 목록에 두 번 들어 있습니다.");
-                    else if (!string.IsNullOrEmpty(node.NodeId) && other.NodeId == node.NodeId) warnings.Add($"[{name}] 노드 ID '{node.NodeId}'가 {node.name}, {other.name}에 중복됩니다.");
-                    else if (node.ResultItem != null && other.ResultItem == node.ResultItem) warnings.Add($"[{name}] 결과 장비 {node.ResultItem.name}가 {node.name}, {other.name}에 중복됩니다.");
+                    if (other == node)
+                    {
+                        warnings.Add($"[{name}] 노드 {node.name}가 목록에 두 번 들어 있습니다.");
+                        continue;
+                    }
+                    // ID와 결과 장비가 함께 겹치면 둘 다 알려야 하므로 따로 검사한다
+                    if (!string.IsNullOrEmpty(node.NodeId) && other.NodeId == node.NodeId) warnings.Add($"[{name}] 노드 ID '{node.NodeId}'가 {node.name}, {other.name}에 중복됩니다.");
+                    if (node.ResultItem != null && other.ResultItem == node.ResultItem) warnings.Add($"[{name}] 결과 장비 {node.ResultItem.name}가 {node.name}, {other.name}에 중복됩니다.");
                 }
 
                 TechNodeSO pre = node.Prerequisite;
