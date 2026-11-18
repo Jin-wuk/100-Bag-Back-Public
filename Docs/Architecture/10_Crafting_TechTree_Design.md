@@ -155,10 +155,10 @@ flowchart LR
 | 대상 | 변경 |
 | --- | --- |
 | `MonsterDataSO` | `[Min(1)] minFloor = 1`, `[Min(1)] maxFloor = 10` 필드와 `CanAppearOnFloor(int floor)`. `OnValidate`에서 `maxFloor < minFloor`이면 맞춤 |
-| `RegionConfigSO` | 기본 몬스터 풀 `[SerializeField] private List<GameObject> _monsterPool` 추가(`IReadOnlyList<GameObject> MonsterPool` 노출). 지금 `03_DungeonScene`의 `DungeonGenerator._monsterPrefabPool` 값(3종)을 `Region1Config`로 옮김. `EditorInitialize`와 `FloorGrayBoxBuilder.CreateGrayBoxFloors`가 지역 설정을 다시 만들 때 기존 풀을 보존하고, 비어 있으면 기본 몬스터 프리팹 3종을 넣음 (Gemini 코드 검토 1-3) |
+| `RegionConfigSO` | 기본 몬스터 풀 `[SerializeField] private List<GameObject> _monsterPool` 추가(`IReadOnlyList<GameObject> MonsterPool` 노출). 지금 `03_DungeonScene`의 `DungeonGenerator._monsterPrefabPool` 값(3종)을 `Region1Config`로 옮김. `EditorInitialize`와 `FloorGrayBoxBuilder.CreateGrayBoxFloors`는 지역 설정을 다시 만들 때 기존 풀을 건드리지 않아 보존됨. **특정 몬스터를 코드에 넣지 않음**(지금 몬스터는 초기 디자인, 2026-11-18 유저 지시). 풀이 비면 검증기 오류로 알림 (Gemini 코드 검토 1-3) |
 | `DungeonGenerator` | `_monsterPrefabPool` 필드 삭제, `_regionConfig.MonsterPool` 사용. `GetZoneMonsterPool(zone)` → `GetFloorMonsterPool(zone, floor)`: 구역 전용 풀이 있으면 그것, 없으면 지역 풀을 기준으로 `CanAppearOnFloor`인 프리팹만 재사용 버퍼 `List<GameObject> _floorMonsterBuffer`에 담아 반환. 0종이면 **필터 없는 같은 풀을 그 버퍼에 복사**해 반환하고 `Debug.LogWarning`. 반환 타입은 항상 `List<GameObject>`라 `SpawnEntitiesInCells`의 매개변수를 바꾸지 않음. 호출부 2곳(구역별 배분, 층별 규칙이 없는 층의 구역 수 사용 분기) 모두 교체. 층 생성 때만 호출(Update 아님) |
 | `FloorDesignValidator.ValidateRegion` | 지역 풀이 비었으면 오류. 1~10층마다 지역 풀에 출현 가능한 몬스터가 1종 이상인지 검사(없으면 오류). 층 디자인의 구역 전용 풀은 그 디자인이 쓰이는 층(초반 1~4, 중간 보스 5, 후반 6~9, 보스 10)에서 0종이면 경고. 몬스터 데이터는 프리팹의 `MonsterController.Data`로 읽음 |
-| 데이터 | Heavy Brute 1~5층, Shadow Spider 3~7층, Arcane Wizard 5~10층 (초기값) |
+| 데이터 | 출현 층은 몬스터 데이터에만 둠. 초기 디자인 몬스터 시험값: Heavy Brute 1~5층, Shadow Spider 3~7층, Arcane Wizard 5~10층 |
 
 ### 10.2 C2 노드 데이터와 해금 상태
 
