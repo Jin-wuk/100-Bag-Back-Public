@@ -34,3 +34,5 @@ MonoBehaviour:
   traits: []
   dropPoolID: 102
   goldDropBase: 12
+  _minFloor: 3
+  _maxFloor: 7
