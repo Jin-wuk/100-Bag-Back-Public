@@ -255,7 +255,7 @@ flowchart LR
 
 ### 10.6 C7 문서
 
-8절 C7 목록과 함께 **Monsters.md(몬스터별 출현 층)·Dungeon.md(2절 배치 규칙의 층 범위 필터)**도 갱신합니다 (Gemini 코드 검토 1-7). 설계도(1.1절)는 Items.md(아이템 분류 표에 설계도, 획득 경로, 보안 파우치 보관 가능), Hub.md(대장간 해금 조건. 잡화상 설계도는 테스트 전용이라 적지 않음)에 반영합니다. Monsters.md 보스 항목에는 임시 보스가 2단계 설계도만 떨어뜨리는 예외와, 보스 분리(F6b) 때 5층 = 2단계·10층 = 3단계로 드랍 풀을 나눈다는 조건을 적습니다. 새 클래스(`TechNodeSO`, `TechTreeSO`, `CraftingSystem`, `TechTreePanelUI`)는 `ARCHITECTURE.md`와 스크립트 맵(허브 쪽은 새 `Hub_System_Map.md` 또는 기존 맵 확장)에 추가합니다.
+8절 C7 목록과 함께 **Monsters.md(몬스터별 출현 층)·Dungeon.md(2절 배치 규칙의 층 범위 필터)**도 갱신합니다 (Gemini 코드 검토 1-7). 설계도(1.1절)는 Items.md(아이템 분류 표에 설계도, 획득 경로, 보안 파우치 보관 가능), Hub.md(대장간 해금 조건. 잡화상의 MVP 테스트용 임시 판매 — 2단계 설계도와 1단계 재료 2종(1절·5절) — 는 적지 않음, C7 Gemini 기획 검토 MINOR 반영)에 반영합니다. Monsters.md 보스 항목에는 임시 보스가 2단계 설계도만 떨어뜨리는 예외와, 보스 분리(F6b) 때 5층 = 2단계·10층 = 3단계로 드랍 풀을 나눈다는 조건을 적습니다. 새 클래스(`TechNodeSO`, `TechTreeSO`, `CraftingSystem`, `TechTreePanelUI`)는 `ARCHITECTURE.md`와 스크립트 맵(허브 쪽은 새 `Hub_System_Map.md` 또는 기존 맵 확장)에 추가합니다.
 
 ### 10.7 영향 범위 근거
 

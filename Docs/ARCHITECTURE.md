@@ -268,13 +268,13 @@ flowchart TD
 
 | 클래스 | 책임 |
 | --- | --- |
-| `RegionConfigSO` | 지역 하나의 설정: 초반(1~4층)·후반(6~9층) 디자인 풀, 5층·10층 고정 디자인, 층별 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률, 몬스터 수), 층 배율(몬스터 HP·ATK, 드랍 등급 비율), 상자 드랍 풀 ID |
+| `RegionConfigSO` | 지역 하나의 설정: 초반(1~4층)·후반(6~9층) 디자인 풀, 5층·10층 고정 디자인, 층별 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률, 몬스터 수), 층 배율(몬스터 HP·ATK, 드랍 등급 비율), 일반 몬스터 풀(`MonsterPool`), 상자 드랍 풀 ID |
 | `FloorDesignSO` | 층 디자인 하나: 층 프리팹, 가중치 |
 | `FloorLayout` / `FloorMarker` | 층 프리팹 루트(바닥·벽 타일맵, 마커, 구역)와 칸 역할 마커(시작점·위층 계단·탈출구·상자 후보·보스 위치) |
 | `DungeonZone` | 몬스터 배치 영역. 1~9층은 층별 규칙의 몬스터 수를 구역 칸 수 비율로 나눠 놓음 (구역 자체 수는 10층만, 함정은 미배치) |
-| `DungeonGenerator` | 층 추첨·생성·교체, 마커와 구역 배치, 같은 씬 층 전환, 보스 배치(`BossSpawn` 마커 + `RegionConfigSO` 보스 프리팹), 보스층 안개 없이 시작, 층 클리어 처리(보스층 정리·무적·안개 해제·계단 열기·탈출구 굴림) |
+| `DungeonGenerator` | 층 추첨·생성·교체, 마커와 구역 배치, 몬스터 종류 선택(지역 풀을 `MonsterDataSO` 출현 층 범위로 거름, 0종이면 범위 무시 폴백), 같은 씬 층 전환, 보스 배치(`BossSpawn` 마커 + `RegionConfigSO` 보스 프리팹), 보스층 안개 없이 시작, 층 클리어 처리(보스층 정리·무적·안개 해제·계단 열기·탈출구 굴림) |
 | `FloorClearTracker` | 현재 층의 살아 있는 몬스터 등록부와 클리어 판정 (POCO, `DungeonGenerator` 소유) |
-| `FloorDesignValidator` | 층 규격 검증. 에디터 메뉴(`FloorGrayBoxBuilder`)와 런타임이 함께 씀 |
+| `FloorDesignValidator` | 층 규격 검증과 지역 검증(1~10층마다 출현 가능한 몬스터가 있는지, 구역 전용 풀·잘못 연결된 프리팹 경고). 에디터 메뉴(`FloorGrayBoxBuilder`)와 런타임이 함께 씀 |
 | `FloorStairs` | 위층 계단. 잠긴 채 생성, 클리어 시 열림. 칸 도착으로 지역 이벤트만 던짐 |
 | `FloorChest` | 칸을 막는 상자. 공격(`IAttackInteractable`)을 받으면 열리고 `OnChestOpened` 발행 |
 | `DungeonExit` | 탈출 포탈. 클리어 시 확률 생성, 칸 도착 시 탈출 요청 이벤트, 확인되면 결과 기록 후 기지로 전환 |

@@ -29,9 +29,9 @@ git으로 공유된다. 보고서와 프롬프트 같은 작업 파일(`.claude/
 |---|---|---|
 | HP / MP / 공격력 / 방어력 | PlayerStatManager `_baseHp` 100 / `_baseMp` 50 / `_baseAttack` 10 / `_baseDefense` 5 | 같음 |
 | 이동 속도 | PlayerStatManager `_baseSpeed` 10 | 8 |
-| 공격 속도 (초당) | PlayerStatManager `_baseAttackSpeed` 1 | 1 |
+| 공격 속도 (초당) | PlayerStatManager `_baseAttackSpeed` 1 | 1.82 |
 | 칸당 이동 시간 | PlayerMovement `_moveDurationPerTile` 0.3 | 0.3 |
-| 가방 기본 칸 | InventoryManager `_baseMaxSlots` 30 | 25 |
+| 가방 기본 칸 | InventoryManager `_baseMaxSlots` 25 | 25 |
 | 보안 파우치 칸 | SecurePouchManager `_baseSlots` 2 | 2 |
 | 차징 배율 / 차징 시간 / 차징 사거리 | PlayerController `_chargeDamageMultiplier` 2.0 / `_chargeDuration` 0.6 / `_chargeLineLength` 2 | 같음 |
 | 콤보 배율 (1.0/1.15/1.5) | 위치 미확인 | 미확인 |
