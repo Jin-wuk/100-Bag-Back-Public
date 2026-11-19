@@ -20,10 +20,10 @@ MonoBehaviour:
   baseValue: 0
   rarity: 0
   equipType: 7
-  hpBonus: 0
+  hpBonus: 30
   mpBonus: 0
   attackBonus: 0
-  defenseBonus: 0
+  defenseBonus: 5
   speedBonus: 0
   rangeBonus: 0
   branch: 1
