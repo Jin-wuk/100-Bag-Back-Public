@@ -15,7 +15,7 @@ MonoBehaviour:
   monsterID: 101
   monsterName: Heavy Brute
   type: 0
-  hp: 65
+  hp: 100
   atk: 8
   def: 6
   speed: 4
