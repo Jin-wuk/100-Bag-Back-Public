@@ -344,9 +344,15 @@ namespace BagBack100.EditorTools
                     Debug.LogWarning($"[FloorGrayBoxBuilder] {prefab.name}의 드랍 풀 ID {monster.Data.dropPoolID}를 찾지 못했습니다.");
                     continue;
                 }
-                foreach (var fixedDrop in monsterPool.guaranteedDrops) AddCommonMaterial(fixedDrop.itemID, itemsById, materialIds);
+                // 코드로 만든 풀은 리스트가 null일 수 있어 LootSystem과 같이 비어 있는 것으로 본다
+                if (monsterPool.guaranteedDrops != null)
+                {
+                    foreach (var fixedDrop in monsterPool.guaranteedDrops) AddCommonMaterial(fixedDrop.itemID, itemsById, materialIds);
+                }
+                if (monsterPool.randomDropGroups == null) continue;
                 foreach (var group in monsterPool.randomDropGroups)
                 {
+                    if (group?.entries == null) continue;
                     foreach (var entry in group.entries) AddCommonMaterial(entry.itemID, itemsById, materialIds);
                 }
             }
@@ -366,6 +372,7 @@ namespace BagBack100.EditorTools
             int remainder = ChestBonusTotalWeight % ChestBonusItemIds.Length;
             for (int i = 0; i < ChestBonusItemIds.Length; i++)
             {
+                if (!itemsById.ContainsKey(ChestBonusItemIds[i])) Debug.LogWarning($"[FloorGrayBoxBuilder] 상자 보너스 아이템 ID {ChestBonusItemIds[i]}에 해당하는 ItemDataSO가 없습니다.");
                 int weight = perItemWeight + (i < remainder ? 1 : 0);
                 bonusEntries.Add(new DropEntry { itemID = ChestBonusItemIds[i], dropWeight = weight, minAmount = 1, maxAmount = 1 });
             }
@@ -391,6 +398,8 @@ namespace BagBack100.EditorTools
 
         private static void AddCommonMaterial(int itemID, Dictionary<int, ItemDataSO> itemsById, HashSet<int> materialIds)
         {
+            // itemID 0은 드랍 그룹의 꽝 항목(설계도 그룹 등)이다. 같은 ID의 임시 ItemDataSO가 있어도 재료로 넣지 않는다
+            if (itemID <= 0) return;
             if (itemsById.TryGetValue(itemID, out ItemDataSO item) && item.category == BagBack100.Data.Core.ItemCategory.Material && item.rarity == BagBack100.Data.Core.ItemRarity.Common)
             {
                 materialIds.Add(itemID);
