@@ -7,12 +7,12 @@
 
 | 스크립트 | 역할 |
 | --- | --- |
-| `SaveData.cs` (`PlayerSessionData`) | 씬 전환 간 영속 정적 컨테이너. 가방(`InventoryItems`), 장착 장비(`EquippedItems`), 창고(`StorageItems`), 보안 파우치(`PouchItems`), 퀵슬롯 등록, 지갑 골드(`Gold`, 시작 1000, `OnGoldChanged`), 현재 지역·층, 직전 결과(`LastRunResult`). 사망 시 `ClearPlayerLoadoutOnDeath()`로 가방·장착 장비만 비움 |
+| `SaveData.cs` (`PlayerSessionData`) | 씬 전환 간 영속 정적 컨테이너. 가방(`InventoryItems`), 장착 장비(`EquippedItems`), 창고(`StorageItems`), 보안 파우치(`PouchItems`), 퀵슬롯 등록, 지갑 골드(`Gold`, 시작 1000, `OnGoldChanged`), 현재 지역·층, 직전 결과(`LastRunResult`), 제작소 해금 노드 ID(`IsNodeUnlocked`/`MarkNodeUnlocked`, 사망과 무관)와 지역 진행도(`UnlockedRegionCount` = 1, `IsRegionUnlocked`). 사망 시 `ClearPlayerLoadoutOnDeath()`로 가방·장착 장비만 비움 |
 | `RunResult.cs` | 한 판의 결과 기록(POCO). 탈출이면 가져온 전리품과 총 가치, 사망이면 잃은 것과 파우치로 지킨 것. 아이템 사본으로 저장 |
 | `RuntimeItem.cs` | 획득한 아이템 1개: 원본 SO + 고유 ID + 슬롯 위치 + 개수 |
-| `SlotContainer.cs` / `ISlotItemContainer.cs` | 칸 배열, 겹치기(`StackLimitOf`: 기본 `maxStack`, 최소 겹침 한도를 받은 창고는 겹치는 아이템·재료를 그 수까지), 이동·교환, 크기 변경(`Resize`, 줄어들면 넘친 아이템 반환). 한도를 넘는 묶음은 한 칸에 넣지 않고 `TryAddAuto`가 나눠 배치. `GetAcceptableAmount`로 받을 수 있는 수량 조회. 가방·창고·파우치가 공유 |
+| `SlotContainer.cs` / `ISlotItemContainer.cs` | 칸 배열, 겹치기(`StackLimitOf`: 기본 `maxStack`, 최소 겹침 한도를 받은 창고는 겹치는 아이템·재료를 그 수까지), 이동·교환, 크기 변경(`Resize`, 줄어들면 넘친 아이템 반환). 한도를 넘는 묶음은 한 칸에 넣지 않고 `TryAddAuto`가 나눠 배치. `GetAcceptableAmount`로 받을 수 있는 수량 조회. itemID 기준 합계·차감(`CountByItemId`·`RemoveByItemId`, 슬롯 순서로 여러 묶음에서 덜고 모자라면 무변경). 인터페이스는 `CountItemId`·`RemoveItemIdAmount`와 일괄 변경(`BeginBulkChange`/`EndBulkChange`: 중첩 카운터, 그동안 알림·세션 저장 보류 후 바뀐 게 있으면 1회 발행). 가방·창고·파우치가 공유 |
 | `SlotItemTransfer.cs` | 컨테이너 사이 이동(static). 전량이 들어가면 그대로 옮기고, 아니면 들어갈 수량만 새 묶음으로 떼어 옮긴 뒤 원본에서 덜어냄 |
-| `GameEnums.cs` | `ItemCategory`, `EquipType`(8부위), `ItemRarity`, `ArmorBranch`, `GameState` 등 |
+| `GameEnums.cs` | `ItemCategory`(… `Blueprint` = 무기 설계도), `EquipType`(8부위), `ItemRarity`, `ArmorBranch`, `GameState` 등 |
 
 ## 2. 플레이어 — `Player/`, `Combat/`, `Core/`
 
@@ -42,8 +42,9 @@
 
 | 스크립트 | 역할 |
 | --- | --- |
-| `HubSystem.cs` | `OnHubObjectClicked` 분기(던전 포탈, 창고, 대장간, 잡화상). 플레이어가 없는 기지에서도 가방·장비·창고·파우치·퀵슬롯 매니저 존재 보장 |
-| `HubTradeSystem.cs` | 판매: `baseValue` × 수량 → 지갑 골드. 구매: `ShopCatalogSO` 가격, 가방 → 창고 순으로 넣고 둘 다 차면 취소. `OnTradeFailed`, `OnTradeCompleted` |
+| `HubSystem.cs` | `OnHubObjectClicked` 분기(던전 포탈, 창고, 대장간 = 제작소, 잡화상). 플레이어가 없는 기지에서도 가방·장비·창고·파우치·퀵슬롯 매니저 존재 보장 |
+| `HubTradeSystem.cs` | 잡화상 판매: `baseValue` × 수량 → 지갑 골드. 구매: `ShopCatalogSO` 가격, 가방 → 창고 순으로 넣고 둘 다 차면 취소. `OnTradeFailed`, `OnTradeCompleted` |
+| `CraftingSystem.cs` 외 제작소 | 테크트리 해금·재제작. 상세는 [Hub_System_Map.md](Hub_System_Map.md) |
 | `StorageManager.cs` | 창고(30칸). `StorageItems`와 동기화. `_stackLimit`(10)을 `SlotContainer` 최소 겹침 한도로 넘겨 재료를 등급과 무관하게 겹침 |
 
 ## 5. UI — `UI/`
@@ -56,12 +57,12 @@
 | `ItemQuantityDialogUI.cs` / `TrashSlotUI.cs` / `SellSlotUI.cs` | 수량 선택 확인창, 휴지통(확인 후 영구 삭제), 판매 칸 |
 | `QuickSlotBarUI.cs` / `QuickSlotSlotUI.cs` | 퀵슬롯 HUD: 아이콘, 가방 내 총 수량, 공용 쿨타임 |
 | `DashCooldownUI.cs` | 대시 쿨타임 HUD(`DashSlot`, 퀵슬롯 바 오른쪽). `PlayerInput.OnInputCreated`로 플레이어를 찾아 `DashCooldownNormalized`를 Filled 이미지에 채움 |
-| `ShopPanelUI.cs` / `GoldDisplayUI.cs` / `RunResultUI.cs` / `UIToast.cs` | 잡화상 목록, 지갑 골드, 결과 화면(한 번 표시 후 비움), 알림 |
+| `ShopPanelUI.cs` / `GoldDisplayUI.cs` / `RunResultUI.cs` / `UIToast.cs` | 잡화상 목록(스크롤 영역, 하단에 판매 칸), 지갑 골드, 결과 화면(한 번 표시 후 비움), 알림 |
 | `DungeonUIManager.cs` | 던전 가방 패널. 열려 있는 동안 이동 차단 + `GamePauseService` 일시정지 요청. 플레이어의 `PlayerCombatState`를 캐싱해 전투 중이면 Tab·보상 화면 열기를 거부하고 `UIToast`(던전 HUD의 FloorToast)로 안내. 소모품 사용 실패 사유(`ConsumableController.OnUseFailed`)도 같은 토스트로 표시. 닫기는 항상 허용(단 확인창·층 전환의 입력 잠금 중에는 Esc 무시) |
 | `PlayerStatsUIController.cs` | HP·MP·스탯 텍스트 |
 
 ---
 
 **익스트랙션 루프 흐름**
-1. **생환**: `DungeonExit` 도달(또는 귀환석 `ConsumableController.ConfirmReturnStone`) → `RunResult`(탈출, 지역·층 포함) 기록 → `PlayerSessionData`에 동기화된 가방·장비·파우치 보존 → `02_HubScene` 로드 → `RunResultUI` 표시 → 대장간에서 전리품 판매(`HubTradeSystem`) → 잡화상에서 포션 구매.
+1. **생환**: `DungeonExit` 도달(또는 귀환석 `ConsumableController.ConfirmReturnStone`) → `RunResult`(탈출, 지역·층 포함) 기록 → `PlayerSessionData`에 동기화된 가방·장비·파우치 보존 → `02_HubScene` 로드 → `RunResultUI` 표시 → 잡화상에서 전리품 판매·포션 구매(`HubTradeSystem`) → 제작소에서 해금·재제작(`CraftingSystem`).
 2. **사망**: `PlayerStatManager.TakeDamage`(`CurrentHp <= 0`) → `HandleDeath()` → `RunResult`(사망: 잃은 것 / 파우치로 지킨 것) 기록 → `EquipmentManager.ClearEquipment()` · `InventoryManager.ClearInventory()` · `PlayerSessionData.ClearPlayerLoadoutOnDeath()` (가방·장착 장비 삭제, 파우치·창고·지갑 골드 유지) → `02_HubScene` 복귀 → `RunResultUI` 표시.

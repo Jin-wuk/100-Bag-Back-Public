@@ -11,7 +11,7 @@
 | 좌표계 | 모든 이동·판정은 Unity `Grid`의 셀 좌표(`Vector3Int`) 단위 |
 | 시스템 간 통신 | 같은 오브젝트 안은 `GetComponent`, 시스템 사이는 정적 이벤트 버스 `GlobalEvents` |
 | 데이터 | 정적 데이터는 ScriptableObject, 플레이 중 변하는 값은 런타임 객체(`RuntimeItem`, 각 Controller)에 보관 |
-| 씬 간 데이터 | 정적 세션 컨테이너 `PlayerSessionData` (가방·장비·창고·파우치·퀵슬롯·지갑 골드·직전 결과) |
+| 씬 간 데이터 | 정적 세션 컨테이너 `PlayerSessionData` (가방·장비·창고·파우치·퀵슬롯·지갑 골드·직전 결과·제작소 해금 노드·지역 진행도) |
 | 공용 enum | `GameEnums` (아이템 분류·장비 부위·등급·몬스터 등급·이동 성향·무기 히트박스 등) |
 | 시간 배율 | `Time.timeScale`은 `GamePauseService`만 바꿈 (가방 일시정지와 히트스톱 충돌 방지) |
 
@@ -65,8 +65,12 @@ flowchart TB
     subgraph Hub
         HubSys[HubSystem]
         Trade[HubTradeSystem]
+        Craft[CraftingSystem]
+        TreeUI[TechTreePanelUI]
         Storage[StorageManager]
     end
+
+    TechTree[(TechTreeSO / TechNodeSO)]
 
     Session[("PlayerSessionData<br>씬 간 영속 데이터")]
 
@@ -88,6 +92,12 @@ flowchart TB
     Storage <--> Session
     Pouch <--> Session
     Trade --> Session
+    TechTree --> Craft
+    Craft --> Inv
+    Craft --> Storage
+    Craft --> Pouch
+    Craft --> Session
+    TreeUI --> Craft
     Exit --> Session
 
     PCtrl -. OnPlayerCellChanged .-> Events
@@ -282,7 +292,7 @@ flowchart TD
 | --- | --- |
 | `ItemDataSO` 계열 | 아이템 원본 데이터 (읽기 전용). `EquipmentDataSO` → `WeaponDataSO`·`ArmorDataSO`·`BackpackDataSO`·`AccessoryDataSO`, `ConsumableDataSO`(회복량, 지속 회복 시간, 공용 쿨타임) → `ReturnStoneDataSO`(귀환석 표식) |
 | `RuntimeItem` | 획득한 아이템 1개. 원본 SO 참조 + 고유 ID + 슬롯 위치 + 개수 |
-| `SlotContainer` / `ISlotItemContainer` | 칸 배열·겹치기·이동·크기 변경 공통 로직. 가방·창고·파우치가 같이 씀. 컨테이너별 최소 겹침 한도(창고 10)와 받을 수 있는 수량(`GetAcceptableAmount`) |
+| `SlotContainer` / `ISlotItemContainer` | 칸 배열·겹치기·이동·크기 변경 공통 로직. 가방·창고·파우치가 같이 씀. 컨테이너별 최소 겹침 한도(창고 10)와 받을 수 있는 수량(`GetAcceptableAmount`). itemID 기준 합계·차감(`CountItemId`·`RemoveItemIdAmount`, 모자라면 무변경)과 일괄 변경(`BeginBulkChange`~`EndBulkChange` 사이 알림·세션 저장을 미뤘다가 1회 발행) — 제작 재료 차감용 |
 | `SlotItemTransfer` | 컨테이너 사이 이동. 대상이 다 못 받으면 들어갈 만큼만 떼어 옮김(E키·더블클릭·드래그 공통) |
 | `InventoryManager` | 가방. 배낭 장착에 따른 칸 수, 줍기, 버리기 요청 |
 | `EquipmentManager` | 8부위 장착 장비. 던전에서는 장착·해제 잠금 |
@@ -297,7 +307,9 @@ flowchart TD
 | 클래스 | 책임 |
 | --- | --- |
 | `HubSystem` | 기지 오브젝트 클릭 분기, 기지용 매니저 보장 |
-| `HubTradeSystem` | 대장간 판매(아이템 → 지갑 골드), 잡화상 구매(`ShopCatalogSO`) |
+| `HubTradeSystem` | 잡화상 판매(아이템 → 지갑 골드)와 구매(`ShopCatalogSO`) |
+| `CraftingSystem` | 제작소. 노드 상태 판정(숨김·선행 미충족·해금 가능·해금됨), 해금(재료 + 골드 → 장비 1개, 해금 기록), 재제작(골드 → 장비). 재료는 창고 → 가방 → 파우치 순 원자적 차감. 매니저 3개와 골드 변경을 `OnTechTreeChanged`로 중계(지역 이벤트) |
+| `TechNodeSO` / `TechTreeSO` | 제작소 노드(결과 장비, 단계, 지역, 선행, 재료·골드)와 트리(노드 목록, 제작 장비 판매 비율 0.3, 트리 검증). 판매가 동기화 메뉴 `BagBack100/Tech/Sync Crafted Sell Prices`(`TechTreeEditorMenu`) |
 | `StorageManager` | 기지 창고. 가방과 별도 겹침 한도(10) |
 | `InteractableController` / `OutlineEffect` / `HubObjectType` | 기지 오브젝트 클릭·외곽선·종류 |
 | `ItemContainerUIBase` / `IItemContainerUI` / `IItemDropTarget` | 가방·창고·파우치 UI의 드래그 앤 드롭 공통 처리 |
@@ -305,7 +317,8 @@ flowchart TD
 | `ItemContextMenuUI` / `ItemQuantityDialogUI` / `TrashSlotUI` / `SellSlotUI` | 우클릭 메뉴(버리기·판매·나누기, 가방 패널에 하나를 창고·파우치도 공용), 수량 선택 확인창, 휴지통, 판매 칸 |
 | `QuickSlotBarUI` / `QuickSlotSlotUI` | 퀵슬롯 HUD (수량, 쿨타임) |
 | `DashCooldownUI` | 대시 쿨타임 HUD |
-| `ShopPanelUI` / `GoldDisplayUI` / `RunResultUI` / `UIToast` | 잡화상 목록, 지갑 골드, 결과 화면, 알림 |
+| `ShopPanelUI` / `GoldDisplayUI` / `RunResultUI` / `UIToast` | 잡화상 목록(스크롤), 지갑 골드, 결과 화면, 알림 |
+| `TechTreePanelUI` | 제작소 화면. 탭별 장비 줄·노드·연결선, 노드 상세와 `Unlock`/`Craft`. `CraftingSystem`에만 묻고 갱신 플래그로 `LateUpdate`에서 1회 갱신 |
 | `DungeonUIManager` | 던전 가방 패널 열기·닫기와 일시정지 요청. 전투 중(`PlayerCombatState`)이면 열기 거부 + HUD 토스트. 소모품 사용 실패 사유(`ConsumableController.OnUseFailed`)도 토스트로 표시 |
 | `ExitConfirmUI` | 던전을 떠나는 확인창. `DungeonExit.OnExitRequested`(포탈)와 `ConsumableController.OnReturnStoneRequested`(귀환석)를 받아 일시정지·입력 잠금 후 확인/취소를 요청한 쪽에 전달 |
 | `PlayerStatsUIController` | HP·MP·스탯 텍스트 |
@@ -328,7 +341,9 @@ flowchart TD
 | `Assets/Resources/CSV/` | 기획 데이터 CSV (임포터 비활성, [기술 부채](Architecture/Tech_Debt.md) 참고) |
 | `Assets/Resources/Shader/` | 전장의 안개 셰이더 |
 | `Docs/GDD/` | 기획 문서 (현재 구현 기준) + 로드맵·아이디어 백로그 |
-| `Docs/Architecture/ScriptMaps/` | 시스템별 상세 클래스 명세 (Player·Items, Dungeon) |
+| `Docs/Architecture/ScriptMaps/` | 시스템별 상세 클래스 명세 (Player·Items, Dungeon, Hub) |
+| `Docs/Architecture/10_Crafting_TechTree_Design.md` | 제작소 테크트리 기획안·구현 설계 (C1~C5 구현, C6 남음) |
+| `Docs/Balance/` | 밸런스 점검 보고서 |
 | `Docs/Architecture/07_Floor_Based_Dungeon_Design.md` | 층계 던전 기획안 (진행 중) |
 | `Docs/Architecture/Tech_Debt.md` | 알려진 기술 부채 |
 | `Docs/Agent/` | AI 코딩 에이전트용 개발 지침 |
