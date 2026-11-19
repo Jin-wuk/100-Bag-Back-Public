@@ -98,6 +98,9 @@ MonoBehaviour:
   _chargeDuration: 0.6
   _chargeLineLength: 2
   _chargeDamageMultiplier: 2
+  _dashDistance: 2
+  _dashDuration: 0.12
+  _dashCooldown: 3
   _projectilePrefab: {fileID: 3354168463907677501, guid: 4971ea61c23900745a3fb642126e6a1a, type: 3}
   _projectileSpawnPoint: {fileID: 0}
 --- !u!212 &5263338046754277592
@@ -141,7 +144,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 3
-  m_Sprite: {fileID: 21300000, guid: 06ae1c42763bfb8409d42bbbe0f3a0b2, type: 3}
+  m_Sprite: {fileID: 21300000, guid: e6c5b2e23f6ce754ca3621491e8d9137, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -215,7 +218,7 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
+    oldSize: {x: 0.4, y: 0.4}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -271,6 +274,9 @@ MonoBehaviour:
   _baseSpeed: 8
   _baseAttackSpeed: 1.82
   _baseRange: 1
+  _hitInvincibleDuration: 0.5
+  _hitFlashDuration: 0.1
+  _hitBlinkInterval: 0.08
   _hubSceneName: 02_HubScene
 --- !u!114 &4486916414795881682
 MonoBehaviour:
@@ -309,6 +315,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac3389127f2fcc241870d9fcead642a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _hubSceneName: 02_HubScene
+  _combatBlockedMessage: Can't use it during combat.
+  _bossFloorBlockedMessage: Can't use it on a boss floor.
 --- !u!114 &5209984685213613030
 MonoBehaviour:
   m_ObjectHideFlags: 0
