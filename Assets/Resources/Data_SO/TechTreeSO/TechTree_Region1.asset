@@ -12,5 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 560568ee0e013ca4fa8dc46afcfb5770, type: 3}
   m_Name: TechTree_Region1
   m_EditorClassIdentifier: 
-  _nodes: []
+  _nodes:
+  - {fileID: 11400000, guid: 53ea6b5a13a138b48859b7dd441f0b23, type: 2}
+  - {fileID: 11400000, guid: 483c9694523f41a4d892c3e3fde95afa, type: 2}
+  - {fileID: 11400000, guid: 2718fe2f70eb0f343b3cfa4807d84eb2, type: 2}
+  - {fileID: 11400000, guid: d19a790a61c58b44db0ee97bf7def8ff, type: 2}
+  - {fileID: 11400000, guid: 958849092a101b043859a07d0402bd3f, type: 2}
+  - {fileID: 11400000, guid: 9514cbbfe0f9dbc48bf6bdebdccdc1e0, type: 2}
+  - {fileID: 11400000, guid: 71592afeb380aa34c8e7dc039ba0c53d, type: 2}
+  - {fileID: 11400000, guid: 6ba81bc618fb05f488be15291e461ffb, type: 2}
+  - {fileID: 11400000, guid: 8dd297611f2c9d74fb0b9679dac34427, type: 2}
+  - {fileID: 11400000, guid: 54e5caa2480fb124b9d65644f1b57083, type: 2}
+  - {fileID: 11400000, guid: 1150d10edd28f8b408f2885dca6c1890, type: 2}
+  - {fileID: 11400000, guid: 849dbe9c8523d274c8ba0f2e1c39b6db, type: 2}
+  - {fileID: 11400000, guid: 9a106b47056c78f499a13c6338887f83, type: 2}
   _craftedSellRatio: 0.3
