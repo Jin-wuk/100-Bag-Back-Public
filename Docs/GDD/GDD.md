@@ -16,7 +16,7 @@
 
 ```mermaid
 flowchart LR
-    Hub["기지<br>장비·퀵슬롯 정리, 포션 구매"] --> Enter[던전 입장]
+    Hub["기지<br>장비 제작·장착, 퀵슬롯 정리, 포션 구매"] --> Enter[던전 입장]
     Enter --> Floor["층 탐험<br>전장의 안개 속 이동"]
     Floor --> Fight["전투<br>장판 예고를 보고 피하고 반격"]
     Fight --> Loot["전리품<br>바닥 아이템·상자"]
@@ -25,7 +25,7 @@ flowchart LR
     Floor -->|탈출 포탈| Result[결과 화면]
     Fight -->|HP 0| Death["사망<br>가방·장착 장비 잃음, 파우치는 유지"]
     Death --> Result
-    Result --> Sell["기지<br>전리품 판매 → 골드"]
+    Result --> Sell["기지<br>전리품 판매 → 골드<br>전리품·골드로 장비 해금"]
     Sell --> Hub
 ```
 
@@ -44,7 +44,7 @@ flowchart LR
 | 던전 | 지역 × 10층. 층마다 디자인 풀에서 1장, 한 판 중복 없음. 위층 계단으로 상승, 상자는 공격으로 염 | [Dungeon.md](Dungeon.md) |
 | 시야 | 3단계 전장의 안개. 벽 너머는 보이지 않음 | [Dungeon.md](Dungeon.md) |
 | 아이템 | 1아이템 1칸, 칸 수만 제한. 장비 8부위, 포션과 퀵슬롯, 보안 파우치 | [Items.md](Items.md) |
-| 기지 | 걸어 다니지 않고 오브젝트를 클릭하는 로비. 창고, 판매, 구매, 결과 화면 | [Hub.md](Hub.md) |
+| 기지 | 걸어 다니지 않고 오브젝트를 클릭하는 로비. 창고, 제작소(테크트리 해금·재제작), 잡화상(구매·판매), 결과 화면. 무기·방어구·배낭은 제작소에서만 얻음(악세서리는 던전 드랍) | [Hub.md](Hub.md) |
 
 ## 4. 문서 목록
 
@@ -55,8 +55,8 @@ flowchart LR
 | [Monster_AI.md](Monster_AI.md) | 몬스터 행동 루프, 이동 성향, 공격 패턴 명세 |
 | [Dungeon.md](Dungeon.md) | 층계 구조, 배치 규칙, 상자, 전장의 안개, 탈출과 사망 |
 | [Items.md](Items.md) | 가방, 아이템 분류, 장비, 획득·버리기, 소모품, 골드, 보안 파우치 |
-| [Hub.md](Hub.md) | 기지 구성, 판매·구매, 창고 |
-| [UI_Direction.md](UI_Direction.md) | 창고·상점·툴팁·테크트리 화면의 목표 구성 (미구현) |
+| [Hub.md](Hub.md) | 기지 구성, 제작소, 판매·구매, 창고 |
+| [UI_Direction.md](UI_Direction.md) | 창고·상점·툴팁·테크트리 화면의 목표 구성 (테크트리만 MVP 단순 화면 구현) |
 | [Roadmap.md](Roadmap.md) | 아직 구현하지 않은 기획, 아이디어 백로그 |
 | [08 지역 1 보스 기획안](../Architecture/08_Region1_Boss_Design.md) | 숲 지역 나무 보스·중간 보스 초안 (미구현) |
 

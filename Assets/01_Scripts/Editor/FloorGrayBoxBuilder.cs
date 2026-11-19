@@ -301,40 +301,80 @@ namespace BagBack100.EditorTools
         }
 
         private const string ChestDropPoolPath = "Assets/Resources/Data_SO/DropPoolSO/DropPool_Chest_Region1.asset";
-        private const string LootMaterialFolder = "Assets/Resources/Data_SO/ItemSO/LootSO";
-        // 장비·포션 그룹: 악세서리(목걸이 14, 반지 15, 귀걸이 17) + HP 포션 2, MP 포션 3. 던전 드랍 장비는 악세서리만 허용
-        private static readonly int[] ChestBonusItemIds = { 14, 15, 17, 2, 3 };
+        // 장비·포션 그룹: 악세서리(목걸이 14, 반지 15, 귀걸이 17) + HP 포션 2. 던전 드랍 장비는 악세서리만 허용, MP 포션은 MVP 밖 (10 제작소 기획안 C5)
+        private static readonly int[] ChestBonusItemIds = { 14, 15, 17, 2 };
         private const int ChestBonusTotalWeight = 30;   // 30% 장비 또는 포션
         private const int ChestBonusEmptyWeight = 70;   // 70% 꽝(itemID 0)
 
         /// <summary>
         /// 기획 5절 [추천] 상자 내용 "재료 2 확정 + 30% 장비 또는 포션"을 기존 DropPoolSO 구조로 만든다.
-        /// 재료 = 몬스터 전리품 하위 등급(itemID 끝자리 1·2). 값은 데이터라 플레이 테스트로 조정한다.
+        /// 재료 = 지역 몬스터 풀(Region1Config)의 몬스터 드랍 풀에 있는 일반 등급 재료. 특정 몬스터를 코드에 두지 않고 풀 데이터에서 읽는다.
+        /// 값은 데이터라 플레이 테스트로 조정한다.
         /// </summary>
         [MenuItem("BagBack100/Floor/Create Region1 Chest Drop Pool")]
         public static void CreateOrUpdateChestDropPool()
         {
-            var materialEntries = new List<DropEntry>();
-            foreach (string guid in AssetDatabase.FindAssets("t:ItemDataSO", new[] { LootMaterialFolder }))
+            RegionConfigSO region = AssetDatabase.LoadAssetAtPath<RegionConfigSO>(RegionConfigPath);
+            if (region == null)
             {
-                var item = AssetDatabase.LoadAssetAtPath<ItemDataSO>(AssetDatabase.GUIDToAssetPath(guid));
-                if (item == null) continue;
-                int tier = item.itemID % 10;
-                if (tier != 1 && tier != 2) continue;
-                materialEntries.Add(new DropEntry { itemID = item.itemID, dropWeight = 1, minAmount = 1, maxAmount = 1 });
-            }
-            materialEntries.Sort((a, b) => a.itemID.CompareTo(b.itemID));
-            if (materialEntries.Count == 0)
-            {
-                Debug.LogError($"[FloorGrayBoxBuilder] {LootMaterialFolder}에서 하위 등급 재료를 찾지 못했습니다.");
+                Debug.LogError($"[FloorGrayBoxBuilder] {RegionConfigPath}가 없습니다.");
                 return;
             }
 
+            var itemsById = new Dictionary<int, ItemDataSO>();
+            foreach (string guid in AssetDatabase.FindAssets("t:ItemDataSO"))
+            {
+                var item = AssetDatabase.LoadAssetAtPath<ItemDataSO>(AssetDatabase.GUIDToAssetPath(guid));
+                if (item != null) itemsById[item.itemID] = item;
+            }
+            var poolsById = new Dictionary<int, DropPoolSO>();
+            foreach (string guid in AssetDatabase.FindAssets("t:DropPoolSO"))
+            {
+                var dropPool = AssetDatabase.LoadAssetAtPath<DropPoolSO>(AssetDatabase.GUIDToAssetPath(guid));
+                if (dropPool != null) poolsById[dropPool.dropPoolID] = dropPool;
+            }
+
+            var materialIds = new HashSet<int>();
+            for (int i = 0; i < region.MonsterPool.Count; i++)
+            {
+                GameObject prefab = region.MonsterPool[i];
+                if (prefab == null || !prefab.TryGetComponent(out BagBack100.Monster.MonsterController monster) || monster.Data == null) continue;
+                if (!poolsById.TryGetValue(monster.Data.dropPoolID, out DropPoolSO monsterPool))
+                {
+                    Debug.LogWarning($"[FloorGrayBoxBuilder] {prefab.name}의 드랍 풀 ID {monster.Data.dropPoolID}를 찾지 못했습니다.");
+                    continue;
+                }
+                // 코드로 만든 풀은 리스트가 null일 수 있어 LootSystem과 같이 비어 있는 것으로 본다
+                if (monsterPool.guaranteedDrops != null)
+                {
+                    foreach (var fixedDrop in monsterPool.guaranteedDrops) AddCommonMaterial(fixedDrop.itemID, itemsById, materialIds);
+                }
+                if (monsterPool.randomDropGroups == null) continue;
+                foreach (var group in monsterPool.randomDropGroups)
+                {
+                    if (group?.entries == null) continue;
+                    foreach (var entry in group.entries) AddCommonMaterial(entry.itemID, itemsById, materialIds);
+                }
+            }
+
+            var materialEntries = new List<DropEntry>();
+            foreach (int id in materialIds) materialEntries.Add(new DropEntry { itemID = id, dropWeight = 1, minAmount = 1, maxAmount = 1 });
+            materialEntries.Sort((a, b) => a.itemID.CompareTo(b.itemID));
+            if (materialEntries.Count == 0)
+            {
+                Debug.LogError($"[FloorGrayBoxBuilder] {region.name} 몬스터 풀의 드랍 풀에서 일반 등급 재료를 찾지 못했습니다.");
+                return;
+            }
+
+            // 나머지는 앞 항목부터 1씩 더해 그룹 합이 정확히 ChestBonusTotalWeight가 되게 한다
             var bonusEntries = new List<DropEntry>();
             int perItemWeight = ChestBonusTotalWeight / ChestBonusItemIds.Length;
-            foreach (int id in ChestBonusItemIds)
+            int remainder = ChestBonusTotalWeight % ChestBonusItemIds.Length;
+            for (int i = 0; i < ChestBonusItemIds.Length; i++)
             {
-                bonusEntries.Add(new DropEntry { itemID = id, dropWeight = perItemWeight, minAmount = 1, maxAmount = 1 });
+                if (!itemsById.ContainsKey(ChestBonusItemIds[i])) Debug.LogWarning($"[FloorGrayBoxBuilder] 상자 보너스 아이템 ID {ChestBonusItemIds[i]}에 해당하는 ItemDataSO가 없습니다.");
+                int weight = perItemWeight + (i < remainder ? 1 : 0);
+                bonusEntries.Add(new DropEntry { itemID = ChestBonusItemIds[i], dropWeight = weight, minAmount = 1, maxAmount = 1 });
             }
             bonusEntries.Add(new DropEntry { itemID = 0, dropWeight = ChestBonusEmptyWeight, minAmount = 0, maxAmount = 0 });
 
@@ -354,6 +394,16 @@ namespace BagBack100.EditorTools
             EditorUtility.SetDirty(pool);
             AssetDatabase.SaveAssets();
             Debug.Log($"[FloorGrayBoxBuilder] {ChestDropPoolPath} (ID {pool.dropPoolID}): 재료 {materialEntries.Count}종, 장비·포션 {ChestBonusItemIds.Length}종.");
+        }
+
+        private static void AddCommonMaterial(int itemID, Dictionary<int, ItemDataSO> itemsById, HashSet<int> materialIds)
+        {
+            // itemID 0은 드랍 그룹의 꽝 항목(설계도 그룹 등)이다. 같은 ID의 임시 ItemDataSO가 있어도 재료로 넣지 않는다
+            if (itemID <= 0) return;
+            if (itemsById.TryGetValue(itemID, out ItemDataSO item) && item.category == BagBack100.Data.Core.ItemCategory.Material && item.rarity == BagBack100.Data.Core.ItemRarity.Common)
+            {
+                materialIds.Add(itemID);
+            }
         }
 
         // T2: 회색 박스 위층 계단 프리팹과 층 HUD를 만들고 03_DungeonScene에 연결한다

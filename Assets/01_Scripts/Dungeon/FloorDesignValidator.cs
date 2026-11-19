@@ -11,7 +11,7 @@ namespace BagBack100.Dungeon
     }
 
     /// <summary>
-    /// Role: 층 프리팹 규격 검증 (마커 개수·위치, 계단–탈출구 거리, 상자 후보 수, 상자로 막혀도 계단·탈출구 도달 가능, 보스 마커 위치, 지역 풀 구성·보스 프리팹).
+    /// Role: 층 프리팹 규격 검증 (마커 개수·위치, 계단–탈출구 거리, 상자 후보 수, 상자로 막혀도 계단·탈출구 도달 가능, 보스 마커 위치, 지역 풀 구성·보스 프리팹, 층별 출현 몬스터).
     ///       에디터 메뉴와 런타임 생성기가 함께 쓰므로 UnityEditor API를 쓰지 않는다.
     /// Dependencies: FloorLayout, FloorMarker, RegionConfigSO, FloorDesignSO
     /// Events: 없음
@@ -236,7 +236,95 @@ namespace BagBack100.Dungeon
             ValidateDesign(region.BossFloorDesign, FloorBand.Boss, StairsRequirement.Optional, region, errors);
             CheckBossPrefab(region.MidBossPrefab, RegionConfigSO.MidBossFloor, region, warnings);
             CheckBossPrefab(region.BossPrefab, RegionConfigSO.BossFloor, region, warnings);
+            CheckMonsterPool(region, errors, warnings);
             return errors.Count == errorCountBefore;
+        }
+
+        /// <summary>
+        /// 몬스터 출현 층 범위 검증. 지역 몬스터 풀은 1~10층마다 출현 가능한 몬스터가 1종 이상이어야 한다(없으면 오류).
+        /// 구역 전용 풀은 그 디자인이 쓰이는 층에서 0종이면 경고 (런타임은 범위를 무시하고 스폰하는 폴백이 있다).
+        /// 특정 몬스터를 가정하지 않고 풀에 연결된 프리팹의 MonsterDataSO만 읽는다.
+        /// </summary>
+        private static void CheckMonsterPool(RegionConfigSO region, List<string> errors, List<string> warnings)
+        {
+            IReadOnlyList<GameObject> pool = region.MonsterPool;
+            if (pool == null || pool.Count == 0)
+            {
+                errors.Add($"[{region.name}] 몬스터 풀이 비어 있습니다.");
+            }
+            else
+            {
+                CheckInvalidPrefabs(pool, $"[{region.name}] 몬스터 풀", warnings);
+                for (int floor = 1; floor <= RegionConfigSO.BossFloor; floor++)
+                {
+                    if (CountMonstersForFloor(pool, floor) == 0)
+                    {
+                        errors.Add($"[{region.name}] 몬스터 풀에 {floor}층 출현 범위에 맞는 몬스터가 없습니다.");
+                    }
+                }
+            }
+
+            CheckZonePools(region.EarlyPool, 1, RegionConfigSO.MidBossFloor - 1, region, warnings);
+            CheckZonePools(region.LatePool, RegionConfigSO.MidBossFloor + 1, RegionConfigSO.RuleFloorCount, region, warnings);
+            CheckZonePools(region.MidBossFloorDesign, RegionConfigSO.MidBossFloor, RegionConfigSO.MidBossFloor, region, warnings);
+            CheckZonePools(region.BossFloorDesign, RegionConfigSO.BossFloor, RegionConfigSO.BossFloor, region, warnings);
+        }
+
+        private static void CheckZonePools(IReadOnlyList<FloorDesignSO> designs, int fromFloor, int toFloor, RegionConfigSO region, List<string> warnings)
+        {
+            if (designs == null) return;
+            for (int i = 0; i < designs.Count; i++)
+            {
+                CheckZonePools(designs[i], fromFloor, toFloor, region, warnings);
+            }
+        }
+
+        private static void CheckZonePools(FloorDesignSO design, int fromFloor, int toFloor, RegionConfigSO region, List<string> warnings)
+        {
+            if (design == null || design.LayoutPrefab == null) return;
+            DungeonZone[] zones = design.LayoutPrefab.Zones;
+            if (zones == null) return;
+            for (int z = 0; z < zones.Length; z++)
+            {
+                DungeonZone zone = zones[z];
+                if (zone == null || zone.OverrideMonsterPool == null || zone.OverrideMonsterPool.Count == 0) continue;
+                CheckInvalidPrefabs(zone.OverrideMonsterPool, $"[{region.name}] {design.name}의 구역 {zone.name} 전용 풀", warnings);
+                for (int floor = fromFloor; floor <= toFloor; floor++)
+                {
+                    if (CountMonstersForFloor(zone.OverrideMonsterPool, floor) > 0) continue;
+                    warnings.Add($"[{region.name}] {design.name}의 구역 {zone.name} 전용 풀에 {floor}층 출현 범위에 맞는 몬스터가 없습니다. 범위를 무시하고 스폰합니다.");
+                }
+            }
+        }
+
+        // 빈 칸이나 MonsterController·데이터가 없는 프리팹은 런타임에서 건너뛰므로, 다른 몬스터가 층을 메워도 연결 실수를 알린다
+        private static void CheckInvalidPrefabs(IReadOnlyList<GameObject> pool, string poolLabel, List<string> warnings)
+        {
+            for (int i = 0; i < pool.Count; i++)
+            {
+                GameObject prefab = pool[i];
+                if (prefab == null)
+                {
+                    warnings.Add($"{poolLabel} {i}번 칸이 비어 있습니다.");
+                }
+                else if (!prefab.TryGetComponent(out BagBack100.Monster.MonsterController monster) || monster.Data == null)
+                {
+                    warnings.Add($"{poolLabel}의 {prefab.name}에 MonsterController 또는 몬스터 데이터가 없어 스폰에서 제외됩니다.");
+                }
+            }
+        }
+
+        private static int CountMonstersForFloor(IReadOnlyList<GameObject> pool, int floor)
+        {
+            int count = 0;
+            for (int i = 0; i < pool.Count; i++)
+            {
+                GameObject prefab = pool[i];
+                if (prefab == null) continue;
+                if (!prefab.TryGetComponent(out BagBack100.Monster.MonsterController monster) || monster.Data == null) continue;
+                if (monster.Data.CanAppearOnFloor(floor)) count++;
+            }
+            return count;
         }
 
         // 보스가 없어도 층은 전원 처치 규칙으로 진행되므로 오류가 아니라 경고로 둔다

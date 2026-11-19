@@ -10,13 +10,15 @@ git으로 공유된다. 보고서와 프롬프트 같은 작업 파일(`.claude/
 | 드랍 | Assets/Resources/Data_SO/DropPoolSO | 몬스터는 `dropPoolID`, 지역 상자는 `_chestDropPoolId`로 연결 |
 | 층·지역 | Assets/Resources/Data_SO/FloorSO | `RegionNConfig`의 `_floorRules`는 층 순서대로 |
 | 상점 | Assets/Resources/Data_SO/ShopSO | GeneralStoreCatalog |
+| 제작소 | Assets/Resources/Data_SO/TechTreeSO | `TechTree_Region1`과 노드(`Region1/`). 해금 재료·골드·재제작 골드. 제작 장비 판매가는 결과 장비 `baseValue`(재제작 × 0.3로 동기화) |
+| 설계도 | Assets/Resources/Data_SO/ItemSO/BlueprintSO | 무기 2·3단계 해금 재료 |
 
 ## enum 의미 (Assets/01_Scripts/Data/Core/GameEnums.cs)
 | 필드 | 값 |
 |---|---|
 | MonsterDataSO.type | 0 Normal, 1 Elite, 2 Boss |
 | MonsterDataSO.movementStyle | 0 HeavyChase, 1 AgileFlank, 2 RangedKiting |
-| ItemDataSO.category | 0 Equipment, 1 Consumable, 2 Material, 3 Key, 4 Valuable |
+| ItemDataSO.category | 0 Equipment, 1 Consumable, 2 Material, 3 Key, 4 Valuable, 5 Blueprint |
 | ItemDataSO.rarity | 0 Common, 1 Rare, 2 Legendary |
 | FloorDesignSO._band | 0 Early(1~5층), 1 Late(6~9층), 2 Boss(5층 중간 보스 / 10층 보스) |
 
@@ -27,9 +29,9 @@ git으로 공유된다. 보고서와 프롬프트 같은 작업 파일(`.claude/
 |---|---|---|
 | HP / MP / 공격력 / 방어력 | PlayerStatManager `_baseHp` 100 / `_baseMp` 50 / `_baseAttack` 10 / `_baseDefense` 5 | 같음 |
 | 이동 속도 | PlayerStatManager `_baseSpeed` 10 | 8 |
-| 공격 속도 (초당) | PlayerStatManager `_baseAttackSpeed` 1 | 1 |
+| 공격 속도 (초당) | PlayerStatManager `_baseAttackSpeed` 1 | 1.82 |
 | 칸당 이동 시간 | PlayerMovement `_moveDurationPerTile` 0.3 | 0.3 |
-| 가방 기본 칸 | InventoryManager `_baseMaxSlots` 30 | 35 |
+| 가방 기본 칸 | InventoryManager `_baseMaxSlots` 25 | 25 |
 | 보안 파우치 칸 | SecurePouchManager `_baseSlots` 2 | 2 |
 | 차징 배율 / 차징 시간 / 차징 사거리 | PlayerController `_chargeDamageMultiplier` 2.0 / `_chargeDuration` 0.6 / `_chargeLineLength` 2 | 같음 |
 | 콤보 배율 (1.0/1.15/1.5) | 위치 미확인 | 미확인 |
@@ -43,6 +45,7 @@ git으로 공유된다. 보고서와 프롬프트 같은 작업 파일(`.claude/
 | 전투 | Docs/GDD/Combat.md | 2.3 공격, 2.4 무기별 차이, 3. 플레이어 스탯 |
 | 몬스터 | Docs/GDD/Monsters.md | 1. 등급, 4. 구현된 몬스터 |
 | 아이템·가방 | Docs/GDD/Items.md | 1. 가방, 2. 아이템 분류, 5. 사망과 생환 |
+| 제작소·경제 | Docs/GDD/Hub.md, Docs/Architecture/10_Crafting_TechTree_Design.md | Hub 2절 테크트리 표, 10 기획안 10.5절 비용 초안 |
 | 던전·층 | Docs/GDD/Dungeon.md, Docs/Architecture/07_Floor_Based_Dungeon_Design.md | 맵 구성, 배치 규칙, 탈출과 사망 |
 | 전체 | Docs/GDD/GDD.md, Docs/GDD/Roadmap.md | |
 

@@ -25,6 +25,35 @@
 | 제작 장비 판매 | 판매 가능. **판매가 = 재제작 골드의 일부** (비율 미정, 2026-11-17 유저 결정) |
 | 해금 상태 저장 | 세션 메모리만 (세이브는 MVP 제외, 07 문서 Q17) |
 
+### 1.1 설계도 해금으로 변경 (유저, 2026-11-19)
+
+해금 조건에 **던전에서 얻는 설계도**를 더합니다. 해금이 기지에서 정해진 절차로 끝나지 않고, 던전에서 무언가를 들고 살아 나와야 하는 익스트랙션의 판단과 이어지게 하려는 변경입니다. 1절의 다른 결정(재료 + 골드 해금, 골드만 드는 재제작, 단계·잠금 구조)은 그대로입니다.
+
+| 항목 | 결정 |
+| --- | --- |
+| 화면 | **테크트리 화면(C4) 유지.** 선행을 충족한 노드는 설계도가 없어도 `해금 가능` 상태로 보이고, 재료 목록의 설계도가 `0/1`이라 해금 버튼이 비활성 (2.3절, C4 코드 그대로) |
+| 1단계 | **설계도 없이 해금** (지금 규칙 그대로). 시작과 0G·무장비 복구가 드랍 운에 막히지 않게 함 |
+| 2단계 이상 | **무기만** 설계도 + 전리품 + 골드로 해금. 방어구·배낭은 설계도 없이 전리품 + 골드(지금 규칙 그대로). 해금하면 장비 1개 지급, 이후 재제작은 골드만 (1절과 같음, B7) |
+| 설계도 1장 | **영구 해금 1회.** 제작할 때마다 설계도를 쓰지 않음 |
+| 획득 | 던전 드랍. 일반 몬스터는 낮은 확률, 보스는 높은 확률. **기지까지 들고 와야** 쓸 수 있음. 사망하면 가방의 설계도는 잃고 보안 파우치의 설계도는 남음 |
+| 중복 설계도 | **골드로 판매** |
+| 던전 암상인·현금 분리 | **MVP 제외.** 골드 소모처 기획으로 [Roadmap.md](../GDD/Roadmap.md) 5절에 둠 |
+
+**세부 결정 (2026-11-19, B1~B6은 Claude 추천안을 유저가 채택)**
+
+| # | 항목 | 결정 |
+| --- | --- | --- |
+| B1 | 설계도를 쓰는 방식 | **노드의 해금 재료 중 하나로 넣음**(수량 1). 창고·가방·파우치 합산 차감(3절)을 그대로 쓰므로 등록 단계가 따로 없음. 재료나 골드가 모자라면 설계도는 창고에 두고 나중에 해금 |
+| B2 | 같은 줄 선행 조건 | **유지.** 3단계 설계도를 먼저 주워도 2단계를 열어야 해금 가능. 그때까지 창고에 보관 |
+| B3 | 드랍처와 확률 | 무기 설계도만 있음(B7). 단계를 층 범위에 묶음: 2단계 설계도 = 3~7층 몬스터, 3단계 = 5~10층 몬스터(4절 재료와 같은 축). 5층 중간 보스는 2단계, 10층 보스는 3단계를 높은 확률로. 확률은 C6 `balance-check`. **MVP 예외**: 지금은 5·10층이 같은 임시 보스(같은 드랍 풀)를 쓰므로, 보스를 나누기(F6b) 전까지 임시 보스는 **2단계만** 높은 확률로 떨어뜨리고 3단계는 5~10층 몬스터에서만 나옴(5층에서 3단계를 쉽게 얻어 진행이 건너뛰어지는 것을 막음) |
+| B4 | 중복 설계도 판매가 | 그 노드 해금 골드의 30%. 2단계 120G, 3단계 270G(전설 전리품 300G 근처) |
+| B5 | 설계도 아이템 규칙 | 새 분류 `Blueprint`, **가방·창고 모두 겹침 1(1칸 1장)**, 장비가 아니므로 보안 파우치에 넣을 수 있음. 등급은 2단계 희귀, 3단계 전설(아이콘 테두리·툴팁용) |
+| B6 | MVP 테스트 | 2단계 설계도를 잡화상에서 판매해 흐름 확인. **기능·밸런스 테스트 전용 임시 판매**이며 C6 플레이 테스트 뒤 잡화상에서 뺌(기지에서 언제든 사면 던전 파밍과 이후 암상인 우회로의 의미가 없어짐) |
+| B7 | 설계도 단위 (유저 결정) | **설계도는 무기에만, 무기마다 따로(특정).** 무기는 전투 양상이 달라 "어떤 무기를 주웠나"가 의미 있음. 방어구는 설계도 없이 **전리품 종류·수량**으로 해금을 조절. MVP는 무기 한 계열이라 설계도는 2단계·3단계 2종 |
+| B8 | 방어구 분기 재료 (유저 방향, MVP 제외) | 방어구 3분기(Roadmap 2절)가 들어가면 **분기마다 재료 성격을 맞춤.** 예: 부엉이 몬스터의 깃털 n개 → 민첩(기동)형, 가죽 n개 → 방어형. 원하는 분기가 사냥할 몬스터를 정함. MVP는 스탯만 오르는 단순 단계라 지금 비용 초안(10.5절) 그대로 |
+
+B1·B2 결정으로 C1~C4 코드(층 범위, 노드 데이터, 해금 순서, 재료 차감, 화면)는 바뀌지 않습니다. 코드 변경은 C5의 `ItemCategory.Blueprint` 추가뿐이고, 나머지는 에셋(설계도 아이템, 노드 재료 목록, 드랍 풀, 잡화상)입니다. 이 결정은 2.3·3·5·7·10.5절에 반영했습니다.
+
 ## 2. 트리 구조
 
 ### 2.1 단계와 지역
@@ -60,14 +89,14 @@ flowchart LR
 | --- | --- | --- |
 | 숨김 | 노드의 지역이 해금되지 않음 | 없음 (MVP에서는 지역 2 이후 전부) |
 | 선행 미충족 | 지역은 열렸지만 같은 줄 이전 단계를 아직 해금 안 함 | 필요 재료·골드와 선행 노드 확인만 (해금 버튼 비활성) |
-| 해금 가능 | 선행을 충족했고 아직 해금 안 함 | 필요 재료·골드 확인, 해금 (재료·골드가 모자라면 버튼 비활성) |
+| 해금 가능 | 선행을 충족했고 아직 해금 안 함 | 필요 재료·골드 확인, 해금 (재료·골드가 모자라면 버튼 비활성). 무기 2단계 이상은 설계도도 재료 목록에 `0/1`로 보임(1.1절 B1) |
 | 해금됨 | 해금 완료 | 재제작 |
 
 ## 3. 해금과 재제작
 
 | 동작 | 비용 | 결과 |
 | --- | --- | --- |
-| 해금 | 노드별 전리품 n개 + 골드 n | 해금 상태 기록 + 장비 1개 지급 |
+| 해금 | 노드별 전리품 n개 + 골드 n (무기 2단계 이상은 + 그 무기의 설계도 1장) | 해금 상태 기록 + 장비 1개 지급 |
 | 재제작 | 노드별 골드 n | 장비 1개 지급 |
 
 - **재료를 꺼내는 곳**: 창고·가방·보안 파우치를 합산하고, 창고 → 가방 → 보안 파우치 순서로 꺼냅니다. 제작은 기지에서만 하므로 파우치도 보관함으로 취급합니다.
@@ -75,6 +104,8 @@ flowchart LR
 - **재료 차감은 원자적**으로 합니다. 희귀·전설 재료는 가방 겹침 1이라 여러 칸에 흩어지므로, `itemID` 기준으로 모든 칸을 합산해 충분할 때만 한 번에 차감합니다.
 - **판매가 관계**: 제작 장비 판매가는 재제작 골드보다 낮아야 합니다(골드 복제 방지). 판매가를 **재제작 골드 × 비율(1 미만)**로 계산하면 자동으로 지켜집니다(1절, 비율 30%는 6절 U6). 장비 SO의 `baseValue`를 따로 쓰게 되면 에디터 검증(`baseValue < 재제작 골드`)으로 강제합니다.
 - 사망으로 장비를 잃어도 해금 상태는 그대로입니다.
+- **설계도**(1.1절): 노드 재료 목록의 한 항목(수량 1)이라 위 합산·원자적 차감을 그대로 따릅니다. 해금하면 소모되고, 해금 상태는 영구입니다. 같은 노드를 이미 해금했으면 남은 설계도는 일반 아이템처럼 잡화상에서 팝니다.
+- **설계도 판매가 = 그 노드 해금 골드 × 30%**(B4, 2단계 120G·3단계 270G). 설계도 SO의 `baseValue`에 **직접 입력**합니다(`Sync Crafted Sell Prices`는 결과 장비만 다루므로 C2 에디터 코드를 바꾸지 않음). 해금 골드를 바꾸면 이 값도 손으로 맞춥니다. 나중에 암상인이 설계도를 팔게 되면 판매가보다 비싸야 합니다(Roadmap 5절).
 
 ## 4. 재료 수급: 몬스터 출현 층 범위
 
@@ -96,6 +127,8 @@ flowchart LR
 - **테스트 재료 구매가 ≥ 재료 판매가(`baseValue`)**. 사서 바로 팔아 골드가 늘지 않게 합니다.
 - **0G·무장비 복구**: 사망으로 장비와 골드가 바닥난 상태에서도 맨손으로 1~4층 전리품을 팔아 재제작 골드를 다시 모을 수 있는지 C6에서 확인합니다. 1~4층에서 탈출구가 안 나오면 5층(귀환석 불가)까지 가야 하는 경로도 함께 봅니다.
 - 드랍 풀에서 무기·방어구·배낭을 뺍니다(Items.md 2.1절 획득 경로 확정 사항 적용).
+- **설계도 테스트**(B6): 잡화상에서 무기 2단계 설계도를 판매가의 2배(240G)로 팝니다. 테스트 재료와 같은 규칙(구매가 ≥ 판매가)입니다. **테스트 전용 임시 판매**라 C6 플레이 테스트 뒤 뺍니다.
+- **설계도 드랍**(B3): 몬스터 드랍 풀에 설계도 전용 그룹을 따로 둡니다(전리품 굴림과 별개, 낮은 확률). 2단계 설계도는 3~7층 몬스터(MVP: Spider), 3단계는 5~10층 몬스터(MVP: Wizard)의 풀에 둡니다. 임시 보스 풀에는 **2단계만** 높은 확률로 둡니다(B3 MVP 예외). 확률은 C6에서 정합니다. 상자 풀에는 넣지 않습니다.
 - **상자 드랍 풀 정리**: 지금 상자 풀(`DropPool_Chest_Region1`)에는 지역 1에 나오지 않는 몬스터의 전리품이 섞여 있습니다. 지역 1 출현 몬스터의 전리품으로 제한합니다. U10에 따라 상자 풀과 `FloorGrayBoxBuilder`의 상자 보너스 아이템에서 MP 포션도 뺍니다.
 
 ## 6. 세부 결정 (유저, 2026-11-17)
@@ -111,7 +144,7 @@ flowchart LR
 | U5 | 재료 차감 위치 | **창고·가방·보안 파우치 합산** (1절, 3절) |
 | U6 | 제작 장비 판매가 비율 | **재제작 골드의 30%** |
 | U7 | 제작소 위치 | **대장간 = 제작소, 판매는 잡화상으로 이동** (1절). 대장간을 열면 테크트리 패널과 가방·장비 패널을 함께 띄움(재료 확인, 제작 직후 장착). 잡화상은 구매 목록 + 판매 칸. `HubSystem`의 `Tab` 토글 규칙과 토스트 배치는 C4에서 정함 (Gemini 검토 2-2, 3-4) |
-| U8 | MVP 화면 | 열(단계) + 노드 + 연결선만 있는 **단순 테크트리**. 카테고리 탭(무기·방어구·배낭) |
+| U8 | MVP 화면 | 열(단계) + 노드 + 연결선만 있는 **단순 테크트리**. 카테고리 탭(무기·방어구). 배낭은 방어구 탭의 4번째 줄 (2026-11-18 유저 결정으로 3탭 → 2탭) |
 | U9 | 비용 수치 | 층당 기대 가치(약 160G) 기준으로 Claude가 초안을 만들고 `balance-check`로 점검 (C5·C6) |
 | U10 | MP 포션 | MVP 동안 **상점·드랍에서 제외** (MP 소모처가 없음) |
 | U11 | 무기 단계별 차이 | **공격력만 상승**. 판정 형태(`hitboxPattern`)는 무기 3종 작업 때 |
@@ -133,6 +166,10 @@ flowchart LR
 | `BackpackDataSO` 에셋 | 4단계로 재구성 (지금 Basic·Sturdy·Expedition 3개). MVP는 1단계만 노드로 연결 |
 | `SecurePouchManager` | 재료 합산·차감 대상에 포함 |
 | 시작 장비 | 시작 지급 경로가 있다면 제거 (장비 없이 시작) |
+| `GameEnums.ItemCategory` (1.1절) | `Blueprint`를 맨 뒤에 추가 |
+| 설계도 `ItemDataSO` 에셋 (1.1절) | 무기 2·3단계 설계도 2개, 무기 노드 재료 목록에 연결 |
+| 몬스터·임시 보스 `DropPoolSO` (1.1절) | 설계도 전용 그룹 추가 (B3) |
+| `GeneralStoreCatalog` (1.1절) | 2단계 설계도 테스트 판매 (B6, 임시) |
 
 ## 8. 구현 단위 초안
 
@@ -143,8 +180,91 @@ flowchart LR
 | C3 | 제작 로직: 해금·재제작, 비용 차감, 지급 |
 | C4 | 제작 화면(테크트리) |
 | C5 | 지역 1 노드 에셋(무기·방어구·배낭)과 비용 초안, 상점·드랍 풀 정리, 시작 상태 |
-| C6 | 밸런스 점검(`balance-check`)과 사이클 플레이 테스트 (0G·무장비 복구, 층별 몬스터 쏠림 포함) |
+| C6 | 밸런스 점검(`balance-check`)과 사이클 플레이 테스트 (0G·무장비 복구, 층별 몬스터 쏠림, 설계도 드랍 확률 포함). 테스트 뒤 `GeneralStoreCatalog`에서 2단계 설계도 제거(B6). **2026-11-19: 데이터 점검만 마침([보고서](../Balance/balance-check-economy-2026-11-19.md)). 수치 조정·플레이 테스트·테스트 판매 제거는 애니메이션·아트 교체 뒤 직접 플레이와 함께 진행(유저 결정)** |
 | C7 | GDD·구조 문서 동기화: Hub.md(대장간 = 제작소, 판매를 잡화상으로 이동, MP 포션 제외), Items.md(배낭 표·획득 경로, MP 포션 제외), Combat.md 스탯 표(MP 회복 문구), UI_Direction.md 4절(재제작 비용·배낭 위치), Roadmap.md(방어구 3분기 줄), 07 문서 6절·Q26(배낭 3단계·상한 35칸), ARCHITECTURE.md·스크립트 맵 |
+
+## 10. 구현 설계 (코드)
+
+8절 구현 단위를 코드 수준으로 정리합니다. 커밋은 단위마다 나누고, 각 커밋은 컴파일되는 상태를 유지합니다. 단위 사이 의존: C1은 독립, C2 → C3 → C4, C5는 C1~C4 이후.
+
+### 10.1 C1 몬스터 출현 층 범위
+
+| 대상 | 변경 |
+| --- | --- |
+| `MonsterDataSO` | `[Min(1)] minFloor = 1`, `[Min(1)] maxFloor = 10` 필드와 `CanAppearOnFloor(int floor)`. `OnValidate`에서 `maxFloor < minFloor`이면 맞춤 |
+| `RegionConfigSO` | 기본 몬스터 풀 `[SerializeField] private List<GameObject> _monsterPool` 추가(`IReadOnlyList<GameObject> MonsterPool` 노출). 지금 `03_DungeonScene`의 `DungeonGenerator._monsterPrefabPool` 값(3종)을 `Region1Config`로 옮김. `EditorInitialize`와 `FloorGrayBoxBuilder.CreateGrayBoxFloors`는 지역 설정을 다시 만들 때 기존 풀을 건드리지 않아 보존됨. **특정 몬스터를 코드에 넣지 않음**(지금 몬스터는 초기 디자인, 2026-11-18 유저 지시). 풀이 비면 검증기 오류로 알림 (Gemini 코드 검토 1-3) |
+| `DungeonGenerator` | `_monsterPrefabPool` 필드 삭제, `_regionConfig.MonsterPool` 사용. `GetZoneMonsterPool(zone)` → `GetFloorMonsterPool(zone, floor)`: 구역 전용 풀이 있으면 그것, 없으면 지역 풀을 기준으로 `CanAppearOnFloor`인 프리팹만 재사용 버퍼 `List<GameObject> _floorMonsterBuffer`에 담아 반환. 0종이면 **필터 없는 같은 풀을 그 버퍼에 복사**해 반환하고 `Debug.LogWarning`. 반환 타입은 항상 `List<GameObject>`라 `SpawnEntitiesInCells`의 매개변수를 바꾸지 않음. 호출부 2곳(구역별 배분, 층별 규칙이 없는 층의 구역 수 사용 분기) 모두 교체. 층 생성 때만 호출(Update 아님) |
+| `FloorDesignValidator.ValidateRegion` | 지역 풀이 비었으면 오류. 1~10층마다 지역 풀에 출현 가능한 몬스터가 1종 이상인지 검사(없으면 오류). 층 디자인의 구역 전용 풀은 그 디자인이 쓰이는 층(초반 1~4, 중간 보스 5, 후반 6~9, 보스 10)에서 0종이면 경고. 몬스터 데이터는 프리팹의 `MonsterController.Data`로 읽음 |
+| 데이터 | 출현 층은 몬스터 데이터에만 둠. 초기 디자인 몬스터 시험값: Heavy Brute 1~5층, Shadow Spider 3~7층, Arcane Wizard 5~10층 |
+
+### 10.2 C2 노드 데이터와 해금 상태
+
+| 대상 | 변경 |
+| --- | --- |
+| 새 `TechNodeSO` (`Data/Models`) | 필드는 모두 `[SerializeField] private` + 읽기 전용 프로퍼티(가이드라인 4절). `string nodeId`(고유), `EquipmentDataSO resultItem`, `int tier`, `int regionId`, `TechNodeSO prerequisite`(첫 단계는 null), `List<MaterialCost> materials`(`ItemDataSO item`, `int amount`), `int unlockGold`, `int recraftGold`. 줄(무기·투구·갑옷·신발·배낭)은 `resultItem.equipType`으로 구분하므로 별도 enum을 두지 않음. **노드 자체 검증도 `TechNodeSO.OnValidate`**: 같은 재료 중복, 수량 0 이하, 재료·결과 장비 null, 자기 자신을 선행으로 지정 (Gemini 코드 검토 1-6) |
+| 새 `TechTreeSO` (`Data/Models`) | `[SerializeField] private` 필드 + 프로퍼티. `List<TechNodeSO> nodes`, `[Range(0,0.99)] float craftedSellRatio = 0.3f`. `GetSellPrice(TechNodeSO) = floor(recraftGold × ratio)`. 에디터 검증(`OnValidate`): `nodeId` 중복, 선행 노드의 `equipType`이 같고 `tier`가 낮은지, `resultItem` 중복, **결과 장비의 `baseValue`가 노드 판매가와 다르면 경고**. 에디터 메뉴 `BagBack100/Tech/Sync Crafted Sell Prices`가 결과 장비 SO의 `baseValue`를 노드 판매가로 맞추고 저장(`Undo.RecordObject` + `EditorUtility.SetDirty` + `AssetDatabase.SaveAssets`, Gemini 코드 검토 2-3). 판매가를 `baseValue` 하나로 두므로 `HubTradeSystem`과 결과 화면(`RunResult.SumValue`)이 같은 값을 씀 (Gemini 코드 검토 1-5) |
+| `PlayerSessionData` | `HashSet<string>` 해금 노드 ID, `IsNodeUnlocked(string)`, `MarkNodeUnlocked(string)`. 지역 해금: `UnlockedRegionCount = 1`, `IsRegionUnlocked(int regionId)`(MVP는 지역 1만 true, 설정 API는 F8 때). 세션 메모리 |
+
+### 10.3 C3 제작 로직
+
+| 대상 | 변경 |
+| --- | --- |
+| `SlotContainer` | `CountByItemId(int itemID)`, `RemoveByItemId(int itemID, int amount)`: 슬롯 순서대로 여러 묶음에서 덜어냄. 합계가 모자라면 아무것도 바꾸지 않고 false |
+| `ISlotItemContainer` + 구현 3곳(`InventoryManager`·`StorageManager`·`SecurePouchManager`) | `int CountItemId(int itemID)`, `bool RemoveItemIdAmount(int itemID, int amount)`, `void BeginBulkChange()`, `void EndBulkChange()` 추가. `BeginBulkChange`~`EndBulkChange` 사이에서는 변경 알림·세션 저장을 미루고, 끝날 때 바뀐 것이 있으면 **1회만** 발행(중첩 카운터). `InventoryManager`의 기존 `CountItems(itemID)`는 `CountItemId`와 같은 `SlotContainer.CountByItemId`에 위임해 중복 로직을 없앰(기존 호출처 유지). `StorageManager`·`SecurePouchManager`에도 `_container == null` 가드 추가 (Gemini 코드 검토 1-1, 1-2, 1-7) |
+| 새 `CraftingSystem` (`Hub`, 2계층 System) | 허브 씬 컴포넌트. 참조: `TechTreeSO`(인스펙터), 매니저 3개(`Start`에서 한 번 탐색, `HubTradeSystem`과 같은 방식). 매니저 3개는 **지연 캐싱**(쓸 때 null이면 탐색). `SecurePouchManager`는 `HubSystem.Awake`가 동적으로 붙이므로 각 매니저의 `OnManagerCreated` 정적 이벤트도 구독해 늦게 생겨도 받음. 매니저 3개의 `OnContainerChanged`와 `PlayerSessionData.OnGoldChanged`를 `CraftingSystem`이 구독해 `OnTechTreeChanged`로 중계(UI는 `CraftingSystem`만 구독). 모든 구독은 `OnEnable`/`OnDisable` 짝. 매니저마다 바인딩 헬퍼(`BindInventory` 등)를 두어 참조가 바뀌면 이전 인스턴스의 `OnContainerChanged`를 먼저 해제하고 새 인스턴스에 구독. `OnDisable`은 정적 `OnManagerCreated`, 현재 바인딩된 인스턴스 이벤트, `OnGoldChanged`를 모두 해제 (Gemini 코드 검토 2-2). 이벤트(시스템 지역 이벤트, `GlobalEvents` 아님): `OnCraftFailed(string)`, `OnCraftCompleted(string)`, `OnTechTreeChanged`. API: `GetState(node)` → `Hidden`/`PrerequisiteLocked`/`Unlockable`/`Unlocked`, `GetOwnedAmount(ItemDataSO)`(창고+가방+파우치), `TryUnlock(node)`, `TryRecraft(node)` |
+| 해금 순서 (`TryUnlock`) | ① 상태가 `Unlockable` ② 골드 ≥ `unlockGold` ③ 재료마다 보유 합계 ≥ 필요 ④ 새 `RuntimeItem(resultItem)`이 가방 또는 창고에 들어가는지 검사 ⑤ 컨테이너 3개 `BeginBulkChange` ⑥ 아이템 추가(가방 → 창고). **반환값이 false면 차감 없이 실패 처리** ⑦ 재료 차감(창고 → 가방 → 파우치, 재료별로 남은 수량을 다음 컨테이너로 넘김) ⑧ `MarkNodeUnlocked`(알림이 보류된 동안 기록하므로 UI는 중간 상태를 보지 않고, 롤백 경로도 없음) ⑨ `finally`에서 `EndBulkChange`(컨테이너별 알림 1회) ⑩ 골드 차감 ⑪ `OnCraftCompleted`. ③④까지 통과하면 ⑥⑦⑩은 실패하지 않음(단일 스레드, 결과 장비와 재료는 itemID가 다름) (Gemini 코드 검토 2-1). `HubTradeSystem.TryBuy`와 같은 "먼저 넣고 나중에 차감" 방식 (Gemini 코드 검토 1-1) |
+| 재제작 (`TryRecraft`) | `Unlocked` 확인 → 골드 ≥ `recraftGold` → 공간 검사 → 추가(**반환값이 true일 때만** 다음 단계) → 골드 차감 → 이벤트 (Gemini 코드 검토 2-1) |
+| `HubTradeSystem` | **로직 변경 없음.** 제작 장비의 판매가는 `baseValue`에 동기화되므로(10.2) 기존 `baseValue × 수량` 계산을 그대로 씀. 클래스 주석의 "대장간 판매"만 "잡화상 판매"로 |
+
+### 10.4 C4 제작 화면과 판매 이동
+
+| 대상 | 변경 |
+| --- | --- |
+| 새 `TechTreePanelUI` (`UI`) | 대장간 패널 안. 카테고리 탭 2개(무기 / 방어구). 방어구 탭은 투구·갑옷·신발 3줄 아래에 배낭 줄을 둔 4줄(2026-11-18 유저 결정). 탭별 줄 구성은 인스펙터 배열(`TabDef`: 버튼 + `EquipType[]`)로 정함. 줄 안 노드는 지역 → 단계 순, 잠긴 지역 노드는 이름·아이콘을 `???`로 가림. 노드 폭은 배낭 4단계(지역당 1단계)가 한 줄에 들어가게 맞춤. 열 = 단계, 노드 = 버튼(아이콘·이름, 상태별 색). 같은 줄의 노드 사이에 연결선(가로 막대 `Image`). 노드를 누르면 상세: 결과 장비 스탯, 재료별 `보유/필요`, 골드, 버튼 하나(`Unlock` / `Craft`, 상태·비용에 따라 `interactable`). 노드 행은 `OnEnable`·탭 전환 때만 다시 만듦. 구독: `CraftingSystem` 이벤트 3개만(OnEnable/OnDisable 짝). `OnTechTreeChanged`를 받으면 갱신 플래그만 켜고 `LateUpdate`에서 플래그가 켜져 있을 때 1회 갱신(한 번의 해금에서 컨테이너·골드 알림이 여러 번 와도 화면 갱신은 1회). 플래그가 꺼진 프레임은 아무것도 하지 않고, 수치 표시는 `TMP_Text.SetText("{0}/{1}", owned, need)`로 문자열 할당 없이 갱신 (Gemini 코드 검토 2-3). UI는 계산하지 않고 `CraftingSystem`에 묻기만 함 (Gemini 코드 검토 1-1, 1-2) |
+| `HubSystem` | 로직 변경 없음. 대장간 클릭 → `_blacksmithPanel` + 가방 패널(지금과 같음). `Tab` 토글도 창고·잡화상과 같은 규칙 유지(3-4 IDEA는 일관성 쪽으로 정리). `_blacksmithPanel` 툴팁 문구만 "제작(테크트리)"로 |
+| 허브 씬 (`02_HubScene`) | `SellSlot`과 판매 안내 `Hint`를 대장간 패널에서 잡화상 패널 하단으로 이동(인스펙터 참조 유지). 잡화상 구매 목록 `ShopPanel/Background/Rows`를 스크롤 영역(`RowsViewport`: `ScrollRect` + `RectMask2D`) 안에 넣고 하단 여백을 늘려 판매 칸(160×160)과 겹치지 않게 함. 노드가 없을 때 쓸 빈 트리 에셋 `TechTree_Region1`을 만들어 `CraftingSystem`에 연결(노드는 C5). 대장간 패널 제목 `Blacksmith - Sell` → `Blacksmith - Craft`, 잡화상 제목 `General Store - Buy & Sell`. 대장간 패널에 `TechTreePanelUI` 구성, 씬에 `CraftingSystem` 추가. unityMCP로 적용하고 `MarkSceneDirty` 후 저장 (Gemini 코드 검토 1-4) |
+| `SellSlotUI` | 주석의 "대장간 판매 칸" → "잡화상 판매 칸". `IsAvailable` 조건은 그대로(잡화상이 열렸을 때만 가방 우클릭 `판매` 표시) |
+| `RunResultUI` | 생환 결과 안내 `(sell at the Blacksmith)` → `(sell at the General Store)` (Gemini 코드 검토 1-5) |
+
+### 10.5 C5 지역 1 에셋과 상점·드랍 정리
+
+| 대상 | 변경 |
+| --- | --- |
+| 1단계 장비 | 기존 기본 장비 재사용: Basic Sword(21), Basic Helmet(13), Basic Armor(11), Basic Boots(16), Basic Backpack(12, +5칸) |
+| 2·3단계 장비 | 새 에셋. itemID 301~ (무기 302·303, 투구 312·313, 갑옷 322·323, 신발 332·333). 스탯은 1단계 기준 단계마다 상승(공격력 또는 방어·HP만). 무기 `baseAttackSpeed`는 0(맨손 공속 1.82 유지) 또는 1.82 이상 |
+| 설계도 (1.1절) | `ItemCategory`에 `Blueprint`를 **맨 뒤에** 추가(에셋에 int로 직렬화). 새 `ItemDataSO` 2개: 2단계 검 설계도(401, 희귀, `baseValue` 120), 3단계 검 설계도(402, 전설, `baseValue` 270). `maxStack` 1(`SlotContainer`가 `Material`이 아니면 창고에서도 겹침 1로 다룸). 무기 2·3단계 노드의 재료 목록에 각각 수량 1로 넣음. 설계도 전용 에디터 검증은 C2 코드를 건드리므로 하지 않음 |
+| 노드 | `TechTree_Region1.asset` + 노드 13개(무기 3, 투구·갑옷·신발 각 3, 배낭 1). 만든 뒤 `Sync Crafted Sell Prices`로 결과 장비 `baseValue`를 판매가에 맞춤 |
+| 비용 초안 | 아래 표. 재료는 1단계 Brute(1~5층), 2단계 Spider(3~7층), 3단계 Wizard(5~10층) 전리품 중심. 같은 단계의 노드끼리 재료 종류를 나눠 한 재료에 몰리지 않게 함. C6에서 `balance-check` |
+| 잡화상 (`GeneralStoreCatalog`) | 무기·방어구·배낭 3단계와 MP 포션 제거. HP 포션·귀환석 유지. 테스트 재료: Brute 일반 전리품 2종(101·102)을 판매가의 2배(40G)로 추가 |
+| 상자 풀 (`FloorGrayBoxBuilder`) | 재료 수집을 `LootSO` 폴더 전체 대신 **`Region1Config` 몬스터 풀의 몬스터 드랍 풀**에 있는 하위 등급 전리품으로 제한. 몬스터 풀에 설계도 그룹이 생기므로 `Blueprint` 분류는 수집에서 뺌. 보너스 아이템에서 MP 포션(3) 제거, 가중치는 합 30이 정확히 되도록 나머지를 앞 항목부터 1씩 분배. 메뉴 재실행으로 `DropPool_Chest_Region1` 갱신 |
+| 몬스터 드랍 풀 | 장비는 들어 있지 않음(확인함). 설계도 그룹 추가: Spider 풀에 2단계, Wizard 풀에 3단계, 임시 보스 풀에 2단계만(높은 확률, B3 MVP 예외). 전용 `DropGroup`은 **`useFloorRarity = false`, `minRolls = maxRolls = 1`**, 설계도 + 꽝 항목(`itemID = 0`)의 가중치로 확률을 정함(층 등급 분기는 `itemID > 0`만 유효해서 꽝 항목이 동작하지 않음). `LootSystem` 코드 변경 없음 |
+| 잡화상 설계도 | 2단계 검 설계도(401)를 240G로 추가 (B6) |
+| 시작 상태 | 지금도 새 세션은 장비 없이 시작(시작 지급 경로 없음, 확인함). 시작 골드 1000G 유지 |
+
+**비용 초안 (노드 1개 기준)**
+
+| 단계 | 재료 | 해금 골드 | 재제작 골드 | 판매가(30%) |
+| --- | --- | --- | --- | --- |
+| 1 | Brute 일반 ×3 | 150G | 100G | 30G |
+| 2 | Spider 일반 ×3 + Brute 희귀 ×1 | 400G | 250G | 75G |
+| 3 | Wizard 일반 ×3 + Spider 희귀 ×1 + Wizard 희귀 ×1 | 900G | 500G | 150G |
+
+- 무기 2·3단계 노드는 위 재료에 그 단계 검 설계도 1장이 더해집니다(1.1절). 방어구·배낭은 설계도 없이 표 그대로입니다.
+- 1단계 5노드를 모두 열려면 골드 750G + Brute 일반 15개입니다. 시작 1000G로는 일부만 열 수 있어 "무엇부터 열지" 고르게 됩니다(튜토리얼의 시작 무기 선택과 같은 방향).
+- 층당 기대 가치 약 160G 기준으로 1단계 1노드 ≈ 1~2층, 3단계 1노드 ≈ 6~8층 분량입니다.
+
+### 10.6 C7 문서
+
+8절 C7 목록과 함께 **Monsters.md(몬스터별 출현 층)·Dungeon.md(2절 배치 규칙의 층 범위 필터)**도 갱신합니다 (Gemini 코드 검토 1-7). 설계도(1.1절)는 Items.md(아이템 분류 표에 설계도, 획득 경로, 보안 파우치 보관 가능), Hub.md(대장간 해금 조건. 잡화상의 MVP 테스트용 임시 판매 — 2단계 설계도와 1단계 재료 2종(1절·5절) — 는 적지 않음, C7 Gemini 기획 검토 MINOR 반영)에 반영합니다. Monsters.md 보스 항목에는 임시 보스가 2단계 설계도만 떨어뜨리는 예외와, 보스 분리(F6b) 때 5층 = 2단계·10층 = 3단계로 드랍 풀을 나눈다는 조건을 적습니다. 새 클래스(`TechNodeSO`, `TechTreeSO`, `CraftingSystem`, `TechTreePanelUI`)는 `ARCHITECTURE.md`와 스크립트 맵(허브 쪽은 새 `Hub_System_Map.md` 또는 기존 맵 확장)에 추가합니다.
+
+### 10.7 영향 범위 근거
+
+- graphify: `HubTradeSystem` ← `SellSlotUI`, `ShopPanelUI`. `SellSlotUI` ← `InventoryUIController.TryOpenItemMenu`(우클릭 `판매` 표시). `MonsterDataSO` ← `MonsterController`. `RegionConfigSO` ← `DungeonGenerator`, `LootSystem`, `FloorDesignValidator`, `FloorGrayBoxBuilder`.
+- `ISlotItemContainer` 구현체는 `InventoryManager`·`StorageManager`·`SecurePouchManager` 3개뿐(grep). 인터페이스에 메서드를 추가해도 다른 구현체는 없음.
+- 인스펙터 연결: `DungeonGenerator._monsterPrefabPool`(던전 씬 YAML 1413줄, 프리팹 3개), `HubTradeSystem._generalStoreCatalog`, `SellSlotUI` 참조(허브 씬). C1·C4에서 unityMCP로 다시 연결합니다.
+- `SecurePouchManager`는 허브 씬에 직렬화돼 있지 않고 `HubSystem.Awake`가 동적으로 붙입니다(그래서 `CraftingSystem`은 지연 캐싱 + `OnManagerCreated` 구독).
+- `baseValue` 사용처: `HubTradeSystem.GetSellPrice`, `RunResult.SumValue`(결과 화면 가치). 제작 장비는 `baseValue`를 판매가에 동기화해 두 곳이 같은 값을 씁니다.
+- 새 전역 이벤트 없음. 제작 이벤트는 `CraftingSystem` 지역 이벤트이고 UI만 구독합니다.
 
 ## 9. 검토 기록
 
@@ -173,3 +293,41 @@ flowchart LR
 | 3-4 | IDEA | `Tab` 토글 예외를 대장간만 둘지 모든 사이드 패널에 둘지 | C4 설계 때 정함 | - |
 
 3차 판정: **APPROVED** (2026-11-17, gemini-4-hydrogen-xhigh)
+
+**코드 설계 검토 (gemini-4-argon-medium)**
+
+| # | 등급 | 지적 | 처리 | 반영 위치 |
+| --- | --- | --- | --- | --- |
+| 코드 1-1 | MAJOR | 재료별 차감마다 알림이 나가 UI가 중간 상태로 여러 번 갱신, 해금 기록이 차감 뒤 | 수용: 일괄 변경(Begin/EndBulkChange), 해금 기록 먼저, UI 갱신 플래그 | 10.3, 10.4 |
+| 코드 1-2 | MAJOR | 동적 추가되는 `SecurePouchManager`를 `Start`에서만 찾으면 null, 구독 누락 | 수용: 지연 캐싱 + `OnManagerCreated`, 구독은 `CraftingSystem`이 중계, null 가드 | 10.3 |
+| 코드 1-3 | MAJOR | 빌더·`EditorInitialize`가 지역 몬스터 풀을 보존·주입하지 않음, 풀 타입 불일치, 호출부 2곳 | 수용 | 10.1 |
+| 코드 1-4 | MAJOR | 잡화상 구매 목록과 판매 칸이 겹침, 대장간 제목·안내 정리 누락 | 수용 | 10.4 |
+| 코드 1-5 | MINOR | 결과 화면 문구, `RunResult.SumValue`의 `baseValue`와 노드 판매가 불일치 | 수용: 판매가를 `baseValue`에 동기화(`HubTradeSystem` 로직 변경 없음) | 10.2~10.5 |
+| 코드 1-6 | MINOR | 새 SO의 `public` 필드, 노드 단위 검증 누락 | 수용 | 10.2 |
+| 코드 1-7 | MINOR | `CountItems`와 중복 메서드, C7에 Monsters.md·Dungeon.md 누락 | 수용 | 10.3, 10.6 |
+| 코드 1-8 | IDEA | 재료가 빠지며 빈칸이 생기는 경우는 만석이어도 제작 허용 | 유저에게 제안 (지금은 기획 3절대로 거절) | - |
+| 코드 2-1 | MINOR | 해금 선기록의 롤백 API 누락, 재제작에서 추가 결과 미확인 | 수용: 해금 기록을 아이템 추가·재료 차감 뒤 `EndBulkChange` 전으로 옮겨 롤백 경로 제거, 추가 반환값 확인 | 10.3 |
+| 코드 2-2 | MINOR | 매니저 참조 교체 시 이전 인스턴스 구독이 남을 수 있음 | 수용: 바인딩 헬퍼, `OnDisable`에서 전부 해제 | 10.3 |
+| 코드 2-3 | MINOR | 동기화 메뉴의 SO 수정 방식, `LateUpdate` 문자열 할당 | 수용: `Undo.RecordObject`+`SetDirty`+`SaveAssets`, `SetText` | 10.2, 10.4 |
+| 코드 2-4 | IDEA | 일괄 변경 카운터·dirty 판정을 `SlotContainer`에 공용화 | 유저에게 제안 | - |
+
+코드 설계 2차 판정: **APPROVED** (2026-11-18, gemini-4-argon-medium)
+
+**설계도 해금 기획 검토 (1.1절, gemini-4-hydrogen-xhigh)**
+
+| # | 등급 | 지적 | 처리 | 반영 위치 |
+| --- | --- | --- | --- | --- |
+| 설계도 1-1 | MAJOR | "C2·C3 코드 변경 없음"인데 판매가 동기화 메뉴·`TechTreeSO` 검증 추가를 요구 | 수용: 설계도 `baseValue` 직접 입력, 설계도 전용 검증 제외 | 1.1절, 3절, 10.5절 |
+| 설계도 1-2 | MAJOR | 5·10층이 같은 임시 보스 드랍 풀을 써서 B3(5층 2단계·10층 3단계)와 모순, 5층에서 3단계 획득 | 수용: 보스 분리(F6b) 전까지 임시 보스는 2단계만 | B3, 5절, 10.5절 |
+| 설계도 1-3 | MAJOR | 잡화상 설계도 판매가 임시인지 불명확, 파밍 우회 | 수용: 테스트 전용, C6 뒤 제거 | B6, 5절 |
+| 설계도 1-4 | MAJOR | "설계도 없으면 잠김" 문구가 C4 동작(해금 가능 + `0/1` + 버튼 비활성)과 다름 | 수용: 문구를 구현에 맞춤 | 1.1절 |
+| 설계도 1-5 | MINOR | 창고 겹침 규칙 누락 | 수용: 가방·창고 모두 겹침 1 | B5, 10.5절 |
+| 설계도 1-6 | MINOR | 설계도 `DropGroup` 설정 조건과 설계도 등급 누락 | 수용 | B5, 10.5절 |
+| 설계도 1-7 | MINOR | 1.1절 "다음 단계" 문구, 7절 영향 범위, Roadmap 경제 항목 옛 용어 | 수용 | 1.1절, 7절, Roadmap 5절 |
+| 설계도 1-8 | IDEA | 가방 툴팁에 설계도의 노드 해금 여부 표시 | 유저 채택: 백로그 | Roadmap 9절 |
+| 설계도 1-9 | IDEA | 미해금 설계도 판매·버리기 때 경고 | 유저 채택: 백로그 | Roadmap 9절 |
+| 설계도 2-1 | MINOR | 잡화상 설계도 제거 시점이 C6·C7에서 엇갈림 | 수용 | 8절 C6, 10.6절 |
+| 설계도 2-2 | MINOR | Roadmap 제작소 줄에 "무기" 한정 누락 | 수용 | Roadmap 5절 |
+| 설계도 2-3 | MINOR | 임시 보스 예외와 F6b 분리 조건이 보스 문서에 없음 | 수용 | 10.6절, Roadmap 3절 |
+
+2차 판정: **APPROVED** (2026-11-19, gemini-4-hydrogen-xhigh). 2차 MINOR 3건은 판정 뒤 반영

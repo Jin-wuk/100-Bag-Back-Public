@@ -42,6 +42,8 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
+    useFloorRarity: 0
+    dropChance: 1
     entries:
     - itemID: 101
       dropWeight: 1
@@ -64,70 +66,6 @@ MonoBehaviour:
       minAmount: 1
       maxAmount: 1
     - itemID: 122
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 131
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 132
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 141
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 142
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 151
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 152
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 161
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 162
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 171
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 172
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 181
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 182
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 191
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 192
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 201
-      dropWeight: 1
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 202
       dropWeight: 1
       minAmount: 1
       maxAmount: 1
@@ -158,25 +96,23 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
+    useFloorRarity: 0
+    dropChance: 1
     entries:
     - itemID: 14
-      dropWeight: 6
+      dropWeight: 8
       minAmount: 1
       maxAmount: 1
     - itemID: 15
-      dropWeight: 6
+      dropWeight: 8
       minAmount: 1
       maxAmount: 1
     - itemID: 17
-      dropWeight: 6
+      dropWeight: 7
       minAmount: 1
       maxAmount: 1
     - itemID: 2
-      dropWeight: 6
-      minAmount: 1
-      maxAmount: 1
-    - itemID: 3
-      dropWeight: 6
+      dropWeight: 7
       minAmount: 1
       maxAmount: 1
     - itemID: 0

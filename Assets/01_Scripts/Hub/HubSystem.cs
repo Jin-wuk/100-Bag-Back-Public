@@ -8,7 +8,7 @@ namespace BagBack100.Hub
     /// <summary>
     /// Role: 허브 내 시스템 및 상태를 관리하는 2계층 System. 싱글톤을 쓰지 않고 전역 이벤트를 받아 분기한다.
     ///       플레이어가 없는 허브에서도 창고·가방·장비·퀵슬롯 매니저가 존재하도록 보장한다.
-    /// Dependencies: DungeonEntranceUI, 대장간·잡화상 패널, StorageManager, InventoryManager, EquipmentManager, QuickSlotManager, SecurePouchManager
+    /// Dependencies: DungeonEntranceUI, 대장간(제작)·잡화상(구매·판매) 패널, StorageManager, InventoryManager, EquipmentManager, QuickSlotManager, SecurePouchManager
     /// Events: 없음 (구독: GlobalEvents.OnHubObjectClicked)
     /// </summary>
     public class HubSystem : MonoBehaviour
@@ -19,9 +19,9 @@ namespace BagBack100.Hub
         [SerializeField] private GameObject _storageUIPanel;
         [Tooltip("인벤토리 및 장비창 통합 UI 패널")]
         [SerializeField] private GameObject _inventoryUIPanel;
-        [Tooltip("대장간(판매) 패널. 창고 패널과 같은 자리에 표시")]
+        [Tooltip("대장간(제작, 테크트리) 패널. 창고 패널과 같은 자리에 표시")]
         [SerializeField] private GameObject _blacksmithPanel;
-        [Tooltip("잡화상(구매) 패널. 창고 패널과 같은 자리에 표시")]
+        [Tooltip("잡화상(구매·판매) 패널. 창고 패널과 같은 자리에 표시")]
         [SerializeField] private GameObject _shopPanel;
 
         private void Awake()

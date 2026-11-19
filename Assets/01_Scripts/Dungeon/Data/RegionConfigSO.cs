@@ -70,7 +70,7 @@ namespace BagBack100.Dungeon.Data
     }
 
     /// <summary>
-    /// Role: 지역 1곳의 층 구성 정적 데이터 (디자인 풀, 보스층 디자인, 층별 몬스터 배율·드랍 등급 비율, 1~9층 탈출구·상자 표, 상자 드랍 풀, 디버그 옵션).
+    /// Role: 지역 1곳의 층 구성 정적 데이터 (디자인 풀, 일반 몬스터 풀, 보스층 디자인, 층별 몬스터 배율·드랍 등급 비율, 1~9층 탈출구·상자 표, 상자 드랍 풀, 디버그 옵션).
     /// Dependencies: FloorDesignSO
     /// Events: 없음
     /// </summary>
@@ -95,6 +95,10 @@ namespace BagBack100.Dungeon.Data
         [SerializeField] private FloorDesignSO _midBossFloor;
         [Tooltip("10층 보스층 디자인 (위층 계단은 있어도 무시)")]
         [SerializeField] private FloorDesignSO _bossFloor;
+
+        [Header("Monsters")]
+        [Tooltip("이 지역 일반 스폰 몬스터 프리팹 풀. 층마다 MonsterDataSO의 출현 층 범위로 거른다. 구역 전용 풀(DungeonZone)이 있으면 그 풀을 대신 거른다")]
+        [SerializeField] private List<GameObject> _monsterPool = new List<GameObject>();
 
         [Header("Bosses")]
         [Tooltip("5층 BossSpawn 마커에 놓을 중간 보스 프리팹 (MonsterDataSO.type = Boss). 비우면 5층은 전원 처치 규칙")]
@@ -129,6 +133,7 @@ namespace BagBack100.Dungeon.Data
         public IReadOnlyList<FloorDesignSO> LatePool => _latePool;
         public FloorDesignSO MidBossFloorDesign => _midBossFloor;
         public FloorDesignSO BossFloorDesign => _bossFloor;
+        public IReadOnlyList<GameObject> MonsterPool => _monsterPool;
         public GameObject MidBossPrefab => _midBossPrefab;
         public GameObject BossPrefab => _bossPrefab;
 

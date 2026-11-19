@@ -8,15 +8,15 @@
 graph TD
     %% Scriptable Objects
     subgraph DataLayer["Data Layer"]
-        RC["RegionConfigSO.cs<br>- 1~5 / 6~9 Design Pools<br>- 5F/10F Boss Designs & Boss Prefabs<br>- 1~9F Exit/Chest Rules<br>- Floor Scaling & Rarity<br>- Chest DropPool ID"]
+        RC["RegionConfigSO.cs<br>- 1~5 / 6~9 Design Pools<br>- Monster Pool<br>- 5F/10F Boss Designs & Boss Prefabs<br>- 1~9F Exit/Chest Rules<br>- Floor Scaling & Rarity<br>- Chest DropPool ID"]
         CDP["DropPool_Chest_Region1<br>(DropPoolSO, ID 1000)"]
         FD["FloorDesignSO.cs<br>- Floor Prefab / Band / Weight"]
     end
 
     %% Managers & Core Logic
     subgraph LogicLayer["Logic Layer"]
-        DG["DungeonGenerator.cs<br>- Floor Draw (Weighted, No Repeat per Run)<br>- Floor Transition<br>- Flood Fill (BFS) & Zone Spawning<br>- Chest B-Plan Rolls"]
-        FV["FloorDesignValidator.cs<br>- Marker Count / Walkable / Stairs-Exit Distance / Boss Marker<br>- Pool Size / Shared Layouts"]
+        DG["DungeonGenerator.cs<br>- Floor Draw (Weighted, No Repeat per Run)<br>- Floor Transition<br>- Flood Fill (BFS) & Zone Spawning<br>- Monster Floor-Range Filter<br>- Chest B-Plan Rolls"]
+        FV["FloorDesignValidator.cs<br>- Marker Count / Walkable / Stairs-Exit Distance / Boss Marker<br>- Pool Size / Shared Layouts<br>- Monster Pool per Floor"]
         FOW["FogOfWarSystem.cs<br>- 3-State Fog: Unexplored / Explored / Visible<br>- Bresenham LOS & Dynamic Mask Texture<br>- North 2-Tile Elevation Offset"]
         LS["LootSystem.cs<br>- Field Loot Spawner (Monster / Chest)<br>- Floor Rarity Roll<br>- Auto FogVisibilityObject Attach"]
     end
@@ -72,6 +72,8 @@ graph TD
     *   플레이어의 마지막 도착 칸은 `OnPlayerCellChanged`로 추적하고, 1층은 `PlayerController.Start`보다 배치가 먼저라 `SpawnPlayerAtCell`에서 직접 넣는다(겹침 가드 기준).
 
     *   **보스층 공통(F6a)**: `SetupFloorLayout`에서 잡몹보다 먼저 `SpawnBoss`(`BossSpawn` 마커 + `RegionConfigSO.GetBossPrefab`, 칸을 쓸 수 없으면 경고 후 전원 처치 규칙), 안개 초기화 뒤 `RevealAll(immediate: true)`(층 전환 일시정지 중에는 페이드가 돌지 않으므로 즉시 반영).
+
+    *   **몬스터 종류(10 기획안 C1)**: 몬스터 스폰은 `GetFloorMonsterPool(zone)`이 고른 풀에서 균등 추첨. 구역 전용 풀(`DungeonZone.OverrideMonsterPool`)이 있으면 그것, 없으면 `RegionConfigSO.MonsterPool`을 `MonsterDataSO.CanAppearOnFloor(현재 층)`로 걸러 재사용 버퍼(`_floorMonsterBuffer`)에 담는다. 0종이면 범위를 무시한 같은 풀(유효한 몬스터 프리팹만)로 대신하고 경고, 풀이 비면 오류. `MonsterController`·데이터가 없는 프리팹은 `TryGetMonsterData`로 건너뜀. 보스 스폰에는 적용하지 않음.
 
     *   **층 배율(F4)**: `SpawnEntity`가 몬스터 생성 직후 `ApplyFloorScaling(GetHpMultiplier, GetAtkMultiplier)` 적용. 드랍 등급 비율은 `LootSystem`이 드랍 순간 `PlayerSessionData.CurrentRegionId/CurrentFloor`로 `RegionConfigSO.GetRarityWeights`를 조회한다(System 간 직접 참조 없음).
 
@@ -129,11 +131,12 @@ graph TD
 
 ### 2.10. `FloorDesignSO` / `RegionConfigSO` (`ScriptableObject`)
 *   **`FloorDesignSO`**: 층 프리팹, 구간(`Early` 1~5 / `Late` 6~9 / `Boss`), 가중치.
-*   **`RegionConfigSO`**: 지역 번호·이름, 1~5 풀, 6~9 풀, 5층·10층 보스 디자인과 보스 프리팹, 층 배율(`_hpPerFloor`, `_atkPerFloor`, 1층·9층 `RarityWeights`), 1~9층 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 상자 드랍 풀 ID, 디버그 "디자인 중복 허용".
+*   **`RegionConfigSO`**: 지역 번호·이름, 1~5 풀, 6~9 풀, 일반 몬스터 풀(`MonsterPool`), 5층·10층 보스 디자인과 보스 프리팹, 층 배율(`_hpPerFloor`, `_atkPerFloor`, 1층·9층 `RarityWeights`), 1~9층 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 상자 드랍 풀 ID, 디버그 "디자인 중복 허용".
 
 ### 2.11. `FloorDesignValidator` (static)
 *   **역할**: 런타임·에디터 공용 규격 검증. 시작점 1, 탈출구 1, 계단 1(10층 보스층은 0~1), 마커 칸 보행 가능·중복 없음, 계단–탈출구 체비쇼프 거리 ≥ 3, 상자 후보 ≥ 구간 최대 굴림 횟수, 풀 구간 일치. `BossSpawn`은 보스층 1개·일반층 0개, 시작점 5걸음 초과, 계단·탈출구와 3칸 이상. 지역 검증은 보스 프리팹 누락·비 Boss 데이터를 경고.
 *   **풀 장수(T3)**: 구간 고유 프리팹 수 < 구간 층 수(4) → 오류, = 4 → 경고(추천 6장 이상). 1~5 풀과 6~9 풀이 같은 프리팹을 쓰면 오류(6~9층 후보 부족 방지). 디버그 중복 허용이면 오류 대신 경고. 경고는 별도 목록으로 에디터 메뉴가 LogWarning.
+*   **몬스터 풀(10 기획안 C1, `CheckMonsterPool`)**: 지역 몬스터 풀이 비면 오류, 1~10층마다 출현 가능한 몬스터 0종이면 오류. 구역 전용 풀은 그 디자인의 층 범위(초반 1~4, 5, 후반 6~9, 10)에서 0종이면 경고. 풀의 빈 칸·데이터 없는 프리팹은 경고(`CheckInvalidPrefabs`).
 
 ### 2.12. `FloorStairs` (`MonoBehaviour`, Controller)
 *   **역할**: 위층 계단. 잠긴 채(어두운 색) 생성되고 층 클리어 시 `Unlock(마지막 도착 칸)`. 진입은 `OnPlayerCellChanged` 칸 비교로 판정하고, 열린 계단 칸에 도착하면 정적 지역 이벤트 `OnStairsEntered`만 던지고 1회 후 비활성. 잠금이 풀리는 순간 계단 위에 서 있었다면 한 번 벗어나야 발동.
@@ -143,7 +146,7 @@ graph TD
 
 ### 2.14. `FloorGrayBoxBuilder` (Editor)
 *   메뉴 `BagBack100/Floor/Create Gray Box Floors`: 회색 박스 층 3장(일반 2 + 보스 1)과 `Region1Config`·`FloorDesignSO` 생성 후 검증. 템플릿은 `Floor_GrayBox_Normal01.prefab`의 Floor·Wall(먼저 복제 후 템플릿을 닫고 저장).
-*   메뉴 `BagBack100/Floor/Create Region1 Chest Drop Pool`: 상자 드랍 풀(`DropPool_Chest_Region1`) 생성.
+*   메뉴 `BagBack100/Floor/Create Region1 Chest Drop Pool`: 상자 드랍 풀(`DropPool_Chest_Region1`) 생성. 재료 그룹은 `Region1Config` 몬스터 풀 → 몬스터 드랍 풀의 `Material`·`Common` 아이템(itemID 0 꽝 제외), 보너스 그룹은 악세서리 3종 + HP 포션(가중치 합 30) + 꽝 70.
 *   메뉴 `BagBack100/Floor/Setup Chest Prefab`: 회색 박스 상자 프리팹(`FloorChest_GrayBox`) 생성·`DungeonGenerator._chestPrefab` 연결.
 *   메뉴 `BagBack100/Floor/Validate Region Configs`: 모든 `RegionConfigSO` 검증.
 *   메뉴 `BagBack100/Floor/Setup Stairs And Floor HUD`: 회색 박스 계단 프리팹(`FloorStairs_GrayBox`) 생성·`DungeonGenerator._stairsPrefab` 연결, 켜진 Overlay 캔버스 아래 `FloorHUD` 생성 후 저장.

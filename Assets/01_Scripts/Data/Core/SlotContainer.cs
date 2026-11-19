@@ -303,6 +303,44 @@ namespace BagBack100.Data.Core
             return AddAt(item, FindFirstEmptySlot());
         }
 
+        /// <summary>같은 itemID 아이템이 여러 묶음에 나뉘어 있어도 합계를 센다 (제작 재료 보유량, 퀵슬롯 표시)</summary>
+        public int CountByItemId(int itemID)
+        {
+            int total = 0;
+            for (int i = 0; i < _items.Count; i++)
+            {
+                if (_items[i].ItemData.itemID == itemID) total += _items[i].Count;
+            }
+            return total;
+        }
+
+        /// <summary>
+        /// 같은 itemID를 슬롯 순서대로 여러 묶음에서 amount개 덜어낸다. 합계가 모자라면 아무것도 바꾸지 않고 false (제작 재료 차감).
+        /// </summary>
+        public bool RemoveByItemId(int itemID, int amount)
+        {
+            if (amount <= 0 || CountByItemId(itemID) < amount) return false;
+
+            int remaining = amount;
+            for (int s = 0; s < _slots.Length && remaining > 0; s++)
+            {
+                var item = _slots[s];
+                if (item == null || item.ItemData.itemID != itemID) continue;
+
+                if (item.Count <= remaining)
+                {
+                    remaining -= item.Count;
+                    Remove(item);
+                }
+                else
+                {
+                    item.Count -= remaining;
+                    remaining = 0;
+                }
+            }
+            return true;
+        }
+
         public bool Remove(RuntimeItem item)
         {
             if (item == null || !_items.Contains(item)) return false;

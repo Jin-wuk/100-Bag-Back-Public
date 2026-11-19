@@ -39,8 +39,6 @@ namespace BagBack100.Dungeon
         [Header("Prefabs & Pools")]
         [Tooltip("던전 진입 시 스폰할 플레이어 프리팹")]
         [SerializeField] private GameObject _playerPrefab;
-        [Tooltip("기본 몬스터 프리팹 풀")]
-        [SerializeField] private List<GameObject> _monsterPrefabPool = new List<GameObject>();
         [Tooltip("함정 프리팹 풀 (함정은 피해 효과 구현 전까지 배치하지 않는다)")]
         [SerializeField] private List<GameObject> _trapPrefabPool = new List<GameObject>();
         [Tooltip("탈출 포탈 프리팹 (DungeonExit). 층 클리어 시 층별 확률 굴림에 성공하면 탈출구 마커에 생성 (보스층은 100%)")]
@@ -610,7 +608,7 @@ namespace BagBack100.Dungeon
                 {
                     List<Vector3Int> candidates = zoneValidCells[zone];
                     if (candidates.Count == 0 || zone.MonsterCount <= 0) continue;
-                    SpawnEntitiesInCells(candidates, zone.MonsterCount, GetZoneMonsterPool(zone), reachableSteps, occupiedCells, spawnedMonsterCells, true, parent);
+                    SpawnEntitiesInCells(candidates, zone.MonsterCount, GetFloorMonsterPool(zone), reachableSteps, occupiedCells, spawnedMonsterCells, true, parent);
                 }
                 return;
             }
@@ -657,7 +655,7 @@ namespace BagBack100.Dungeon
             {
                 ZoneShare share = _zoneSpawnBuffer[i];
                 if (share.Count <= 0) continue;
-                SpawnEntitiesInCells(zoneValidCells[share.Zone], share.Count, GetZoneMonsterPool(share.Zone), reachableSteps, occupiedCells, spawnedMonsterCells, true, parent);
+                SpawnEntitiesInCells(zoneValidCells[share.Zone], share.Count, GetFloorMonsterPool(share.Zone), reachableSteps, occupiedCells, spawnedMonsterCells, true, parent);
             }
         }
 
@@ -671,9 +669,49 @@ namespace BagBack100.Dungeon
 
         private readonly List<ZoneShare> _zoneSpawnBuffer = new List<ZoneShare>();
 
-        private List<GameObject> GetZoneMonsterPool(DungeonZone zone)
+        private readonly List<GameObject> _floorMonsterBuffer = new List<GameObject>();
+
+        /// <summary>
+        /// 구역 전용 풀이 있으면 그 풀, 없으면 지역 몬스터 풀을 현재 층의 출현 범위(MonsterDataSO.CanAppearOnFloor)로 거른다.
+        /// 거른 결과가 0종이면 0마리 스폰으로 층이 즉시 클리어되지 않도록 필터 없는 같은 풀로 대신한다(안전장치, 10 기획안 U4).
+        /// 결과는 재사용 버퍼에 담으므로 다음 호출 전에 소비해야 한다 (SpawnEntitiesInCells가 즉시 소비).
+        /// </summary>
+        private List<GameObject> GetFloorMonsterPool(DungeonZone zone)
         {
-            return zone.OverrideMonsterPool != null && zone.OverrideMonsterPool.Count > 0 ? zone.OverrideMonsterPool : _monsterPrefabPool;
+            bool useZonePool = zone != null && zone.OverrideMonsterPool != null && zone.OverrideMonsterPool.Count > 0;
+            IReadOnlyList<GameObject> source = useZonePool ? zone.OverrideMonsterPool : _regionConfig.MonsterPool;
+
+            _floorMonsterBuffer.Clear();
+            if (source == null || source.Count == 0)
+            {
+                Debug.LogError($"[DungeonGenerator] {_regionConfig.name}의 몬스터 풀이 비어 있습니다. {_currentFloorNumber}층에 일반 몬스터를 놓지 못합니다.");
+                return _floorMonsterBuffer;
+            }
+
+            for (int i = 0; i < source.Count; i++)
+            {
+                if (TryGetMonsterData(source[i], out var data) && data.CanAppearOnFloor(_currentFloorNumber)) _floorMonsterBuffer.Add(source[i]);
+            }
+
+            if (_floorMonsterBuffer.Count == 0)
+            {
+                string poolName = useZonePool ? $"구역 {zone.name}의 전용 풀" : $"{_regionConfig.name}의 몬스터 풀";
+                Debug.LogWarning($"[DungeonGenerator] {poolName}에 {_currentFloorNumber}층 출현 범위에 맞는 몬스터가 없어 범위를 무시하고 스폰합니다.");
+                for (int i = 0; i < source.Count; i++)
+                {
+                    if (TryGetMonsterData(source[i], out _)) _floorMonsterBuffer.Add(source[i]);
+                }
+            }
+            return _floorMonsterBuffer;
+        }
+
+        // 풀에 몬스터가 아닌 프리팹이나 데이터가 빠진 프리팹이 섞여도 스폰에서 예외가 나지 않게 같은 조건으로 거른다
+        private static bool TryGetMonsterData(GameObject prefab, out BagBack100.Data.Models.MonsterDataSO data)
+        {
+            data = null;
+            if (prefab == null || !prefab.TryGetComponent(out Monster.MonsterController monster)) return false;
+            data = monster.Data;
+            return data != null;
         }
 
         private void InitializeFogOfWar(Vector3Int playerStartCell)

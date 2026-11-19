@@ -95,7 +95,7 @@ namespace BagBack100.UI
             System.Action onSell = null;
             if (ReferenceEquals(source, _inventoryManager))
             {
-                // 허브에는 바닥이 없으므로 버리기 버튼을 숨기고, 대장간이 열려 있을 때만 판매 버튼을 보인다
+                // 허브에는 바닥이 없으므로 버리기 버튼을 숨기고, 잡화상이 열려 있을 때만 판매 버튼을 보인다
                 if (_inventoryManager.CanDiscard) onDiscard = () => RequestDiscard(item);
                 var sellSlot = FindObjectOfType<SellSlotUI>();
                 if (sellSlot != null && sellSlot.IsAvailable) onSell = () => sellSlot.RequestSell(item, _inventoryManager);
