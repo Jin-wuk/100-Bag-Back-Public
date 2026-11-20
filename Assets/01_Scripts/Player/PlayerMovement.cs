@@ -56,8 +56,10 @@ namespace BagBack100.Player
 
         public bool IsMoving => _isMoving;
         public bool IsDashing => _isDashing;
-        // 기본 Speed 기준 칸당 이동 시간. 걷기 애니메이션 재생 속도 배율의 기준
-        public float BaseMoveDurationPerTile => _moveDurationPerTile;
+        // 지금 걷는 칸의 진행도(0~1). 걷기 프레임을 칸 하나에 한 번 재생하는 기준
+        public float CurrentStepProgress { get; private set; }
+        // 걸음을 시작할 때마다 1씩 늘어나는 번호. 새 칸 걸음이 시작됐는지 판정하는 데 쓴다
+        public int StepCount => _stepIndex;
         // 지금 걷는 칸·대시의 시작→도착 방향(z=0). _currentPath는 보간 전에 비워지고 걸음 홉이 위치에 섞이므로 따로 기록한다
         public Vector3 CurrentStepDirection { get; private set; }
         public LayerMask ObstacleLayerMask => _obstacleLayerMask;
@@ -280,6 +282,7 @@ namespace BagBack100.Player
                 }
 
                 float elapsedTime = 0f;
+                CurrentStepProgress = 0f;
                 _stepIndex++;
                 float tiltSign = (_stepIndex % 2 == 1) ? 1f : -1f;
 
@@ -287,6 +290,7 @@ namespace BagBack100.Player
                 {
                     elapsedTime += Time.deltaTime;
                     float t = Mathf.Clamp01(elapsedTime / duration);
+                    CurrentStepProgress = t;
                     
                     // 1. 기본 선형 보간 위치
                     Vector3 lerpedPos = Vector3.Lerp(startPos, endPos, t);
