@@ -7,7 +7,7 @@ namespace BagBack100.Player
     /// <summary>
     /// Role: 플레이어 상태와 방향에 맞춰 SpriteRenderer의 스프라이트 프레임만 바꾼다 (대기·이동·대시·공격). 색·스케일 연출은 건드리지 않는다.
     ///       대기 방향은 마우스 조준이 아니라 마지막 행동(걸음·대시·공격) 방향을 따른다.
-    /// Dependencies: SpriteAnimSetSO, PlayerController(상태), PlayerMovement(걸음 방향·이동 시간), EntityCombat(공격 시작 이벤트)
+    /// Dependencies: SpriteAnimSetSO, DirectionalSpriteSO.FromVector(방향 변환), PlayerController(상태), PlayerMovement(걸음 방향·이동 시간), EntityCombat(공격 시작 이벤트)
     /// Events: 없음 (구독: EntityCombat.OnMeleeAttack, EntityCombat.OnRangedAttack)
     /// </summary>
     [RequireComponent(typeof(SpriteRenderer))]
@@ -63,7 +63,7 @@ namespace BagBack100.Player
         private void HandleAttackStarted(Vector3 direction)
         {
             _attackElapsed = 0f;
-            _attackDir = ToDir4(direction, _attackDir);
+            _attackDir = DirectionalSpriteSO.FromVector(direction, _attackDir);
             _lookDir = _attackDir;
         }
 
@@ -82,7 +82,7 @@ namespace BagBack100.Player
             if (state == PlayerState.Moving || state == PlayerState.Dashing)
             {
                 _idleTime = 0f;
-                _lookDir = ToDir4(_movement.CurrentStepDirection, _lookDir);
+                _lookDir = DirectionalSpriteSO.FromVector(_movement.CurrentStepDirection, _lookDir);
                 Sprite[] frames = _animSet.Move.Get(_lookDir);
                 if (state == PlayerState.Dashing)
                 {
@@ -152,16 +152,6 @@ namespace BagBack100.Player
                 _renderer.sprite = next;
                 _lastSprite = next;
             }
-        }
-
-        // 대각선은 좌우 방향을 우선한다
-        private static FacingDir4 ToDir4(Vector3 v, FacingDir4 fallback)
-        {
-            float ax = Mathf.Abs(v.x);
-            float ay = Mathf.Abs(v.y);
-            if (ax < 0.001f && ay < 0.001f) return fallback;
-            if (ax >= ay) return v.x > 0f ? FacingDir4.East : FacingDir4.West;
-            return v.y > 0f ? FacingDir4.North : FacingDir4.South;
         }
 
         private static Sprite PickFrame(Sprite[] frames, int index)
