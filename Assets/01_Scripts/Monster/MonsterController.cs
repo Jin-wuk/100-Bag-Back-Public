@@ -41,6 +41,9 @@ namespace BagBack100.Monster
         public int InstanceID => gameObject.GetInstanceID();
         public MonsterAIState CurrentState { get; private set; } = MonsterAIState.Patrol;
         public bool IsAggroed => _isAggroed;
+        public bool IsMovingToTile => _isMovingToTile;
+        // 지금 건너는 칸의 시작→도착 방향(z=0). 보간 중 위치에는 홉 높이가 섞이므로 따로 기록한다
+        public Vector3 CurrentMoveDirection { get; private set; }
 
         public EntityCombat Combat { get; private set; }
         public Grid Grid { get; private set; }
@@ -759,6 +762,7 @@ namespace BagBack100.Monster
 
             float elapsed = 0f;
             Vector3 startPos = transform.position;
+            CurrentMoveDirection = new Vector3(endPos.x - startPos.x, endPos.y - startPos.y, 0f);
 
             while (elapsed < duration)
             {
