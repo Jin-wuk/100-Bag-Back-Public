@@ -66,6 +66,12 @@ namespace BagBack100.Player
             PlayerState state = _controller.CurrentState;
             Sprite next;
 
+            // 이동·대시·차징이 공격 락을 끊으면 남은 공격 프레임을 이어 재생하지 않는다
+            if (state == PlayerState.Moving || state == PlayerState.Dashing || state == PlayerState.Charging)
+            {
+                _attackElapsed = float.MaxValue;
+            }
+
             if (state == PlayerState.Moving || state == PlayerState.Dashing)
             {
                 _moveDir = ToDir4(_movement.CurrentStepDirection, _moveDir);
