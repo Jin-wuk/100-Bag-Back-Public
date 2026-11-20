@@ -1385,6 +1385,7 @@ GameObject:
   - component: {fileID: 525934923}
   - component: {fileID: 525934922}
   - component: {fileID: 525934924}
+  - component: {fileID: 525934925}
   m_Layer: 0
   m_Name: DungeonManager
   m_TagString: Untagged
@@ -1410,10 +1411,6 @@ MonoBehaviour:
   _startSafeStepRadius: 10
   _minMonsterSpacing: 3
   _playerPrefab: {fileID: 8512937500303504559, guid: d7ab76544ca784842ad6cf9233b76fd7, type: 3}
-  _monsterPrefabPool:
-  - {fileID: 4769375905301041180, guid: 8df9a16836a132d4796e502b6c008942, type: 3}
-  - {fileID: 4769375905301041180, guid: a8e9c16836a132d4796e502b6c008999, type: 3}
-  - {fileID: 5063341003800382751, guid: 7423487f6c961634da54a17013396bd0, type: 3}
   _trapPrefabPool:
   - {fileID: 709572298007640017, guid: 583d8656933d57c4fb2b969400b8c471, type: 3}
   _fixedExitPrefab: {fileID: 2438186420317738188, guid: 00acfe0bdf3b7a84db10595098f61626, type: 3}
@@ -1460,10 +1457,25 @@ MonoBehaviour:
   _fogTilemap: {fileID: 0}
   _fogMaterial: {fileID: 2100000, guid: 93552b966a2cf6b408712d4ee121c54a, type: 2}
   _fadeSpeed: 6
-  _unexploredColor: {r: 0.03, g: 0.03, b: 0.05, a: 1}
+  _unexploredColor: {r: 0.023529412, g: 0.050980393, b: 0.05882353, a: 1}
   _exploredColor: {r: 0.12, g: 0.14, b: 0.2, a: 0.72}
   _visibleColor: {r: 0.12, g: 0.14, b: 0.2, a: 0}
   _fogSortingOrder: 50
+--- !u!114 &525934925
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 525934921}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bf366e7226189b41a707f1b365a728b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _checkerTile: {fileID: 11400000, guid: 974f284d5ffb7f4408f96fdb473f4bfc, type: 2}
+  _checkerColor: {r: 0, g: 0.023529412, b: 0.11764706, a: 0.08}
+  _sortingOrder: -19
 --- !u!1 &634446666
 GameObject:
   m_ObjectHideFlags: 0
