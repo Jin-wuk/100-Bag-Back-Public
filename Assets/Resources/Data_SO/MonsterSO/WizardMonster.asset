@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: WizardMonster
   m_EditorClassIdentifier: 
   monsterID: 103
-  monsterName: Arcane Wizard
+  monsterName: Pinecone Owl
   type: 0
   hp: 45
   atk: 10

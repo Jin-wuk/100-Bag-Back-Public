@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: MelleMonster
   m_EditorClassIdentifier: 
   monsterID: 101
-  monsterName: Heavy Brute
+  monsterName: Bramble Hog
   type: 0
   hp: 100
   atk: 8

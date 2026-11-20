@@ -26,6 +26,7 @@ MonoBehaviour:
   - {fileID: 4769375905301041180, guid: 8df9a16836a132d4796e502b6c008942, type: 3}
   - {fileID: 4769375905301041180, guid: a8e9c16836a132d4796e502b6c008999, type: 3}
   - {fileID: 5063341003800382751, guid: 7423487f6c961634da54a17013396bd0, type: 3}
+  - {fileID: 4769375905301041180, guid: 671f4bd97012d8e4f897d24e261efe88, type: 3}
   _midBossPrefab: {fileID: 3674727902322081959, guid: c1b93a4db86cf294e8340ce5d7c80d33, type: 3}
   _bossPrefab: {fileID: 3674727902322081959, guid: c1b93a4db86cf294e8340ce5d7c80d33, type: 3}
   _floorRules:

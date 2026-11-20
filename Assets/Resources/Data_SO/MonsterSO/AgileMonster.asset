@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: AgileMonster
   m_EditorClassIdentifier: 
   monsterID: 102
-  monsterName: Shadow Spider
+  monsterName: Leaf Mantis
   type: 0
   hp: 40
   atk: 7
