@@ -53,7 +53,10 @@ namespace BagBack100.Dungeon
                 var go = new GameObject(CheckerName, typeof(Tilemap), typeof(TilemapRenderer));
                 go.transform.SetParent(layoutRoot, false);
                 checker = go.GetComponent<Tilemap>();
-                go.GetComponent<TilemapRenderer>().sortingOrder = _sortingOrder;
+                var renderer = go.GetComponent<TilemapRenderer>();
+                renderer.sortingOrder = _sortingOrder;
+                // 바닥과 같은 정렬 레이어에 둔다(나중에 레이어를 나눠도 바닥 바로 위에 오도록)
+                if (floor.TryGetComponent(out TilemapRenderer floorRenderer)) renderer.sortingLayerID = floorRenderer.sortingLayerID;
             }
             checker.color = _checkerColor;
 

@@ -119,6 +119,9 @@ namespace BagBack100.Dungeon
                 Vector3 center = transform.InverseTransformPoint(box.transform.TransformPoint(box.offset));
                 Vector3 scale = box.transform.lossyScale;
                 Vector3 rootScale = transform.lossyScale;
+                // 층 루트는 스케일 1이 규격(CheckIdentityTransform). 0이면 나누지 않는다
+                if (Mathf.Approximately(rootScale.x, 0f)) rootScale.x = 1f;
+                if (Mathf.Approximately(rootScale.y, 0f)) rootScale.y = 1f;
                 float w = Mathf.Abs(box.size.x * scale.x / rootScale.x);
                 float h = Mathf.Abs(box.size.y * scale.y / rootScale.y);
                 float xMin = center.x - w * 0.5f, xMax = center.x + w * 0.5f;
