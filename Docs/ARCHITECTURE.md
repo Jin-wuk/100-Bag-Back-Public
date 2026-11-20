@@ -273,6 +273,8 @@ flowchart TD
 | `RegionConfigSO` | 지역 하나의 설정: 초반(1~4층)·후반(6~9층) 디자인 풀, 5층·10층 고정 디자인, 층별 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률, 몬스터 수), 층 배율(몬스터 HP·ATK, 드랍 등급 비율), 일반 몬스터 풀(`MonsterPool`), 상자 드랍 풀 ID |
 | `FloorDesignSO` | 층 디자인 하나: 층 프리팹, 가중치 |
 | `FloorLayout` / `FloorMarker` | 층 프리팹 루트(바닥·벽 타일맵, 마커, 구역)와 칸 역할 마커(시작점·위층 계단·탈출구·상자 후보·보스 위치) |
+| 숲 맵(A4a) | 바닥 = `Floor` 타일맵에 그림 타일 직접(팔레트 `Forest_Floor`), 벽 = Wall 레이어 콜라이더 덤불 오브젝트(팔레트 `Forest_Walls_*`). `FloorLayout`이 콜라이더 칸을 물리 없이 계산해 검증에 반영 |
+| `FloorCheckerOverlay` | 층 진입마다 바닥 칸을 따라 이동 칸 체크무늬 타일맵 생성 |
 | `DungeonZone` | 몬스터 배치 영역. 1~9층은 층별 규칙의 몬스터 수를 구역 칸 수 비율로 나눠 놓음 (구역 자체 수는 10층만, 함정은 미배치) |
 | `DungeonGenerator` | 층 추첨·생성·교체, 마커와 구역 배치, 몬스터 종류 선택(지역 풀을 `MonsterDataSO` 출현 층 범위로 거름, 0종이면 범위 무시 폴백), 같은 씬 층 전환, 보스 배치(`BossSpawn` 마커 + `RegionConfigSO` 보스 프리팹), 보스층 안개 없이 시작, 층 클리어 처리(보스층 정리·무적·안개 해제·계단 열기·탈출구 굴림) |
 | `FloorClearTracker` | 현재 층의 살아 있는 몬스터 등록부와 클리어 판정 (POCO, `DungeonGenerator` 소유) |
