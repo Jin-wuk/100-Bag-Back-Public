@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 7482357267055973970}
   - component: {fileID: 925457934687370922}
   - component: {fileID: 5331458695648868228}
+  - component: {fileID: 6185962038579866330}
   m_Layer: 7
   m_Name: Wizard
   m_TagString: Untagged
@@ -76,7 +77,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 10
-  m_Sprite: {fileID: 21300000, guid: 9bebc1379a519ef4788b7f1ddf8c0160, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 322236a79d4a09c42baabd4a429585e6, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -152,8 +153,8 @@ BoxCollider2D:
   m_Offset: {x: 0, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 1, y: 1}
+    pivot: {x: 0.5, y: 0.3125}
+    oldSize: {x: 0.8888889, y: 0.8888889}
     newSize: {x: 1, y: 1}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
@@ -162,3 +163,16 @@ BoxCollider2D:
   serializedVersion: 2
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
+--- !u!114 &6185962038579866330
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5063341003800382751}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc5307dc357f71949b4056a5fbbb093c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _sprites: {fileID: 11400000, guid: 16a0a0dd4bb239345914b80daa837555, type: 2}
