@@ -7,6 +7,8 @@ namespace BagBack100.Dungeon
     /// <summary>
     /// Role: 층 프리팹 루트. 바닥·벽 타일맵, 마커, 몬스터 구역을 묶고 칸 좌표(루트 기준)를 제공한다.
     ///       Grid는 씬에 하나 영속하고, 층은 그 Grid의 자식(원점)으로만 생성·교체한다.
+    ///       벽은 Wall 타일맵 칸 또는 Wall 레이어 BoxCollider2D 오브젝트(숲 덤불)로 둘 수 있다. 콜라이더가 덮는 칸은
+    ///       물리 엔진 없이 사각형 계산으로 구해 프리팹 에셋 검증에서도 막힌 칸으로 본다.
     /// Dependencies: FloorMarker, DungeonZone
     /// Events: 없음
     /// </summary>
@@ -15,8 +17,18 @@ namespace BagBack100.Dungeon
         [SerializeField] private Tilemap _floorTilemap;
         [SerializeField] private Tilemap _wallTilemap;
 
+        private const string WallLayerName = "Wall";
+        // 콜라이더 가장자리가 정수 칸 경계에서 이만큼 넘게 벗어나면 비정렬로 본다
+        private const float GridAlignTolerance = 0.01f;
+
         private FloorMarker[] _markers;
         private DungeonZone[] _zones;
+        private readonly HashSet<Vector3Int> _colliderBlockedCells = new HashSet<Vector3Int>();
+        private readonly List<string> _colliderIssues = new List<string>();
+        private bool _colliderCellsReady;
+
+        /// <summary>마지막 RefreshBlockedCells에서 찾은 문제(칸 경계 비정렬, BoxCollider2D가 아닌 Wall 콜라이더). 에디터 검증 경고용.</summary>
+        public IReadOnlyList<string> ColliderIssues => _colliderIssues;
 
         public Tilemap FloorTilemap => _floorTilemap;
         public Tilemap WallTilemap => _wallTilemap;
@@ -73,8 +85,60 @@ namespace BagBack100.Dungeon
         public bool IsLocalCellWalkable(Vector3Int cell)
         {
             if (_floorTilemap == null || !_floorTilemap.HasTile(cell)) return false;
-            return _wallTilemap == null || !_wallTilemap.HasTile(cell);
+            if (_wallTilemap != null && _wallTilemap.HasTile(cell)) return false;
+            if (!_colliderCellsReady) RefreshBlockedCells();
+            return !_colliderBlockedCells.Contains(cell);
         }
+
+        /// <summary>
+        /// Wall 레이어 BoxCollider2D(트리거 제외, 타일맵 콜라이더 제외)가 칸 중심을 덮는 칸을 다시 모은다.
+        /// 런타임 판정(Pathfinder·DungeonGenerator·안개)은 같은 규칙을 Physics2D.OverlapPoint(칸 중심)로 본다. 이 계산은 그 결과와 맞추기 위한 것.
+        /// 층 루트 기준이며 회전은 없다고 가정한다. 에디터 검증은 시작할 때마다 호출한다(구조가 바뀔 수 있음).
+        /// </summary>
+        public void RefreshBlockedCells()
+        {
+            _colliderBlockedCells.Clear();
+            _colliderIssues.Clear();
+            _colliderCellsReady = true;
+
+            int wallLayer = LayerMask.NameToLayer(WallLayerName);
+            if (wallLayer < 0) return;
+
+            Collider2D[] colliders = GetComponentsInChildren<Collider2D>(true);
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider2D col = colliders[i];
+                if (col.gameObject.layer != wallLayer || col.isTrigger || !col.enabled || !col.gameObject.activeInHierarchy) continue;
+                if (col is TilemapCollider2D || col is CompositeCollider2D) continue;
+                if (!(col is BoxCollider2D box))
+                {
+                    _colliderIssues.Add($"{col.name}: BoxCollider2D가 아닌 Wall 콜라이더({col.GetType().Name})는 검증 칸 계산에서 빠집니다.");
+                    continue;
+                }
+
+                Vector3 center = transform.InverseTransformPoint(box.transform.TransformPoint(box.offset));
+                Vector3 scale = box.transform.lossyScale;
+                Vector3 rootScale = transform.lossyScale;
+                float w = Mathf.Abs(box.size.x * scale.x / rootScale.x);
+                float h = Mathf.Abs(box.size.y * scale.y / rootScale.y);
+                float xMin = center.x - w * 0.5f, xMax = center.x + w * 0.5f;
+                float yMin = center.y - h * 0.5f, yMax = center.y + h * 0.5f;
+
+                if (!IsOnGridLine(xMin) || !IsOnGridLine(xMax) || !IsOnGridLine(yMin) || !IsOnGridLine(yMax))
+                {
+                    _colliderIssues.Add($"{col.name}: 콜라이더 가장자리가 칸 경계에 맞지 않습니다 (x {xMin:0.##}~{xMax:0.##}, y {yMin:0.##}~{yMax:0.##}).");
+                }
+
+                // 칸 중심 (x+0.5, y+0.5)이 사각형 안에 있는 칸
+                int cx0 = Mathf.CeilToInt(xMin - 0.5f), cx1 = Mathf.FloorToInt(xMax - 0.5f);
+                int cy0 = Mathf.CeilToInt(yMin - 0.5f), cy1 = Mathf.FloorToInt(yMax - 0.5f);
+                for (int y = cy0; y <= cy1; y++)
+                    for (int x = cx0; x <= cx1; x++)
+                        _colliderBlockedCells.Add(new Vector3Int(x, y, 0));
+            }
+        }
+
+        private static bool IsOnGridLine(float v) => Mathf.Abs(v - Mathf.Round(v)) <= GridAlignTolerance;
 
 #if UNITY_EDITOR
         public void EditorSetTilemaps(Tilemap floorTilemap, Tilemap wallTilemap)

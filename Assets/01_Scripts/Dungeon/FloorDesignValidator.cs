@@ -36,6 +36,8 @@ namespace BagBack100.Dungeon
             }
 
             string name = layout.name;
+            // 오브젝트 벽(Wall 레이어 콜라이더)이 덮는 칸을 다시 계산한다. 프리팹 에셋에는 물리가 없어 사각형 계산으로 구한다
+            layout.RefreshBlockedCells();
             // 마커 칸 계산(GetLocalCell)이 셀 크기 1을 가정하므로 런타임 부모 Grid도 같은지 확인한다
             Grid parentGrid = layout.transform.parent != null ? layout.transform.parent.GetComponentInParent<Grid>() : null;
             if (parentGrid != null && (!Mathf.Approximately(parentGrid.cellSize.x, 1f) || !Mathf.Approximately(parentGrid.cellSize.y, 1f)))
@@ -237,7 +239,32 @@ namespace BagBack100.Dungeon
             CheckBossPrefab(region.MidBossPrefab, RegionConfigSO.MidBossFloor, region, warnings);
             CheckBossPrefab(region.BossPrefab, RegionConfigSO.BossFloor, region, warnings);
             CheckMonsterPool(region, errors, warnings);
+            CheckColliderIssues(region.EarlyPool, region, warnings);
+            CheckColliderIssues(region.LatePool, region, warnings);
+            CheckColliderIssues(region.MidBossFloorDesign, region, warnings);
+            CheckColliderIssues(region.BossFloorDesign, region, warnings);
             return errors.Count == errorCountBefore;
+        }
+
+        private static void CheckColliderIssues(IReadOnlyList<FloorDesignSO> designs, RegionConfigSO region, List<string> warnings)
+        {
+            if (designs == null) return;
+            for (int i = 0; i < designs.Count; i++) CheckColliderIssues(designs[i], region, warnings);
+        }
+
+        /// <summary>
+        /// 오브젝트 벽 콜라이더가 칸 경계에 어긋나면 그림과 판정 칸이 달라진다(판정은 칸 중심 1점). 에디터 메뉴 검증에서만 경고하고 런타임은 막지 않는다.
+        /// </summary>
+        private static void CheckColliderIssues(FloorDesignSO design, RegionConfigSO region, List<string> warnings)
+        {
+            if (design == null || design.LayoutPrefab == null) return;
+            FloorLayout layout = design.LayoutPrefab;
+            layout.RefreshBlockedCells();
+            IReadOnlyList<string> issues = layout.ColliderIssues;
+            for (int i = 0; i < issues.Count; i++)
+            {
+                warnings.Add($"[{region.name}] {design.name}: {issues[i]}");
+            }
         }
 
         /// <summary>
