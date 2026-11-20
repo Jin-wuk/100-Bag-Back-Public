@@ -5,8 +5,8 @@ namespace BagBack100.Monster
 {
     /// <summary>
     /// Role: 몬스터가 바라보는 방향에 맞춰 SpriteRenderer의 8방향 스프라이트만 바꾼다. 색·스케일·표시 여부(피격·스턴·안개 연출)는 건드리지 않는다.
-    ///       이동 중 = 이동 방향, 전투 중 대기·예고·공격 = 플레이어 쪽, 비전투 대기 = 마지막 방향 유지.
-    /// Dependencies: DirectionalSpriteSO, MonsterController(이동 상태·이동 방향·어그로·플레이어)
+    ///       이동 중 = 이동 방향, 전투(Aggro) 중 대기·예고·공격 = 플레이어 쪽, 비전투 대기·기절·사망 = 마지막 방향 유지.
+    /// Dependencies: DirectionalSpriteSO, MonsterController(이동 상태·이동 방향·AI 상태·플레이어)
     /// Events: 없음
     /// </summary>
     [RequireComponent(typeof(SpriteRenderer))]
@@ -37,7 +37,8 @@ namespace BagBack100.Monster
             {
                 _facing = DirectionalSpriteSO.FromVector(_monster.CurrentMoveDirection, _facing);
             }
-            else if (_monster.IsAggroed && _monster.Player != null)
+            // 기절·사망 중에도 IsAggroed는 켜져 있으므로 상태로 거른다. 그때는 마지막 방향을 유지한다
+            else if (_monster.CurrentState == MonsterAIState.Aggro && _monster.Player != null)
             {
                 Vector3 toPlayer = _monster.Player.transform.position - transform.position;
                 _facing = DirectionalSpriteSO.FromVector(toPlayer, _facing);
