@@ -4,9 +4,9 @@ using BagBack100.Data.Models;
 namespace BagBack100.Monster
 {
     /// <summary>
-    /// Role: 몬스터가 바라보는 방향에 맞춰 SpriteRenderer의 8방향 스프라이트만 바꾼다. 색·스케일·표시 여부(피격·스턴·안개 연출)는 건드리지 않는다.
-    ///       이동 중 = 이동 방향, 전투(Aggro) 중 대기·예고·공격 = 플레이어 쪽, 비전투 대기·기절·사망 = 마지막 방향 유지.
-    /// Dependencies: DirectionalSpriteSO, MonsterController(이동 상태·이동 방향·AI 상태·플레이어)
+    /// Role: 몬스터가 바라보는 방향에 맞춰 SpriteRenderer의 4방향 스프라이트만 바꾼다. 색·스케일·표시 여부(피격·스턴·안개 연출)는 건드리지 않는다.
+    ///       방향은 플레이어처럼 마지막 행동 기준: 이동 중 = 이동 방향, 패턴(공격)을 시작하면 그 순간의 플레이어 쪽, 그 외에는 그대로 유지.
+    /// Dependencies: DirectionalSpriteSO, MonsterController(이동 상태·이동 방향·마지막 행동 방향)
     /// Events: 없음
     /// </summary>
     [RequireComponent(typeof(SpriteRenderer))]
@@ -16,7 +16,8 @@ namespace BagBack100.Monster
 
         private SpriteRenderer _renderer;
         private MonsterController _monster;
-        private FacingDir8 _facing = FacingDir8.S;
+        private FacingDir4 _facing = FacingDir4.South;
+        private int _lastActionCount;
         private Sprite _lastSprite;
 
         private void Awake()
@@ -28,7 +29,9 @@ namespace BagBack100.Monster
             {
                 Debug.LogError($"[MonsterFacingVisual] {name}: 방향 스프라이트 SO 또는 MonsterController가 없어 비활성화합니다.", this);
                 enabled = false;
+                return;
             }
+            _lastActionCount = _monster.ActionCount;
         }
 
         private void LateUpdate()
@@ -37,12 +40,12 @@ namespace BagBack100.Monster
             {
                 _facing = DirectionalSpriteSO.FromVector(_monster.CurrentMoveDirection, _facing);
             }
-            // 기절·사망 중에도 IsAggroed는 켜져 있으므로 상태로 거른다. 그때는 마지막 방향을 유지한다
-            else if (_monster.CurrentState == MonsterAIState.Aggro && _monster.Player != null)
+            else if (_monster.ActionCount != _lastActionCount)
             {
-                Vector3 toPlayer = _monster.Player.transform.position - transform.position;
-                _facing = DirectionalSpriteSO.FromVector(toPlayer, _facing);
+                // 패턴 시작 순간에만 방향을 잡는다. 예고·공격 중에 플레이어를 따라 돌지 않는다
+                _facing = DirectionalSpriteSO.FromVector(_monster.LastActionDirection, _facing);
             }
+            _lastActionCount = _monster.ActionCount;
 
             Sprite next = _sprites.Get(_facing);
             if (next != null && next != _lastSprite)

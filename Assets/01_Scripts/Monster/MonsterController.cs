@@ -44,6 +44,9 @@ namespace BagBack100.Monster
         public bool IsMovingToTile => _isMovingToTile;
         // 지금 건너는 칸의 시작→도착 방향(z=0). 보간 중 위치에는 홉 높이가 섞이므로 따로 기록한다
         public Vector3 CurrentMoveDirection { get; private set; }
+        // 패턴(공격)을 시작할 때 플레이어 쪽 방향과 횟수를 기록한다. 외형이 "마지막 행동 방향"을 잡는 기준
+        public Vector3 LastActionDirection { get; private set; }
+        public int ActionCount { get; private set; }
 
         public EntityCombat Combat { get; private set; }
         public Grid Grid { get; private set; }
@@ -280,6 +283,7 @@ namespace BagBack100.Monster
                             _patternCooldownExpirations[selectedPattern] = Time.time + selectedPattern.patternCooldown;
                             _nextGlobalPatternTime = Time.time + _monsterData.globalPatternCooldown;
 
+                            MarkActionTowardPlayer();
                             yield return StartActionCoroutine(selectedPattern.ExecuteRoutine(this));
 
                             _isExecutingPattern = false;
@@ -302,6 +306,7 @@ namespace BagBack100.Monster
                             // 패턴 SO가 하나도 등록되지 않은 에셋을 위한 안전 폴백 기본 근접 공격
                             patternTriggered = true;
                             _isExecutingPattern = true;
+                            MarkActionTowardPlayer();
                             yield return StartActionCoroutine(ExecuteFallbackMeleeRoutine());
                             _isExecutingPattern = false;
                             _nextGlobalPatternTime = Time.time + _monsterData.globalPatternCooldown;
@@ -451,6 +456,14 @@ namespace BagBack100.Monster
 
             selectedPattern = _candidatePatterns[_candidatePatterns.Count - 1];
             return true;
+        }
+
+        private void MarkActionTowardPlayer()
+        {
+            if (Player == null) return;
+            Vector3 toPlayer = Player.transform.position - transform.position;
+            LastActionDirection = new Vector3(toPlayer.x, toPlayer.y, 0f);
+            ActionCount++;
         }
 
         private IEnumerator ExecuteFallbackMeleeRoutine()

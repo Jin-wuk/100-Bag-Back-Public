@@ -2,62 +2,48 @@ using UnityEngine;
 
 namespace BagBack100.Data.Models
 {
-    // 순서는 남쪽부터 시계 방향. DirectionalSpriteSO의 배열 칸 순서와 같다
-    public enum FacingDir8
-    {
-        S,
-        SW,
-        W,
-        NW,
-        N,
-        NE,
-        E,
-        SE
-    }
-
     /// <summary>
-    /// Role: 몬스터 1종의 8방향 정지 스프라이트 정적 데이터. 방향 벡터를 8방향으로 바꾸는 헬퍼를 함께 둔다.
-    /// Dependencies: 없음
+    /// Role: 몬스터 1종의 4방향(S/W/E/N) 정지 스프라이트 정적 데이터. 방향 벡터를 4방향으로 바꾸는 헬퍼를 함께 둔다(플레이어와 같은 규칙: 대각선은 좌우 우선).
+    /// Dependencies: FacingDir4 (SpriteAnimSetSO.cs)
     /// Events: 없음
     /// </summary>
     [CreateAssetMenu(fileName = "NewDirectionalSprite", menuName = "BagBack100/Data/DirectionalSprite")]
     public class DirectionalSpriteSO : ScriptableObject
     {
-        public const int DirectionCount = 8;
-
-        [Tooltip("S, SW, W, NW, N, NE, E, SE 순서")]
-        [SerializeField] private Sprite[] _sprites = new Sprite[DirectionCount];
+        [SerializeField] private Sprite _south;
+        [SerializeField] private Sprite _west;
+        [SerializeField] private Sprite _east;
+        [SerializeField] private Sprite _north;
 
         // 빈 방향은 남쪽 이미지로 대신한다
-        public Sprite Get(FacingDir8 dir)
+        public Sprite Get(FacingDir4 dir)
         {
-            if (_sprites == null || _sprites.Length == 0) return null;
-            int index = (int)dir;
-            Sprite sprite = index < _sprites.Length ? _sprites[index] : null;
-            return sprite != null ? sprite : _sprites[0];
+            Sprite sprite;
+            switch (dir)
+            {
+                case FacingDir4.West: sprite = _west; break;
+                case FacingDir4.East: sprite = _east; break;
+                case FacingDir4.North: sprite = _north; break;
+                default: sprite = _south; break;
+            }
+            return sprite != null ? sprite : _south;
         }
 
-        // 화면 기준 방향 벡터를 45° 단위로 맞춘다. 거의 0이면 fallback
-        public static FacingDir8 FromVector(Vector3 v, FacingDir8 fallback)
+        // 거의 0인 벡터는 fallback. 대각선은 좌우 방향을 우선한다
+        public static FacingDir4 FromVector(Vector3 v, FacingDir4 fallback)
         {
-            if (v.x * v.x + v.y * v.y < 0.000001f) return fallback;
-            // atan2 기준 0° = 동쪽, 반시계. 남쪽(-90°)을 0번으로 두고 시계 방향으로 센다
-            float angle = Mathf.Atan2(v.y, v.x) * Mathf.Rad2Deg;
-            int step = Mathf.RoundToInt((-90f - angle) / 45f);
-            step = ((step % DirectionCount) + DirectionCount) % DirectionCount;
-            return (FacingDir8)step;
+            float ax = Mathf.Abs(v.x);
+            float ay = Mathf.Abs(v.y);
+            if (ax < 0.001f && ay < 0.001f) return fallback;
+            if (ax >= ay) return v.x > 0f ? FacingDir4.East : FacingDir4.West;
+            return v.y > 0f ? FacingDir4.North : FacingDir4.South;
         }
 
         private void OnValidate()
         {
-            if (_sprites == null || _sprites.Length != DirectionCount)
+            if (_south == null || _west == null || _east == null || _north == null)
             {
-                Debug.LogWarning($"[DirectionalSpriteSO] {name}: 스프라이트 칸이 {DirectionCount}개가 아닙니다.", this);
-                return;
-            }
-            for (int i = 0; i < DirectionCount; i++)
-            {
-                if (_sprites[i] == null) Debug.LogWarning($"[DirectionalSpriteSO] {name}: {(FacingDir8)i} 스프라이트가 비어 있습니다.", this);
+                Debug.LogWarning($"[DirectionalSpriteSO] {name}: 비어 있는 방향 스프라이트가 있습니다(남쪽 이미지로 대신 표시).", this);
             }
         }
     }
