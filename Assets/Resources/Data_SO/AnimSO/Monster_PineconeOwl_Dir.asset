@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ef550eadbb88ec42a9a293be6bac3da, type: 3}
+  m_Name: Monster_PineconeOwl_Dir
+  m_EditorClassIdentifier: 
+  _south: {fileID: 21300000, guid: 322236a79d4a09c42baabd4a429585e6, type: 3}
+  _west: {fileID: 21300000, guid: c42f9a3f0bb92684c96d25c6ea5fc9ac, type: 3}
+  _east: {fileID: 21300000, guid: 498cbb5f6353f0f43b85e5a21bb99028, type: 3}
+  _north: {fileID: 21300000, guid: 5188db9e9b4cee2408513a35c9ecf399, type: 3}
