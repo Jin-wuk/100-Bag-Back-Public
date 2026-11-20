@@ -77,6 +77,10 @@ graph TD
 
     *   **층 배율(F4)**: `SpawnEntity`가 몬스터 생성 직후 `ApplyFloorScaling(GetHpMultiplier, GetAtkMultiplier)` 적용. 드랍 등급 비율은 `LootSystem`이 드랍 순간 `PlayerSessionData.CurrentRegionId/CurrentFloor`로 `RegionConfigSO.GetRarityWeights`를 조회한다(System 간 직접 참조 없음).
 
+### 2.1b. `MonsterFacingVisual` / `DirectionalSpriteSO` (`MonoBehaviour` Visual / `ScriptableObject`)
+*   **역할**: 몬스터 SpriteRenderer의 4방향(S/W/E/N) 스프라이트만 교체(색·스케일·안개 표시 여부는 `MonsterController`·안개 쪽 그대로). 마지막 행동 기준: 이동 중(`MonsterController.IsMovingToTile`) = `CurrentMoveDirection`, 패턴 시작(`ActionCount` 증가) = 그 순간 플레이어 쪽(`LastActionDirection`), 그 외에는 유지. `MonsterController`가 패턴·기본 근접 시작 직전에 `MarkActionTowardPlayer`로 기록. 방향 변환은 `DirectionalSpriteSO.FromVector`(대각선은 좌우 우선, 빈 칸은 S 이미지).
+*   **연결**: Monster_Dummy(Bramble Hog)·AgileMonster(Leaf Mantis)·Wizard(Pinecone Owl)·Monster_Snail(Amber Snail) 프리팹 → `Data_SO/AnimSO/Monster_<이름>_Dir.asset`. 임시 보스는 미적용. 이미지는 `Assets/Art/Characters/Monsters/<종류>/`(PPU 36, 발끝 기준점).
+
 ### 2.2. `FogOfWarSystem` (`MonoBehaviour`)
 *   **역할**: 플레이어의 타일 이동 이벤트(`GlobalEvents.OnPlayerCellChanged`) 및 시야원들을 추적하여 3단계 전장의 안개(`Unexplored`, `Explored`, `Visible`)와 엔티티 가시성을 총괄 제어하는 코어 비전 매니저.
 *   **특징**:
