@@ -41,7 +41,8 @@ namespace BagBack100.Dungeon
         [SerializeField] private float _fadeSpeed = 6f;
 
         [Tooltip("미탐험 영역 색상 (완전 암전)")]
-        [SerializeField] private Color _unexploredColor = new Color(0.03f, 0.03f, 0.05f, 1f);
+        // 층 진입 시 카메라 배경색으로도 쓰인다(맵 바깥 어둠). 숲 맵 배경 #060d0f
+        [SerializeField] private Color _unexploredColor = new Color(6f / 255f, 13f / 255f, 15f / 255f, 1f);
         [Tooltip("탐험 완료했으나 현재 시야 밖인 영역 색상 (뿌연 청회색빛 어둠 추천)")]
         [SerializeField] private Color _exploredColor = new Color(0.12f, 0.14f, 0.20f, 0.72f);
         [Tooltip("현재 시야 내 영역 색상 (투명)")]
