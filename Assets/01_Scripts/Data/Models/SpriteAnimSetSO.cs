@@ -30,7 +30,8 @@ namespace BagBack100.Data.Models
             }
         }
 
-        public void CollectWarnings(string label, UnityEngine.Object context)
+        // optional = true: 방향이 통째로 비어 있는 것은 허용하고, 칸을 만든 뒤 비워 둔 프레임만 경고한다
+        public void CollectWarnings(string label, UnityEngine.Object context, bool optional = false)
         {
             for (int i = 0; i < 4; i++)
             {
@@ -38,6 +39,7 @@ namespace BagBack100.Data.Models
                 Sprite[] frames = Get(dir);
                 if (frames == null || frames.Length == 0)
                 {
+                    if (optional) continue;
                     Debug.LogWarning($"[SpriteAnimSetSO] {context.name}: {label} {dir} 프레임이 비어 있습니다.", context);
                     continue;
                 }
@@ -83,7 +85,9 @@ namespace BagBack100.Data.Models
 
         private void OnValidate()
         {
+            _idle?.CollectWarnings("Idle", this, true);
             _move?.CollectWarnings("Move", this);
+            _moveAlt?.CollectWarnings("MoveAlt", this, true);
             _attack?.CollectWarnings("Attack", this);
         }
     }
