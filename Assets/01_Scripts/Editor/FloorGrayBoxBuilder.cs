@@ -495,7 +495,8 @@ namespace BagBack100.EditorTools
                 var renderer = go.AddComponent<SpriteRenderer>();
                 renderer.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
                 renderer.color = new Color(1f, 0.82f, 0.2f, 0.95f);
-                renderer.sortingOrder = StairsSortingOrder;
+                renderer.sortingOrder = ChestSortingOrder;
+                renderer.spriteSortPoint = SpriteSortPoint.Pivot;
                 go.transform.localScale = new Vector3(0.7f, 0.7f, 1f);
 
                 // 이동 차단은 TileSystem 점유로, 열기는 공격(IAttackInteractable)으로 처리하므로 콜라이더가 필요 없다
@@ -513,7 +514,10 @@ namespace BagBack100.EditorTools
         }
 
         private const string StairsPrefabPath = FloorPrefabFolder + "/FloorStairs_GrayBox.prefab";
-        private const int StairsSortingOrder = 11; // 탈출 포탈(ReturnPortal)과 같은 정렬 순서
+        // 정렬: 바닥 타일맵 -20, 체크무늬 -19, 바닥에 붙은 것(계단·함정) -10, 외곽 벽 0(상·좌·우)/2(하),
+        // 서 있는 것(플레이어·몬스터·상자·포털·전리품·내부 장애물) 1 + Y 정렬(기준점 = 칸 중심), 조준선·경고·이펙트·숫자 3 이상
+        private const int StairsSortingOrder = -10;
+        private const int ChestSortingOrder = 1;
 
         private static FloorStairs CreateOrUpdateStairsPrefab()
         {
