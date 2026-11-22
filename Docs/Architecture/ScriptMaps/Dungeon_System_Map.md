@@ -134,13 +134,15 @@ graph TD
 *   **`FloorMarker`**: `PlayerStart` / `UpStairs` / `Exit` / `ChestCandidate` / `BossSpawn`. 칸 중앙(+0.5)에 둔다.
 *   **층 프리팹 규격**: 루트(`FloorLayout`, Grid 없음) 아래 `Floor`, `Wall`(레이어 Wall, `TilemapCollider2D`), `Markers`, `Zones`. 타일맵은 루트 기준 위치·회전 0, 스케일 1.
 *   **숲 맵(A4a)**: 바닥은 `Floor` 타일맵에 그림 타일(풀·흙 변형, Wang 16)을 Tile Palette `Forest_Floor`로 직접 칠한다(그림이 곧 보행 판정). 벽도 타일이다: 32×32 한 칸 = 타일 하나. 고유 타일 78종(`wall_forest_sheet.png`, 8열 시트를 `wall_forest_00`~`77`로 슬라이스)을 팔레트 `Forest_Walls`에 원본 배치(ㅁ 고리, 가로 벽 2종, 세로 줄기 2종, ㄇ, ㅜ)대로 두고, 필요한 모양을 골라 칠한다. 가로 벽은 2줄(윗면 + 앞면), 세로 줄기는 1칸 폭, 아래 외곽 벽은 3줄(윗머리 + 몸통 + 앞면).
-    *   벽 타일맵 3장(모두 `Wall` 레이어 + `TilemapCollider2D`, `tileAnchor` (0.5, 0.75)): `WallBack`(외곽 위·좌·우, 순서 0), `WallFront`(아래 외곽 벽 윗머리 줄, 순서 2 → 그 칸에 선 캐릭터 발을 가림), `WallInner`(방 안 벽 + 아래 외곽 벽 몸통·앞면 줄, 순서 1, 렌더 모드 Individual → 캐릭터와 Y 정렬). 기존 1칸 `Wall` 타일맵은 비워 두고 참조만 유지(회색 박스 층 호환).
+    *   벽 타일맵 3장(모두 `Wall` 레이어 + `TilemapCollider2D`, `tileAnchor` (0.5, 0.75)): `WallBack`(외곽 위·좌·우, 순서 0), `WallFront`(아래 외곽 벽 3줄 전부, 순서 2 → 윗머리·몸통 칸에 선 캐릭터를 가림), `WallInner`(방 안 벽, 순서 1, 렌더 모드 Individual → 캐릭터와 Y 정렬). 기존 1칸 `Wall` 타일맵은 비워 두고 참조만 유지(회색 박스 층 호환).
     *   벽 스프라이트 기준점 (0.5, 0.75) = tileAnchor: 그림 위치는 그대로, Individual 정렬 기준(칸 + 앵커)이 칸 위 0.75가 되어 같은 줄 캐릭터(칸 중심 0.5)는 항상 벽 앞, 윗줄 캐릭터는 벽 뒤.
-    *   충돌은 Tile 에셋의 `colliderType`(Grid = 막힘, None = 이동 가능). Tile `Forest_Wall_00`~`77` 한 세트: 가로 벽 윗면 막힘, 가로 벽 앞면 이동 가능(캐릭터가 벽 앞에 붙어 섬), 세로 줄기 막힘, 세로 줄기 끝 어두운 앞면 이동 가능. 아래 외곽 벽은 윗머리 줄 이동 가능(벽 뒤로 가려짐), 몸통 줄 막힘(양 끝 모서리 포함), 맨 아래 앞면 줄 전부 이동 가능(벽 앞에 붙어 섬). 이동 가능 Tile 번호: 14~20, 22~25, 37~39, 42~45, 56, 58~63, 72~74, 76, 77. 타일맵 칸은 칠할 때 충돌 종류를 복사하므로, Tile 에셋 값을 바꾸면 해당 벽을 다시 칠하거나 타일맵 Refresh가 필요하다.
+    *   충돌은 Tile 에셋의 `colliderType`(Grid = 막힘, None = 이동 가능). Tile `Forest_Wall_00`~`77` 한 세트: 가로 벽은 윗면·앞면 두 줄 모두 막힘, 세로 줄기 막힘, 세로 줄기 끝 어두운 앞면 이동 가능. 아래 외곽 벽은 윗머리 줄만 이동 가능(벽 뒤로 가려짐), 몸통 줄과 맨 아래 앞면 줄은 막힘(2026-11-22 유저가 Tile 값 직접 조정). 이동 가능 Tile 번호: 42~45, 56, 72~74, 76, 77(나머지는 막힘). 캐릭터 크기에 맞춰 유저가 수시로 조정하는 값이다. 타일맵 칸은 칠할 때 충돌 종류를 복사하므로, Tile 에셋 값을 바꾸면 해당 벽을 다시 칠하거나 타일맵 Refresh가 필요하다.
     *   아트 교체: `Art/Tiles/Forest/Wall/wall_forest_sheet.png`를 같은 이름·같은 칸 배치(256×320, 8열)로 덮어쓰면 슬라이스와 Tile 참조가 유지된다. 원본은 `Desktop/Art/100BagBack/obj_forest-bush-wall/work/obj_forest-bush-wall_32x32_unique.png`(고유 타일)·`_palette.png`(팔레트 배치).
     *   런타임 판정은 `Pathfinder.IsObstacle`·`DungeonGenerator.IsTileWalkable`·`FogOfWarSystem.IsSightBlockedAtCell`의 `Physics2D.OverlapPoint(칸 중심, Wall)`가 벽 타일맵 콜라이더를 본다(코드 변경 없음).
     *   편집: 층 루트에는 Grid가 없어 프리팹 모드에서 팔레트를 쓸 수 없다. 씬의 `FloorGrid` 아래에 층 프리팹을 놓고 칠한 뒤 Apply(층 안에 Grid를 두면 `FindObjectOfType<Grid>()`가 엇갈린다).
     *   시험 층 `Floor_Forest_Test01`(28×20, 지역 풀에는 없음).
+    *   지역 1 층(A4b, 2026-11-22): `Floor_GrayBox_Normal01`·`Normal02`·`Boss01`을 회색 박스 칸 배치 그대로 숲 타일로 바꿨다(이름은 유지, 디자인 SO 참조 그대로). 바닥 = 벽 칸 포함 사각형 전체에 풀 4종, 벽 = 회색 박스 1칸 벽을 규칙으로 옮김: 가로 벽 칸은 윗면 타일 + 바로 아래 바닥 칸에 앞면 타일(이동 가능), 세로 벽은 줄기 + 끝 아래 바닥 칸에 끝 앞면, 위 외곽은 벽 칸에 고리 앞면(막힘) + 한 칸 위(맵 밖)에 고리 윗면, 아래 외곽은 벽 칸에 앞면(막힘) + 위 바닥 칸에 몸통(이동 가능, 가려짐) + 그 위 바닥 칸에 윗머리(모두 `WallFront`), 2칸 두께 덩어리는 둥근 윗모서리 + 몸통 모서리(아래 앞면 없음). 막힘/이동 가능 칸은 Tile 충돌 값을 따르므로, 회색 박스에서 걸을 수 있던 가로 벽 앞면 칸·아래 외곽 몸통 칸이 막힌다(층마다 22~42칸). 이음새(벽이 만나는 칸)는 근사 타일이라 손으로 다듬을 수 있다.
+    *   주의: 메뉴 `Create Gray Box Floors`를 다시 실행하면 이 세 층이 회색 박스로 덮어써진다.
 *   **`FloorLayout.IsLocalCellWalkable`**: 바닥 타일 있음 + Wall 타일 없음 + `RefreshBlockedCells`가 모은 막힌 칸이 아님. 막힌 칸 = Wall 레이어 벽 타일맵(`TilemapCollider2D`, `GetColliderType(칸) != None`) + Wall 레이어 `BoxCollider2D`가 칸 중심을 덮는 칸(방 안 1칸 장애물 오브젝트 대비). 물리 없이 계산해 프리팹 에셋에서도 동작하고, 활성 여부는 층 루트까지 `activeSelf`로 본다(에셋은 `activeInHierarchy`가 항상 false). 칸 경계 비정렬 BoxCollider2D, 지원 안 하는 콜라이더, Geometry Type이 Outlines인 CompositeCollider2D는 `ColliderIssues`로 모은다.
 
 ### 2.10. `FloorDesignSO` / `RegionConfigSO` (`ScriptableObject`)
@@ -160,7 +162,7 @@ graph TD
 *   **역할**: 현재 층 상시 표시(우측 상단), 층 진입 배너(상단 중앙), 층 전환 암전. `GlobalEvents.OnFloorTransitionStarted`/`OnFloorEntered`/`OnFloorCleared` 구독(OnEnable/OnDisable), 클리어 시 `UIToast`로 알림(탈출구 열림 여부 포함), 연출은 unscaled time. 서식 `{0}` 지역 번호, `{1}` 층, `{2}` 지역 이름.
 
 ### 2.14. `FloorGrayBoxBuilder` (Editor)
-*   메뉴 `BagBack100/Floor/Create Gray Box Floors`: 회색 박스 층 3장(일반 2 + 보스 1)과 `Region1Config`·`FloorDesignSO` 생성 후 검증. 템플릿은 `Floor_GrayBox_Normal01.prefab`의 Floor·Wall(먼저 복제 후 템플릿을 닫고 저장).
+*   메뉴 `BagBack100/Floor/Create Gray Box Floors`: 회색 박스 층 3장(일반 2 + 보스 1)과 `Region1Config`·`FloorDesignSO` 생성 후 검증. 템플릿은 `Floor_GrayBox_Normal01.prefab`의 Floor·Wall(먼저 복제 후 템플릿을 닫고 저장). A4b 이후 세 층은 숲 타일로 칠해져 있어 다시 실행하면 덮어써진다.
 *   메뉴 `BagBack100/Floor/Create Region1 Chest Drop Pool`: 상자 드랍 풀(`DropPool_Chest_Region1`) 생성. 재료 그룹은 `Region1Config` 몬스터 풀 → 몬스터 드랍 풀의 `Material`·`Common` 아이템(itemID 0 꽝 제외), 보너스 그룹은 악세서리 3종 + HP 포션(가중치 합 30) + 꽝 70.
 *   메뉴 `BagBack100/Floor/Setup Chest Prefab`: 회색 박스 상자 프리팹(`FloorChest_GrayBox`) 생성·`DungeonGenerator._chestPrefab` 연결.
 *   메뉴 `BagBack100/Floor/Validate Region Configs`: 모든 `RegionConfigSO` 검증.
