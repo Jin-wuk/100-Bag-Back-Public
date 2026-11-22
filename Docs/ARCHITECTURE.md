@@ -190,7 +190,7 @@ flowchart LR
 | `PlayerInput` | 입력을 읽어 이벤트로 전달 (로직 없음) |
 | `PlayerController` | 상태 관리, 선입력 버퍼, 3타 콤보·차징 공격, 무기 히트박스 계산 |
 | `PlayerMovement` | 셀 단위 이동과 보행 연출(칸마다 뛰는 포물선. 틸트·스쿼시는 프리팹에서 끔) |
-| `PlayerSpriteVisual` / `SpriteAnimSetSO` | 상태·방향에 맞춰 스프라이트 프레임 교체(4방향 대기·이동·대시·공격, 대기 방향은 마지막 행동 방향). 공격은 `EntityCombat` 공격 이벤트마다 처음부터 재생 |
+| `PlayerSpriteVisual` / `SpriteAnimSetSO` | 상태·방향에 맞춰 스프라이트 프레임 교체(4방향 대기·이동·대시·공격, 대기 방향은 마지막 행동 방향). 이동은 `MoveCycleMode`(한 칸에 반 사이클/전체). 공격은 `EntityCombat` 공격 이벤트마다 처음부터 재생 |
 | `EntityCombat` | 공격 판정과 후딜레이. 후딜레이는 `Time.unscaledDeltaTime`으로 계산해 히트스톱 영향을 받지 않음 |
 | `PlayerStatManager` | HP/MP, 장비 스탯 합산, 피격(`CombatMath`로 방어력 경감, 피격 무적·보스 처치 후 무적이면 무시), 사망 처리 |
 | `PlayerCombatState` | 마지막 타격·피격 후 5초간 전투 중 판정 |
@@ -245,7 +245,7 @@ classDiagram
 - **행동 루프**: 어그로 판정(거리 + 시야) → 쿨타임을 통과한 패턴 중 가중치 랜덤 선택 → 전조(장판·조준선) → 실행 → 후딜레이 → 패턴이 없으면 이동 성향대로 1칸 이동
 - **상태 소유 규칙**: 패턴 SO는 여러 몬스터가 공유하므로 설정값과 로직만 가집니다. 좌표 버퍼, 쿨타임 같은 인스턴스별 값은 `MonsterController`가 가집니다.
 - **인터럽트**: 행동 루프에서 시작한 하위 코루틴은 `StartActionCoroutine()`으로 추적하고, 회피·기절·사망 시 한꺼번에 중단합니다.
-- 몬스터 외형은 `MonsterFacingVisual`이 `MonsterController.IsMovingToTile`·`CurrentMoveDirection`·`LastActionDirection`·`ActionCount`를 읽어 마지막 행동 방향의 4방향 스프라이트(`DirectionalSpriteSO`)만 바꿉니다(이벤트 없음, 3계층 Visual).
+- 몬스터 외형은 `MonsterFacingVisual`이 `MonsterController.IsMovingToTile`·`CurrentMoveDirection`·`LastActionDirection`·`ActionCount`를 읽어 마지막 행동 방향의 4방향 프레임 애니메이션(`SpriteAnimSetSO` 대기·공격, 없으면 `DirectionalSpriteSO` 정지 이미지)을 재생합니다. 공격 애니는 패턴 SO가 예고 시간을 계산한 직후 호출하는 `MonsterController.NotifyAttackWindup` → 지역 이벤트 `OnAttackWindup(예고 시간)`을 받아 예고 시간에 맞춰 늘립니다(3계층 Visual).
 - 층 배율은 `DungeonGenerator`가 생성 직후 `MonsterController.ApplyFloorScaling`으로 넣고, 피해·HP 상한은 데이터 대신 `MonsterController.Attack`·`MaxHp`를 읽습니다. 소환 패턴을 구현하면 소환자 배율을 넘겨야 합니다.
 - 새 몬스터는 `MonsterDataSO`에 패턴 SO를 조합해 만들고, 새 패턴은 `MonsterPatternSO`를 상속한 클래스 하나로 추가합니다.
 

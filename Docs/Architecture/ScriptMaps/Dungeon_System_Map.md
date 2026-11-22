@@ -77,9 +77,10 @@ graph TD
 
     *   **층 배율(F4)**: `SpawnEntity`가 몬스터 생성 직후 `ApplyFloorScaling(GetHpMultiplier, GetAtkMultiplier)` 적용. 드랍 등급 비율은 `LootSystem`이 드랍 순간 `PlayerSessionData.CurrentRegionId/CurrentFloor`로 `RegionConfigSO.GetRarityWeights`를 조회한다(System 간 직접 참조 없음).
 
-### 2.1b. `MonsterFacingVisual` / `DirectionalSpriteSO` (`MonoBehaviour` Visual / `ScriptableObject`)
+### 2.1b. `MonsterFacingVisual` / `SpriteAnimSetSO` / `DirectionalSpriteSO` (`MonoBehaviour` Visual / `ScriptableObject`)
 *   **역할**: 몬스터 SpriteRenderer의 4방향(S/W/E/N) 스프라이트만 교체(색·스케일·안개 표시 여부는 `MonsterController`·안개 쪽 그대로). 마지막 행동 기준: 이동 중(`MonsterController.IsMovingToTile`) = `CurrentMoveDirection`, 패턴 시작(`ActionCount` 증가) = 그 순간 플레이어 쪽(`LastActionDirection`), 그 외에는 유지. `MonsterController`가 패턴·기본 근접 시작 직전에 `MarkActionTowardPlayer`로 기록. 방향 변환은 `DirectionalSpriteSO.FromVector`(대각선은 좌우 우선, 빈 칸은 S 이미지).
-*   **연결**: Monster_Dummy(Bramble Hog)·AgileMonster(Leaf Mantis)·Wizard(Pinecone Owl)·Monster_Snail(Amber Snail) 프리팹 → `Data_SO/AnimSO/Monster_<이름>_Dir.asset`. 임시 보스는 미적용. 이미지는 `Assets/Art/Characters/Monsters/<종류>/`(PPU 36, 발끝 기준점).
+*   **애니메이션**: `SpriteAnimSetSO`의 대기(`_idle`, 이동 중에도 재생)·공격 프레임. 공격 = 예고 구간 + 타격 구간. `MonsterController.OnAttackWindup(예고 시간)`(패턴 SO 6종·기본 근접이 예고 시간 계산 직후 `NotifyAttackWindup` 호출, AoESlam 퍼지는 마름모는 +0.15초) 수신 → 예고 구간을 예고 시간에 맞춰 늘려 재생 → 타격 구간을 `_attackFps`로 1회(`_loopStrikeWhileExecuting`이면 패턴 실행 중 반복) → 대기. 예고 구간 = `_attackWindup`(있으면, 고슴도치 curl) 또는 `_attack[0.._attackHitFrame-1]`, 타격 구간 = 나머지. 공격 동작 중에는 이동해도 방향 고정. `CurrentState`가 Stunned·Evading·Dead면 즉시 대기. `_animSet`이 없거나 대기 프레임이 빈 방향은 `_sprites`(정지 이미지).
+*   **연결**: Monster_Dummy(Bramble Hog)·AgileMonster(Leaf Mantis)·Wizard(Pinecone Owl)·Monster_Snail(Amber Snail) 프리팹 → `Data_SO/AnimSO/Monster_<이름>_Anim.asset`(애니, 타격 프레임 5, 고슴도치는 curl/roll + 반복) + `Monster_<이름>_Dir.asset`(정지 이미지 대체용). 임시 보스는 미적용. 프레임은 `Assets/Art/Characters/Monsters/<종류>/mon_<id>_<idle|attack|curl|roll>_<방향>_01~09.png`(40px, PPU 36, 방향별 발끝 기준점). 원본은 `Desktop/Art/100BagBack/mon_<id>/final/*_sheet.png`(aseprite 태그 순서 W·E·S·N).
 
 ### 2.2. `FogOfWarSystem` (`MonoBehaviour`)
 *   **역할**: 플레이어의 타일 이동 이벤트(`GlobalEvents.OnPlayerCellChanged`) 및 시야원들을 추적하여 3단계 전장의 안개(`Unexplored`, `Explored`, `Visible`)와 엔티티 가시성을 총괄 제어하는 코어 비전 매니저.

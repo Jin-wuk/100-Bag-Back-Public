@@ -1,0 +1,118 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1550d88a53cbf14b87347be557e2e50, type: 3}
+  m_Name: Monster_AmberSnail_Anim
+  m_EditorClassIdentifier: 
+  _idle:
+    _south:
+    - {fileID: 21300000, guid: 67e8673d091a62c4dadd8454bb5508b6, type: 3}
+    - {fileID: 21300000, guid: 641e28b98a01a4245ab7ea0fb4858233, type: 3}
+    - {fileID: 21300000, guid: aa65e8ca4dec33244a7905fcd8ac609c, type: 3}
+    - {fileID: 21300000, guid: fdd754c5309156f4fbf65de7cba398da, type: 3}
+    - {fileID: 21300000, guid: 347247e87a43b214cbcd355661877642, type: 3}
+    - {fileID: 21300000, guid: db1ef5133826d3b4795af92dfd942161, type: 3}
+    - {fileID: 21300000, guid: 84e2fd7a3099df747a35651ce9f592d0, type: 3}
+    - {fileID: 21300000, guid: 03940a5619e77f440828dde8b1d22fd8, type: 3}
+    - {fileID: 21300000, guid: 0b6328d37420f8044ae0c1bc671c89e7, type: 3}
+    _west:
+    - {fileID: 21300000, guid: 2a95cfe279fd9354e8f8a4205a3c12a2, type: 3}
+    - {fileID: 21300000, guid: 57ad08495fe1308429da388705b3eced, type: 3}
+    - {fileID: 21300000, guid: a2c267a8a862b0847ba81906336dae26, type: 3}
+    - {fileID: 21300000, guid: 4b24a05d1e26f5b408fd3a74afa999f6, type: 3}
+    - {fileID: 21300000, guid: de71c0523ad5c4046abee7b54a807536, type: 3}
+    - {fileID: 21300000, guid: 6d3bfb8be0cb0cc4e97e1fc8e0324743, type: 3}
+    - {fileID: 21300000, guid: ca3750d8007cd584c9d09bdbb36c4fae, type: 3}
+    - {fileID: 21300000, guid: eed4ce8d08b7101418d2483121c3175e, type: 3}
+    - {fileID: 21300000, guid: de9e1948f32cbcf41815689ff6dcd11e, type: 3}
+    _east:
+    - {fileID: 21300000, guid: 2cb7197a21a8e004c8de6d8f88742ef1, type: 3}
+    - {fileID: 21300000, guid: 87dfe6a6be848a04995c97aa1cfc8c52, type: 3}
+    - {fileID: 21300000, guid: 7d617268d58bfaa4591c4261241f8f7c, type: 3}
+    - {fileID: 21300000, guid: c2c6b190bd376d843aa66a217520c45b, type: 3}
+    - {fileID: 21300000, guid: 96a598b84e3abec43b4dbdfef758ecef, type: 3}
+    - {fileID: 21300000, guid: a4328a621039a9c41a1705392c6efdd4, type: 3}
+    - {fileID: 21300000, guid: 7be9f058a1b9a2346ae7000040328968, type: 3}
+    - {fileID: 21300000, guid: bea3d9293f6cc7e4f93838e2f4a8a45b, type: 3}
+    - {fileID: 21300000, guid: e541fe7c12119344b9bd941af87bcd53, type: 3}
+    _north:
+    - {fileID: 21300000, guid: bb64e017413313340a4500ad32e45be6, type: 3}
+    - {fileID: 21300000, guid: ef474d1a7807eab449fe396207580424, type: 3}
+    - {fileID: 21300000, guid: b87033d7d502db048a38ef2c472e7bab, type: 3}
+    - {fileID: 21300000, guid: 9fc27cdb56d3a744cbe3cf36ad03625f, type: 3}
+    - {fileID: 21300000, guid: a6abbfd55198c2d45b14f28f6e5cf137, type: 3}
+    - {fileID: 21300000, guid: 1adb4899956d6974d9ca7bb2e623c382, type: 3}
+    - {fileID: 21300000, guid: f68d938de2b07eb4c882efea37516349, type: 3}
+    - {fileID: 21300000, guid: 000d1fdb5663b924fbcfdacd63d6da50, type: 3}
+    - {fileID: 21300000, guid: bee7f4060fc34f64dba3ba74e3f34793, type: 3}
+  _move:
+    _south: []
+    _west: []
+    _east: []
+    _north: []
+  _moveAlt:
+    _south: []
+    _west: []
+    _east: []
+    _north: []
+  _moveCycleMode: 1
+  _attack:
+    _south:
+    - {fileID: 21300000, guid: cf90d52c82f550c4c84e3fdd5df7994a, type: 3}
+    - {fileID: 21300000, guid: a797b2414274dbd4a9d9868effa6076e, type: 3}
+    - {fileID: 21300000, guid: 0c20c748163d02e4ba54731a89669d42, type: 3}
+    - {fileID: 21300000, guid: 0c1bc443673a0cc41b7bd6686f7c78b0, type: 3}
+    - {fileID: 21300000, guid: 6c7515c7fd1406f4289419cbf208883d, type: 3}
+    - {fileID: 21300000, guid: b601d3628805d534f8c114fc6b221dd6, type: 3}
+    - {fileID: 21300000, guid: b398df0a9b266584c945a31bde3ce597, type: 3}
+    - {fileID: 21300000, guid: e3f2e7cf9d72ba443bf4e0bf630b7acb, type: 3}
+    - {fileID: 21300000, guid: 68461103ae2a0fe43a9182ea6d3be834, type: 3}
+    _west:
+    - {fileID: 21300000, guid: bebb7c76c66f7a945a000bc73c8caa6d, type: 3}
+    - {fileID: 21300000, guid: ed1303d708e0aac419b083f1097a3450, type: 3}
+    - {fileID: 21300000, guid: c68c7be6c98fe424cac21e6d875e913f, type: 3}
+    - {fileID: 21300000, guid: 385a8c28e4dd5d44b8762a22135d1066, type: 3}
+    - {fileID: 21300000, guid: 0d7d3ac4e6875484786c5ab556e0e22c, type: 3}
+    - {fileID: 21300000, guid: d82a75db94fe83b40b57984ea4518e95, type: 3}
+    - {fileID: 21300000, guid: 33bb734e1b88ac5459c25e01fd937e12, type: 3}
+    - {fileID: 21300000, guid: a0f8a4ffc411b364694b3d825912c35f, type: 3}
+    - {fileID: 21300000, guid: 80935c0402fbb1947beddfcbcdc533a6, type: 3}
+    _east:
+    - {fileID: 21300000, guid: 900539079f6563341904a66395f4773d, type: 3}
+    - {fileID: 21300000, guid: 2b65b13cb7f1e4245bd25798c79e7f2a, type: 3}
+    - {fileID: 21300000, guid: a0798384888687249b63db5838548049, type: 3}
+    - {fileID: 21300000, guid: 40e4e43efe4db644e944252a25235d9d, type: 3}
+    - {fileID: 21300000, guid: a85d9ef0f6aa16e45817510f81757507, type: 3}
+    - {fileID: 21300000, guid: 5667388c93fa02c4cae5a3e6cfbbd30b, type: 3}
+    - {fileID: 21300000, guid: faff930b56e25d849a3870cfa80b5a7e, type: 3}
+    - {fileID: 21300000, guid: 7f6ce28df2371dd44810756836dab826, type: 3}
+    - {fileID: 21300000, guid: 355b035a23b107549a0e4e0a95f3410b, type: 3}
+    _north:
+    - {fileID: 21300000, guid: be672f6207f58564f9e7c926e3c00588, type: 3}
+    - {fileID: 21300000, guid: 4299c4d7628dc2e40a2bd1b99db58afa, type: 3}
+    - {fileID: 21300000, guid: 6c867563957c63c448d0bd800e09de67, type: 3}
+    - {fileID: 21300000, guid: 9e6f20b54882c76449f16ddaf14e51ad, type: 3}
+    - {fileID: 21300000, guid: 34d57f62c8ee1454692fb366e37c5fa1, type: 3}
+    - {fileID: 21300000, guid: 196752cabb4d6dd4e8130eefa420d6a9, type: 3}
+    - {fileID: 21300000, guid: 2289d9660ce42e84799394231bbe56bd, type: 3}
+    - {fileID: 21300000, guid: c9f426ea30e91a045b5377cd5826c307, type: 3}
+    - {fileID: 21300000, guid: 7de380f5a8775ca4ea993d6784445504, type: 3}
+  _attackWindup:
+    _south: []
+    _west: []
+    _east: []
+    _north: []
+  _attackHitFrame: 5
+  _loopStrikeWhileExecuting: 0
+  _idleFps: 9.090909
+  _attackFps: 11.764706
+  _stepChainGap: 0.1
+  _dashFrame: 1

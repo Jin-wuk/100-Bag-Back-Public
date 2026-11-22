@@ -1,0 +1,118 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c1550d88a53cbf14b87347be557e2e50, type: 3}
+  m_Name: Monster_LeafMantis_Anim
+  m_EditorClassIdentifier: 
+  _idle:
+    _south:
+    - {fileID: 21300000, guid: c112a8da3547e4f45ab969b08d8a28ba, type: 3}
+    - {fileID: 21300000, guid: 695399d1d37de704189b72f427f9ea7b, type: 3}
+    - {fileID: 21300000, guid: bb0b241f532b8e54cbeb60e8491caff8, type: 3}
+    - {fileID: 21300000, guid: c60f2e8eaa869ab45839711aef7b2f05, type: 3}
+    - {fileID: 21300000, guid: dd6e879f4c6aeaa459099315650743cf, type: 3}
+    - {fileID: 21300000, guid: 2cfc4659f6c8b6e479393530e8f6773e, type: 3}
+    - {fileID: 21300000, guid: 0a85923c6c9ee394a95cc8640fb34195, type: 3}
+    - {fileID: 21300000, guid: 6ca2190520778fc4bb1eb38eb0cbccd1, type: 3}
+    - {fileID: 21300000, guid: 219c4551a770cba4fae52fa5369422a5, type: 3}
+    _west:
+    - {fileID: 21300000, guid: 337d03f482a6a3349849cedaf3ffc662, type: 3}
+    - {fileID: 21300000, guid: 3a5c0ff5efe928840a8ed626eb2f8b00, type: 3}
+    - {fileID: 21300000, guid: 19e4b3bd435443e469458ed9e5458d47, type: 3}
+    - {fileID: 21300000, guid: 76d3de4743f70f641a4a5cf4154b555c, type: 3}
+    - {fileID: 21300000, guid: 3f59afec6861225449deb68333281564, type: 3}
+    - {fileID: 21300000, guid: 3d5bca195693887428965370702e78c9, type: 3}
+    - {fileID: 21300000, guid: 580bdc5e9d4d94e468c046554eef49ad, type: 3}
+    - {fileID: 21300000, guid: 74cecd8c8d27f7644b6283c06bb6fcec, type: 3}
+    - {fileID: 21300000, guid: 3fcb2b59415ad5c49b7f8c6426b65383, type: 3}
+    _east:
+    - {fileID: 21300000, guid: 48d0e6ebe1c67c14fbb0375c568fcdac, type: 3}
+    - {fileID: 21300000, guid: 4b6a7908150c43742a8ed90da65195b2, type: 3}
+    - {fileID: 21300000, guid: 6e401dfd91a50ad4e94025bd985f9ccf, type: 3}
+    - {fileID: 21300000, guid: 8f2da691b227d5f45a9c25108a7771b9, type: 3}
+    - {fileID: 21300000, guid: ad5907561426405489522c3119f1b901, type: 3}
+    - {fileID: 21300000, guid: d77d4abf17c3c14479069c9a37da869e, type: 3}
+    - {fileID: 21300000, guid: c5abc9e526d34c248bafa67118f201ef, type: 3}
+    - {fileID: 21300000, guid: a51e6efd708f6a148972bfe0963c884d, type: 3}
+    - {fileID: 21300000, guid: 3588c18e0e7680147823f36ed13587ae, type: 3}
+    _north:
+    - {fileID: 21300000, guid: 65f515eae8f929a43b56e3ea4217c74e, type: 3}
+    - {fileID: 21300000, guid: 8510a5604464cf0499a3839914a56040, type: 3}
+    - {fileID: 21300000, guid: 80ffc6feba38af34ca2896ff11514ee8, type: 3}
+    - {fileID: 21300000, guid: f419bb928a3433546a9c71a53ca3e63d, type: 3}
+    - {fileID: 21300000, guid: d4afce4c46e17504aabf317b91bd7771, type: 3}
+    - {fileID: 21300000, guid: 145b56dc8ada7d64b85d6dd8baf0f4b5, type: 3}
+    - {fileID: 21300000, guid: 62cad42d9f8a3fe419f6f0e61edfc2fa, type: 3}
+    - {fileID: 21300000, guid: 1a9701bf9827930499b97559d8ec5e61, type: 3}
+    - {fileID: 21300000, guid: 0f24042ede71dd7449a26f2f6aaf302f, type: 3}
+  _move:
+    _south: []
+    _west: []
+    _east: []
+    _north: []
+  _moveAlt:
+    _south: []
+    _west: []
+    _east: []
+    _north: []
+  _moveCycleMode: 1
+  _attack:
+    _south:
+    - {fileID: 21300000, guid: d5aaee04747198b4c850e845d52c7148, type: 3}
+    - {fileID: 21300000, guid: 2d53e103d81ae11419728ef020db339f, type: 3}
+    - {fileID: 21300000, guid: 8fcc9ba6ba661b04b98b23a27954214e, type: 3}
+    - {fileID: 21300000, guid: 8ce511e1ffb59e348a9b2a7c4a5f7dce, type: 3}
+    - {fileID: 21300000, guid: aa4c94e1a8b21cf47a396a1184a1c65c, type: 3}
+    - {fileID: 21300000, guid: ae657c7cf1d910842aad4b202b865a30, type: 3}
+    - {fileID: 21300000, guid: 92e865fa8b4163848894e303754095ba, type: 3}
+    - {fileID: 21300000, guid: 30d5aaeaba764bf4c9c044e598262e57, type: 3}
+    - {fileID: 21300000, guid: b6862c9729213ff4985b5aaaa7eecf7f, type: 3}
+    _west:
+    - {fileID: 21300000, guid: f3f3624e3cbe08144a4990962741b8f1, type: 3}
+    - {fileID: 21300000, guid: 354bc212b296e404dab1db5d82f8d43a, type: 3}
+    - {fileID: 21300000, guid: 175f29432f3996843969534394c33d5b, type: 3}
+    - {fileID: 21300000, guid: d5896c33da48e2c44acaa61f6e47ae7a, type: 3}
+    - {fileID: 21300000, guid: 57dfc9ba070bd1c4396fc5fee9cb3654, type: 3}
+    - {fileID: 21300000, guid: 124b5a65f0b1df3468a65ab673cb9feb, type: 3}
+    - {fileID: 21300000, guid: 23ca1cea09f7a734dbebb236272f0080, type: 3}
+    - {fileID: 21300000, guid: 48c7297b8724dbe43bcfe9c46b145fae, type: 3}
+    - {fileID: 21300000, guid: bd071171d56760f44b0841c87fc8fc0c, type: 3}
+    _east:
+    - {fileID: 21300000, guid: f2a57db93c2e9944e8bce0ec35d004ec, type: 3}
+    - {fileID: 21300000, guid: ee43106b6fbb55a42bb958f10b53806f, type: 3}
+    - {fileID: 21300000, guid: 2b971a3ec361a3c42ad639afe2c3d667, type: 3}
+    - {fileID: 21300000, guid: db59daf551774364fa292ab5d8898322, type: 3}
+    - {fileID: 21300000, guid: 72e51c8a4732d7a42a4db398c0dd8055, type: 3}
+    - {fileID: 21300000, guid: 99faeb3a5b7c2ff4fbb52e5c7d28d9b7, type: 3}
+    - {fileID: 21300000, guid: 3d929945acfa43d41a24caa9dd8a5303, type: 3}
+    - {fileID: 21300000, guid: d173d3ec12a3b744bbc3b3b6e9a74654, type: 3}
+    - {fileID: 21300000, guid: 1a5f695c4ca9f834d853b1f48b131c6a, type: 3}
+    _north:
+    - {fileID: 21300000, guid: c1366cac4e129ab4ab30a9169339a7d0, type: 3}
+    - {fileID: 21300000, guid: 9c93b02e1d6252f48ab571db80bbef43, type: 3}
+    - {fileID: 21300000, guid: d6e9305de332d6546b3653c6b9e2d18c, type: 3}
+    - {fileID: 21300000, guid: 92cb353c55e7fb94787113915e88e884, type: 3}
+    - {fileID: 21300000, guid: fa7c0901c334a724d928c2c93fd9b287, type: 3}
+    - {fileID: 21300000, guid: c124a69f01508044da123d04025d1cd8, type: 3}
+    - {fileID: 21300000, guid: 53e8a0c5dccf83546a4240d71a1b7139, type: 3}
+    - {fileID: 21300000, guid: 1c30dd546d12f5b4381d9ec3e81c29a9, type: 3}
+    - {fileID: 21300000, guid: e4e06e4091b82ae419040fb93f2fb3c0, type: 3}
+  _attackWindup:
+    _south: []
+    _west: []
+    _east: []
+    _north: []
+  _attackHitFrame: 5
+  _loopStrikeWhileExecuting: 0
+  _idleFps: 9.523809
+  _attackFps: 13.333333
+  _stepChainGap: 0.1
+  _dashFrame: 1

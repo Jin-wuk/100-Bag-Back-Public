@@ -39,6 +39,7 @@ namespace BagBack100.Monster
             List<Vector3Int> chargePathCells = monster.PatternCellsBuffer;
             chargePathCells.Clear();
             float telegraph = GetEffectiveTelegraphDuration(monster);
+            monster.NotifyAttackWindup(telegraph);
             bool willHitWall = false;
 
             // 1. 돌진 궤적 계산 및 바닥 장판 예고
