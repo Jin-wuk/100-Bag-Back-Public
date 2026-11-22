@@ -105,15 +105,28 @@ namespace BagBack100.Player
                     }
                     _notWalkingTime = 0f;
                     _lastStepProgress = progress;
-                    if (_altFoot)
-                    {
-                        Sprite[] altFrames = _animSet.MoveAlt.Get(_lookDir);
-                        if (altFrames != null && altFrames.Length > 0) frames = altFrames;
-                    }
-
-                    // 칸 하나를 건너는 동안 프레임을 한 번 재생해 걸음이 칸마다 한 번 뛰는 동작이 되게 한다. 이동 속도가 바뀌어도 칸 진행도를 따르므로 맞춰진다
                     int count = frames != null ? frames.Length : 0;
-                    next = PickFrame(frames, (int)(progress * count));
+
+                    if (_animSet.MoveCycle == MoveCycleMode.HalfCyclePerTile && count > 1)
+                    {
+                        // 한 사이클(왼발+오른발) 시트를 반으로 나눠 칸마다 한 발씩. 가운데 프레임은 두 구간이 함께 써서 이어 걸을 때 끊기지 않게 한다
+                        int mid = (count - 1) / 2;
+                        int start = _altFoot ? mid : 0;
+                        int length = (_altFoot ? count - 1 : mid) - start + 1;
+                        next = PickFrame(frames, start + Mathf.Min((int)(progress * length), length - 1));
+                    }
+                    else
+                    {
+                        if (_altFoot)
+                        {
+                            Sprite[] altFrames = _animSet.MoveAlt.Get(_lookDir);
+                            if (altFrames != null && altFrames.Length > 0) frames = altFrames;
+                        }
+
+                        // 칸 하나를 건너는 동안 프레임을 한 번 재생해 걸음이 칸마다 한 번 뛰는 동작이 되게 한다. 이동 속도가 바뀌어도 칸 진행도를 따르므로 맞춰진다
+                        count = frames != null ? frames.Length : 0;
+                        next = PickFrame(frames, (int)(progress * count));
+                    }
                 }
             }
             else
