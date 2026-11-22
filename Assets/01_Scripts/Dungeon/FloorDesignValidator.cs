@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 using BagBack100.Dungeon.Data;
 
 namespace BagBack100.Dungeon
@@ -48,6 +49,13 @@ namespace BagBack100.Dungeon
             if (layout.WallTilemap == null) errors.Add($"[{name}] Wall 타일맵 참조가 없습니다.");
             CheckIdentityTransform(layout, layout.FloorTilemap != null ? layout.FloorTilemap.transform : null, name, errors);
             CheckIdentityTransform(layout, layout.WallTilemap != null ? layout.WallTilemap.transform : null, name, errors);
+            // 숲 벽 타일맵(WallBack·WallFront·WallInner) 등 나머지 타일맵도 칸 좌표가 루트 기준과 같아야 판정이 맞는다
+            Tilemap[] tilemaps = layout.GetComponentsInChildren<Tilemap>(true);
+            for (int i = 0; i < tilemaps.Length; i++)
+            {
+                if (tilemaps[i] == layout.FloorTilemap || tilemaps[i] == layout.WallTilemap) continue;
+                CheckIdentityTransform(layout, tilemaps[i].transform, name, errors);
+            }
 
             CheckMarkerCount(layout, FloorMarkerType.PlayerStart, 1, 1, name, errors);
             CheckMarkerCount(layout, FloorMarkerType.Exit, 1, 1, name, errors);
