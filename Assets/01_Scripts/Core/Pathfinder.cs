@@ -185,6 +185,109 @@ namespace BagBack100.Core
             return Physics2D.OverlapPoint(worldPos, layerMask) != null;
         }
 
+        /// <summary>
+        /// 여러 칸 몸(N×N, anchor = 좌하단)용 A*. 노드는 anchor이고, 몸 칸이 모두 장애물이 아닌 anchor만 지난다.
+        /// 목표는 몸이 targetCell과 변으로 맞닿는 위치(몸–목표 맨해튼 거리 1). 목표 칸 자체는 장애물 검사하지 않는다(플레이어가 벽 옆에 서도 찾도록).
+        /// isFirstStepBlocked: 시작 anchor의 이웃(첫 걸음)에만 추가로 적용하는 막힘 조건(다른 몬스터 점유 등).
+        /// 경로 대신 첫 걸음 anchor만 돌려준다(한 걸음씩 다시 계산).
+        /// </summary>
+        public static bool TryFindNextBodyStep(Grid grid, Vector3Int startAnchor, int size, Vector3Int targetCell, LayerMask obstacleLayerMask,
+            System.Func<Vector3Int, bool> isFirstStepBlocked, out Vector3Int nextAnchor)
+        {
+            nextAnchor = startAnchor;
+            if (grid == null) return false;
+
+            Vector2Int startPos = new Vector2Int(startAnchor.x, startAnchor.y);
+            Vector2Int target = new Vector2Int(targetCell.x, targetCell.y);
+            if (BodyGap(startPos, size, target) <= 1) return false;
+
+            List<Node> openList = new List<Node>();
+            Dictionary<Vector2Int, Node> openDict = new Dictionary<Vector2Int, Node>();
+            HashSet<Vector2Int> closedSet = new HashSet<Vector2Int>();
+
+            Node startNode = new Node(startPos, null, 0, BodyGap(startPos, size, target) - 1);
+            openList.Add(startNode);
+            openDict[startPos] = startNode;
+
+            int iterations = 0;
+            while (openList.Count > 0)
+            {
+                if (++iterations > MaxSearchIterations) return false;
+
+                int bestIndex = 0;
+                Node currentNode = openList[0];
+                for (int i = 1; i < openList.Count; i++)
+                {
+                    if (openList[i].FCost < currentNode.FCost || (openList[i].FCost == currentNode.FCost && openList[i].HCost < currentNode.HCost))
+                    {
+                        currentNode = openList[i];
+                        bestIndex = i;
+                    }
+                }
+
+                openList.RemoveAt(bestIndex);
+                openDict.Remove(currentNode.Position);
+                closedSet.Add(currentNode.Position);
+
+                if (BodyGap(currentNode.Position, size, target) == 1)
+                {
+                    Node step = currentNode;
+                    while (step.Parent != null && step.Parent != startNode) step = step.Parent;
+                    if (step == startNode) return false;
+                    nextAnchor = new Vector3Int(step.Position.x, step.Position.y, 0);
+                    return true;
+                }
+
+                for (int d = 0; d < Directions.Length; d++)
+                {
+                    Vector2Int neighborPos = currentNode.Position + Directions[d];
+                    if (closedSet.Contains(neighborPos)) continue;
+                    // 몸이 목표 칸을 덮는 위치는 지나지 않는다
+                    if (BodyGap(neighborPos, size, target) == 0) continue;
+                    if (IsBodyBlocked(grid, neighborPos, size, obstacleLayerMask, out float dangerCost)) continue;
+                    if (currentNode == startNode && isFirstStepBlocked != null && isFirstStepBlocked(new Vector3Int(neighborPos.x, neighborPos.y, 0))) continue;
+
+                    float newCost = currentNode.GCost + 1f + dangerCost;
+                    if (!openDict.TryGetValue(neighborPos, out Node neighborNode))
+                    {
+                        neighborNode = new Node(neighborPos, currentNode, newCost, BodyGap(neighborPos, size, target) - 1);
+                        openList.Add(neighborNode);
+                        openDict[neighborPos] = neighborNode;
+                    }
+                    else if (newCost < neighborNode.GCost)
+                    {
+                        neighborNode.GCost = newCost;
+                        neighborNode.Parent = currentNode;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // 몸 사각형에서 목표 칸까지의 맨해튼 거리(몸 안이면 0)
+        private static int BodyGap(Vector2Int anchor, int size, Vector2Int target)
+        {
+            int dx = target.x < anchor.x ? anchor.x - target.x : (target.x > anchor.x + size - 1 ? target.x - (anchor.x + size - 1) : 0);
+            int dy = target.y < anchor.y ? anchor.y - target.y : (target.y > anchor.y + size - 1 ? target.y - (anchor.y + size - 1) : 0);
+            return dx + dy;
+        }
+
+        // 몸 칸 중 하나라도 장애물이면 막힘. 위험 칸 비용은 몸 칸 합
+        private static bool IsBodyBlocked(Grid grid, Vector2Int anchor, int size, LayerMask layerMask, out float dangerCost)
+        {
+            dangerCost = 0f;
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    Vector2Int cell = new Vector2Int(anchor.x + x, anchor.y + y);
+                    if (IsObstacle(grid, cell, layerMask)) return true;
+                    if (TileSystem.Instance != null) dangerCost += TileSystem.Instance.GetDangerCost(new Vector3Int(cell.x, cell.y, 0));
+                }
+            }
+            return false;
+        }
+
         private static float GetDistance(Vector2Int nodeA, Vector2Int nodeB)
         {
             int dstX = Mathf.Abs(nodeA.x - nodeB.x);

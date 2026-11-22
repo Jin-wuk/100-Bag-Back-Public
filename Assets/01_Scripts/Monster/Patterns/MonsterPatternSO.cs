@@ -49,8 +49,9 @@ namespace BagBack100.Monster
         public virtual bool CanExecute(MonsterController monster, int gridDistanceToPlayer)
         {
             if (monster == null || monster.Player == null || monster.Grid == null) return false;
+            // 여러 칸 몸은 몸 가장자리부터 잰다(1칸이면 기존과 같음)
             int dist = orthogonalOnly
-                ? MonsterLocomotion.GetManhattanDistance(monster.GetCurrentCell(), monster.GetPlayerCell())
+                ? monster.GetBodyManhattanDistance(monster.GetPlayerCell())
                 : gridDistanceToPlayer;
             return dist >= minRange && dist <= maxRange;
         }

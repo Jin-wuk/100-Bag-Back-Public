@@ -41,7 +41,8 @@ namespace BagBack100.Monster
             int damage = CalculateDamage(monster);
             monster.DealDamageToPlayerAtCell(targetCell, damage, hitDir, false);
 
-            // 3. 즉각 후방 백스텝 이탈 (뒤가 벽으로 막혀 있으면 좌/우 측면으로 이탈)
+            // 3. 즉각 후방 백스텝 이탈 (뒤가 벽으로 막혀 있으면 좌/우 측면으로 이탈). 1칸 몸 전용 기동
+            if (monster.Footprint > 1) yield break;
             Vector3 awayFromPlayer = (monster.transform.position - monster.Player.transform.position).normalized;
             Vector3Int primaryRetreatDir = MonsterLocomotion.SnapTo4WayCell(awayFromPlayer);
             Vector3Int sideDirA = new Vector3Int(-primaryRetreatDir.y, primaryRetreatDir.x, 0);
@@ -65,7 +66,7 @@ namespace BagBack100.Monster
                     nextCell = currentCell + sideDirB;
                 }
 
-                if (nextCell != currentCell && TileSystem.Instance.TryOccupyTile(nextCell, monster.gameObject, currentCell))
+                if (nextCell != currentCell && monster.TryMoveBody(nextCell))
                 {
                     Vector3 worldTarget = monster.Grid.GetCellCenterWorld(nextCell);
                     yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(worldTarget, backstepDuration, 0.35f));

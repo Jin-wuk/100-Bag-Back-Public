@@ -142,7 +142,8 @@ stateDiagram-v2
 
 | 기능 | API | 사용처 |
 | --- | --- | --- |
-| 타일 점유 | `TryOccupyTile`, `ReleaseTile`, `GetEntityAtTile` | 플레이어·몬스터 이동 시 칸 예약, 공격 대상 탐색 |
+| 타일 점유 | `TryOccupyTile`, `ReleaseTile`, `GetEntityAtTile` | 플레이어 이동 시 칸 예약, 공격 대상 탐색 |
+| 몸 점유 | `TryOccupyFootprint`, `RegisterFootprint`, `ReleaseFootprint` | 몬스터 몸(N×N, 좌하단 기준) 전체를 한 번에 점유·이동·해제. 하나라도 막히면 아무것도 안 바꿈. 몬스터는 `MonsterController.TryMoveBody`로만 호출 |
 | 위험 맵 | `SetDanger(cell, duration)`, `GetDangerCost(cell)` | 공격 예정 칸을 일정 시간 위험으로 표시 |
 | 바닥 아이템 | `RegisterItemTile`, `RemoveItemTile` | 밟아서 줍는 전리품 |
 
