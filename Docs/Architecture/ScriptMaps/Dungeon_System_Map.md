@@ -132,12 +132,15 @@ graph TD
 *   **`FloorLayout`**: 층 프리팹 루트. `Floor`·`Wall` 타일맵 참조, 마커·구역 수집(지연 캐싱, Edit Mode에서는 매번 재수집), 루트 기준 칸 좌표(`GetLocalCell`, 셀 크기 1).
 *   **`FloorMarker`**: `PlayerStart` / `UpStairs` / `Exit` / `ChestCandidate` / `BossSpawn`. 칸 중앙(+0.5)에 둔다.
 *   **층 프리팹 규격**: 루트(`FloorLayout`, Grid 없음) 아래 `Floor`, `Wall`(레이어 Wall, `TilemapCollider2D`), `Markers`, `Zones`. 타일맵은 루트 기준 위치·회전 0, 스케일 1.
-*   **숲 맵(A4a)**: 바닥은 `Floor` 타일맵에 그림 타일(풀·흙 변형, Wang 16)을 Tile Palette `Forest_Floor`로 직접 칠한다(그림이 곧 보행 판정). 벽·장애물은 층 루트 아래 `Walls`에 둔 덤불 오브젝트(`Prefabs/MapPrefabs/Walls/Forest/{Inner,OuterBack,OuterFront}`, Wall 레이어 `BoxCollider2D`)이고 `Wall` 타일맵은 비워 둔다(참조는 유지). 팔레트 `Forest_Walls_*`에서 GameObject 브러시로 칠한다.
-    *   덤불 64×64 조각 17종 × 3세트. 기준점 (0.5, 0.25) = 2×2 묶음 아래줄 칸 중심, 오브젝트 위치 = (2bx+1, 2by+0.5). `Inner` 순서 1 + Y 정렬, 콜라이더 2×2. `OuterBack`(상·좌·우 외곽) 순서 0. `OuterFront`(아래 외곽) 순서 2, 콜라이더 아래 1줄(2×1) → 윗줄은 바닥을 칠하면 걸을 수 있고 벽에 가려진다(투명 처리 없음).
-    *   런타임 판정은 `Pathfinder.IsObstacle`·`DungeonGenerator.IsTileWalkable`·`FogOfWarSystem.IsSightBlockedAtCell`의 `Physics2D.OverlapPoint(칸 중심, Wall)`로 오브젝트 벽을 본다(코드 변경 없음). 그래서 콜라이더는 칸 경계에 맞춰야 한다.
+*   **숲 맵(A4a)**: 바닥은 `Floor` 타일맵에 그림 타일(풀·흙 변형, Wang 16)을 Tile Palette `Forest_Floor`로 직접 칠한다(그림이 곧 보행 판정). 벽도 타일이다: 32×32 한 칸 = 타일 하나. 고유 타일 78종(`wall_forest_sheet.png`, 8열 시트를 `wall_forest_00`~`77`로 슬라이스)을 팔레트 `Forest_Walls`에 원본 배치(ㅁ 고리, 가로 벽 2종, 세로 줄기 2종, ㄇ, ㅜ)대로 두고, 필요한 모양을 골라 칠한다. 가로 벽은 2줄(윗면 + 앞면), 세로 줄기는 1칸 폭, 아래 외곽 벽은 3줄(윗머리 + 몸통 + 앞면).
+    *   벽 타일맵 3장(모두 `Wall` 레이어 + `TilemapCollider2D`, `tileAnchor` (0.5, 0.75)): `WallBack`(외곽 위·좌·우, 순서 0), `WallFront`(아래 외곽 벽 윗머리 줄, 순서 2 → 그 칸에 선 캐릭터 발을 가림), `WallInner`(방 안 벽 + 아래 외곽 벽 몸통·앞면 줄, 순서 1, 렌더 모드 Individual → 캐릭터와 Y 정렬). 기존 1칸 `Wall` 타일맵은 비워 두고 참조만 유지(회색 박스 층 호환).
+    *   벽 스프라이트 기준점 (0.5, 0.75) = tileAnchor: 그림 위치는 그대로, Individual 정렬 기준(칸 + 앵커)이 칸 위 0.75가 되어 같은 줄 캐릭터(칸 중심 0.5)는 항상 벽 앞, 윗줄 캐릭터는 벽 뒤.
+    *   충돌은 Tile 에셋의 `colliderType`(Grid = 막힘, None = 이동 가능). Tile `Forest_Wall_00`~`77` 한 세트: 가로 벽 윗면 막힘, 가로 벽 앞면 이동 가능(캐릭터가 벽 앞에 붙어 섬), 세로 줄기 막힘, 세로 줄기 끝 어두운 앞면 이동 가능. 아래 외곽 벽은 윗머리 줄 이동 가능(벽 뒤로 가려짐), 몸통 줄 막힘(양 끝 모서리 포함), 맨 아래 앞면 줄 전부 이동 가능(벽 앞에 붙어 섬). 이동 가능 Tile 번호: 14~20, 22~25, 37~39, 42~45, 56, 58~63, 72~74, 76, 77. 타일맵 칸은 칠할 때 충돌 종류를 복사하므로, Tile 에셋 값을 바꾸면 해당 벽을 다시 칠하거나 타일맵 Refresh가 필요하다.
+    *   아트 교체: `Art/Tiles/Forest/Wall/wall_forest_sheet.png`를 같은 이름·같은 칸 배치(256×320, 8열)로 덮어쓰면 슬라이스와 Tile 참조가 유지된다. 원본은 `Desktop/Art/100BagBack/obj_forest-bush-wall/work/obj_forest-bush-wall_32x32_unique.png`(고유 타일)·`_palette.png`(팔레트 배치).
+    *   런타임 판정은 `Pathfinder.IsObstacle`·`DungeonGenerator.IsTileWalkable`·`FogOfWarSystem.IsSightBlockedAtCell`의 `Physics2D.OverlapPoint(칸 중심, Wall)`가 벽 타일맵 콜라이더를 본다(코드 변경 없음).
     *   편집: 층 루트에는 Grid가 없어 프리팹 모드에서 팔레트를 쓸 수 없다. 씬의 `FloorGrid` 아래에 층 프리팹을 놓고 칠한 뒤 Apply(층 안에 Grid를 두면 `FindObjectOfType<Grid>()`가 엇갈린다).
     *   시험 층 `Floor_Forest_Test01`(28×20, 지역 풀에는 없음).
-*   **`FloorLayout.IsLocalCellWalkable`**: 바닥 타일 있음 + Wall 타일 없음 + Wall 레이어 `BoxCollider2D`(트리거·타일맵 콜라이더 제외)가 칸 중심을 덮지 않음. 콜라이더 칸은 물리 없이 사각형 계산(`RefreshBlockedCells`, 프리팹 에셋에서도 동작)이며, 칸 경계 비정렬·BoxCollider2D 아닌 Wall 콜라이더는 `ColliderIssues`로 모은다.
+*   **`FloorLayout.IsLocalCellWalkable`**: 바닥 타일 있음 + Wall 타일 없음 + `RefreshBlockedCells`가 모은 막힌 칸이 아님. 막힌 칸 = Wall 레이어 벽 타일맵(`TilemapCollider2D`, `GetColliderType(칸) != None`) + Wall 레이어 `BoxCollider2D`가 칸 중심을 덮는 칸(방 안 1칸 장애물 오브젝트 대비). 물리 없이 계산해 프리팹 에셋에서도 동작하고, 활성 여부는 층 루트까지 `activeSelf`로 본다(에셋은 `activeInHierarchy`가 항상 false). 칸 경계 비정렬 BoxCollider2D, 지원 안 하는 콜라이더, Geometry Type이 Outlines인 CompositeCollider2D는 `ColliderIssues`로 모은다.
 
 ### 2.10. `FloorDesignSO` / `RegionConfigSO` (`ScriptableObject`)
 *   **`FloorDesignSO`**: 층 프리팹, 구간(`Early` 1~5 / `Late` 6~9 / `Boss`), 가중치.
@@ -145,7 +148,7 @@ graph TD
 
 ### 2.11. `FloorDesignValidator` (static)
 *   **역할**: 런타임·에디터 공용 규격 검증. 시작점 1, 탈출구 1, 계단 1(10층 보스층은 0~1), 마커 칸 보행 가능·중복 없음, 계단–탈출구 체비쇼프 거리 ≥ 3, 상자 후보 ≥ 구간 최대 굴림 횟수, 풀 구간 일치. `BossSpawn`은 보스층 1개·일반층 0개, 시작점 5걸음 초과, 계단·탈출구와 3칸 이상. 지역 검증은 보스 프리팹 누락·비 Boss 데이터를 경고.
-*   **오브젝트 벽(A4a)**: `ValidateLayout` 시작에서 `layout.RefreshBlockedCells()` → 마커 보행·도달성·고립 칸 검사가 덤불 콜라이더를 반영. 지역 검증(에디터 메뉴만)은 `ColliderIssues`(칸 경계 비정렬, 지원 안 하는 콜라이더)를 경고(`CheckColliderIssues`). 런타임은 막지 않는다.
+*   **벽 타일·오브젝트(A4a)**: `ValidateLayout` 시작에서 `layout.RefreshBlockedCells()` → 마커 보행·도달성·고립 칸 검사가 벽 타일 충돌과 장애물 콜라이더를 반영. 층 안 모든 타일맵이 루트 기준 위치 0·회전 0·스케일 1인지도 검사. 지역 검증(에디터 메뉴만)은 `ColliderIssues`(칸 경계 비정렬, 지원 안 하는 콜라이더)를 경고(`CheckColliderIssues`). 런타임은 막지 않는다.
 *   **풀 장수(T3)**: 구간 고유 프리팹 수 < 구간 층 수(4) → 오류, = 4 → 경고(추천 6장 이상). 1~5 풀과 6~9 풀이 같은 프리팹을 쓰면 오류(6~9층 후보 부족 방지). 디버그 중복 허용이면 오류 대신 경고. 경고는 별도 목록으로 에디터 메뉴가 LogWarning.
 *   **몬스터 풀(10 기획안 C1, `CheckMonsterPool`)**: 지역 몬스터 풀이 비면 오류, 1~10층마다 출현 가능한 몬스터 0종이면 오류. 구역 전용 풀은 그 디자인의 층 범위(초반 1~4, 5, 후반 6~9, 10)에서 0종이면 경고. 풀의 빈 칸·데이터 없는 프리팹은 경고(`CheckInvalidPrefabs`).
 
@@ -160,13 +163,13 @@ graph TD
 *   메뉴 `BagBack100/Floor/Create Region1 Chest Drop Pool`: 상자 드랍 풀(`DropPool_Chest_Region1`) 생성. 재료 그룹은 `Region1Config` 몬스터 풀 → 몬스터 드랍 풀의 `Material`·`Common` 아이템(itemID 0 꽝 제외), 보너스 그룹은 악세서리 3종 + HP 포션(가중치 합 30) + 꽝 70.
 *   메뉴 `BagBack100/Floor/Setup Chest Prefab`: 회색 박스 상자 프리팹(`FloorChest_GrayBox`) 생성·`DungeonGenerator._chestPrefab` 연결.
 *   메뉴 `BagBack100/Floor/Validate Region Configs`: 모든 `RegionConfigSO` 검증.
-*   팔레트(`Assets/Art/Tiles/Palettes/`): `Forest_Floor`(풀 4·흙 4·Wang 16, Tile 에셋은 `Data_SO/TileSO/Forest/`), `Forest_Walls_Inner`·`_OuterBack`·`_OuterFront`(덤불 프리팹 인스턴스, GameObject 브러시용).
+*   팔레트(`Assets/Art/Tiles/Palettes/`): `Forest_Floor`(풀 4·흙 4·Wang 16, Tile 에셋은 `Data_SO/TileSO/Forest/`), `Forest_Walls`(벽 Tile 78종, 원본 팔레트 그림과 같은 16×11 배치). 벽 Tile 에셋은 `Data_SO/TileSO/Forest/Walls/`, 팔레트 타일맵도 tileAnchor 0.75.
 
 ### 2.15. `FloorCheckerOverlay` (`MonoBehaviour`, Visual)
 *   **역할**: `GlobalEvents.OnFloorEntered`(OnEnable/OnDisable)마다 현재 층 루트 아래 `Checker` 타일맵을 만들어 (x+y) 짝수 바닥 칸에 체크 타일을 깐다(색 `#00061E` 알파 0.08, 순서 -19, 인스펙터 값). 층과 함께 파괴. 던전 씬 `DungeonManager` 오브젝트에 붙어 있다.
 
 ### 2.16. 정렬 순서 규칙
-*   Graphics `Transparency Sort Mode = Custom Axis (0,1,0)`. 바닥 타일맵 -20, 체크무늬 -19, 바닥에 붙은 것(계단·함정) -10, 외곽 벽 0(상·좌·우)/2(하), 서 있는 것(플레이어·몬스터·상자·귀환 포털·바닥 전리품·내부 덤불) 1 + `spriteSortPoint = Pivot`(기준점 = 서 있는 칸 중심), 이동 미리보기 3·경고 장판 5·조준선 9·공격 이펙트 11·타격 플래시 45·피해 숫자 60, 안개 50.
+*   Graphics `Transparency Sort Mode = Custom Axis (0,1,0)`. 바닥 타일맵 -20, 체크무늬 -19, 바닥에 붙은 것(계단·함정) -10, 외곽 벽 타일맵 0(`WallBack`)/2(`WallFront`), 서 있는 것(플레이어·몬스터·상자·귀환 포털·바닥 전리품) 1 + `spriteSortPoint = Pivot`(기준점 = 서 있는 칸 중심), 방 안 벽 `WallInner` 1 + Individual(앵커 0.75), 이동 미리보기 3·경고 장판 5·조준선 9·공격 이펙트 11·타격 플래시 45·피해 숫자 60, 안개 50.
 *   한계: Y 정렬은 칸 이동 홉 높이를 포함해 몬스터(홉 0.5칸)가 위아래로 움직이는 순간 옆 줄과 앞뒤가 잠깐 바뀔 수 있다.
 *   메뉴 `BagBack100/Floor/Setup Stairs And Floor HUD`: 회색 박스 계단 프리팹(`FloorStairs_GrayBox`) 생성·`DungeonGenerator._stairsPrefab` 연결, 켜진 Overlay 캔버스 아래 `FloorHUD` 생성 후 저장.
 *   메뉴 `BagBack100/Floor/Setup Dungeon Scene For Floors`: `FloorGrid` 생성, `DungeonGenerator._regionConfig` 연결, 함정 풀이 비어 있으면 `Hazard_Spike` 지정 후 저장.
