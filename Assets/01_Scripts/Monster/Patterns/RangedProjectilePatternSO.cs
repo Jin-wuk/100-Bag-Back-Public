@@ -80,6 +80,7 @@ namespace BagBack100.Monster
 
             // 3. 전조(Telegraph): 바닥 타일 장판 대신 얇은 레이저 조준선 표시
             float telegraph = GetEffectiveTelegraphDuration(monster);
+            monster.NotifyAttackWindup(telegraph);
             if (showLaserAimLine)
             {
                 float lineLength = Mathf.Max(4f, maxRange + 1f);

@@ -31,6 +31,7 @@ namespace BagBack100.Monster
             Vector3Int targetCell = monster.GetPlayerCell();
             Vector3 cellCenterWorld = monster.Grid.GetCellCenterWorld(targetCell);
             float telegraph = GetEffectiveTelegraphDuration(monster);
+            monster.NotifyAttackWindup(telegraph);
 
             monster.SpawnWarning(cellCenterWorld, telegraph);
             yield return new WaitForSeconds(telegraph);

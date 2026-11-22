@@ -23,7 +23,7 @@ namespace BagBack100.Monster
     /// <summary>
     /// Role: 몬스터 1마리의 생명주기, 행동 루프(어그로 판정 → 가중치 랜덤 패턴 시전 → 이동), 반응형 회피/기절 인터럽트, 피격·사망 처리.
     /// Dependencies: MonsterDataSO, MonsterPatternSO, MonsterLocomotion, EntityCombat, TileSystem, FogOfWarSystem, CombatFeedbackSystem, PlayerController
-    /// Events: GlobalEvents.OnEntityDamaged, GlobalEvents.OnMonsterDied (지역 이벤트: OnDamaged, static OnSpawned / OnRemoved)
+    /// Events: GlobalEvents.OnEntityDamaged, GlobalEvents.OnMonsterDied (지역 이벤트: OnDamaged, OnAttackWindup, static OnSpawned / OnRemoved)
     /// </summary>
     [RequireComponent(typeof(EntityCombat))]
     public class MonsterController : MonoBehaviour
@@ -60,6 +60,8 @@ namespace BagBack100.Monster
         public List<Vector3> PatternDirectionsBuffer { get; } = new List<Vector3>(8);
 
         public event Action OnDamaged;
+        // 패턴이 예고(telegraph)를 시작했다. 인자 = 예고 시간(초). 외형이 공격 애니를 예고 시간에 맞춰 늘리는 기준
+        public event Action<float> OnAttackWindup;
 
         // 층 클리어 등록부(FloorClearTracker)용 지역 이벤트. 사망 전리품 이벤트(OnMonsterDied)와 분리해
         // 소환수·강제 제거·층 정리 파괴까지 "살아 있는 몬스터 수"를 정확히 맞춘다.
@@ -466,11 +468,18 @@ namespace BagBack100.Monster
             ActionCount++;
         }
 
+        // 패턴 SO가 예고 시간을 계산한 직후 호출한다. 예고 시간은 패턴마다 계산이 달라 컨트롤러가 미리 알 수 없다
+        public void NotifyAttackWindup(float duration)
+        {
+            OnAttackWindup?.Invoke(duration);
+        }
+
         private IEnumerator ExecuteFallbackMeleeRoutine()
         {
             Vector3Int targetCell = GetPlayerCell();
             Vector3 cellWorldPos = Grid.GetCellCenterWorld(targetCell);
             float telegraph = Mathf.Max(0.2f, _monsterData.telegraphTime * _monsterData.GetEffectiveTelegraphMultiplier());
+            NotifyAttackWindup(telegraph);
 
             SpawnWarning(cellWorldPos, telegraph);
             yield return new WaitForSeconds(telegraph);

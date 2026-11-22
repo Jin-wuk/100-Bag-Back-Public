@@ -33,6 +33,8 @@ namespace BagBack100.Monster
 
             Vector3Int centerCell = monster.GetCurrentCell();
             float totalTelegraph = GetEffectiveTelegraphDuration(monster);
+            // 퍼지는 마름모는 장판을 다 깐 뒤 0.15초 더 기다렸다 판정하므로 타격 모션도 그만큼 늦춘다
+            monster.NotifyAttackWindup(shape == AoESlamShape.ExpandingDiamond ? totalTelegraph + 0.15f : totalTelegraph);
             List<Vector3Int> targetCellsBuffer = monster.PatternCellsBuffer;
             targetCellsBuffer.Clear();
 

@@ -42,6 +42,7 @@ namespace BagBack100.Monster
             List<Vector3Int> impactCellsBuffer = monster.PatternCellsBuffer;
             impactCellsBuffer.Clear();
             float telegraph = GetEffectiveTelegraphDuration(monster);
+            monster.NotifyAttackWindup(telegraph);
 
             for (int x = -blastRadius; x <= blastRadius; x++)
             {
