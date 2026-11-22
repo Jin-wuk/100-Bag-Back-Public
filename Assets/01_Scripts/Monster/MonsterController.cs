@@ -575,7 +575,7 @@ namespace BagBack100.Monster
                 CombatFeedbackSystem.EnsureInstance().SpawnFloatingStatusText(
                     transform.position, "EVADE", new Color(0.25f, 0.95f, 1f, 1f), 4.2f);
                 Vector3 endPos = Grid.GetCellCenterWorld(targetCell);
-                yield return StartActionCoroutine(MoveToTileRoutine(endPos, 0.14f, 0.35f));
+                yield return StartActionCoroutine(MoveToTileRoutine(endPos, 0.14f));
                 // 회피 직후 짧은 숨고르기 (0.35초 딜타임)
                 yield return new WaitForSeconds(0.35f);
             }
@@ -635,7 +635,7 @@ namespace BagBack100.Monster
                     Vector3 endPos = Grid.GetCellCenterWorld(chosenCell);
                     int actualDist = MonsterLocomotion.GetManhattanDistance(currentCell, chosenCell);
                     float moveDuration = actualDist > 1 ? 0.22f : 0.16f;
-                    yield return StartActionCoroutine(MoveToTileRoutine(endPos, moveDuration, 0.4f));
+                    yield return StartActionCoroutine(MoveToTileRoutine(endPos, moveDuration));
                 }
             }
 
@@ -893,7 +893,11 @@ namespace BagBack100.Monster
             return cell;
         }
 
-        public IEnumerator MoveToTileRoutine(Vector3 endPos, float customDuration = -1f, float hopHeight = 0.5f)
+        /// <summary>
+        /// 몬스터 이동은 바닥 슬라이드가 기본이다(기획 확정, 이동 모션 없이 대기 프레임 재생). hopHeight는 특정 동작만 띄우고 싶을 때를 위해 남겨 둔다.
+        /// 칸마다 가감속을 넣으면 여러 칸 돌진·연속 이동이 끊겨 보이므로 직선 보간을 쓴다(칸 경계는 t=0.5에 넘는다).
+        /// </summary>
+        public IEnumerator MoveToTileRoutine(Vector3 endPos, float customDuration = -1f, float hopHeight = 0f)
         {
             // 도착 몸 칸 중 하나라도 시야 안이면 이동 시작부터 보이게 한다. 점유(TryMoveBody)가 먼저 끝나 있으므로 목적지 = 현재 anchor
             if (FogOfWarSystem.Instance != null && Grid != null)
@@ -921,7 +925,7 @@ namespace BagBack100.Monster
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / duration);
                 Vector3 lerpedPos = Vector3.Lerp(startPos, endPos, t);
-                lerpedPos.y += Mathf.Sin(t * Mathf.PI) * hopHeight;
+                if (hopHeight > 0.001f) lerpedPos.y += Mathf.Sin(t * Mathf.PI) * hopHeight;
                 transform.position = lerpedPos;
                 yield return null;
             }

@@ -69,7 +69,7 @@ namespace BagBack100.Monster
                 if (nextCell != currentCell && monster.TryMoveBody(nextCell))
                 {
                     Vector3 worldTarget = monster.Grid.GetCellCenterWorld(nextCell);
-                    yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(worldTarget, backstepDuration, 0.35f));
+                    yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(worldTarget, backstepDuration));
                 }
                 else
                 {

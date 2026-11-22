@@ -109,7 +109,7 @@ namespace BagBack100.Monster
                 if (monster.TryMoveBody(stepAnchor))
                 {
                     Vector3 worldTarget = monster.GetBodyCenterWorld(stepAnchor);
-                    yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(worldTarget, stepMoveDuration, 0.1f));
+                    yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(worldTarget, stepMoveDuration));
                 }
                 else
                 {
