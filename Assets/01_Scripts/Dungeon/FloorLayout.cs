@@ -7,8 +7,8 @@ namespace BagBack100.Dungeon
     /// <summary>
     /// Role: 층 프리팹 루트. 바닥·벽 타일맵, 마커, 몬스터 구역을 묶고 칸 좌표(루트 기준)를 제공한다.
     ///       Grid는 씬에 하나 영속하고, 층은 그 Grid의 자식(원점)으로만 생성·교체한다.
-    ///       벽은 Wall 타일맵 칸 또는 Wall 레이어 BoxCollider2D 오브젝트(숲 덤불)로 둘 수 있다. 콜라이더가 덮는 칸은
-    ///       물리 엔진 없이 사각형 계산으로 구해 프리팹 에셋 검증에서도 막힌 칸으로 본다.
+    ///       벽은 Wall 타일맵 칸, Wall 레이어 벽 타일맵(숲 WallBack·WallFront·WallInner, 충돌 있는 타일만), Wall 레이어 BoxCollider2D 오브젝트로 둘 수 있다.
+    ///       타일맵·콜라이더가 막는 칸은 물리 엔진 없이 계산해 프리팹 에셋 검증에서도 막힌 칸으로 본다.
     /// Dependencies: FloorMarker, DungeonZone
     /// Events: 없음
     /// </summary>
@@ -91,7 +91,7 @@ namespace BagBack100.Dungeon
         }
 
         /// <summary>
-        /// Wall 레이어 BoxCollider2D(트리거 제외, 타일맵 콜라이더 제외)가 칸 중심을 덮는 칸을 다시 모은다.
+        /// Wall 레이어에서 막힌 칸을 다시 모은다: 벽 타일맵(TilemapCollider2D, 충돌 종류가 None이 아닌 타일 칸)과 BoxCollider2D(칸 중심을 덮는 칸).
         /// 런타임 판정(Pathfinder·DungeonGenerator·안개)은 같은 규칙을 Physics2D.OverlapPoint(칸 중심)로 본다. 이 계산은 그 결과와 맞추기 위한 것.
         /// 층 루트 기준이며 회전은 없다고 가정한다. 에디터 검증은 시작할 때마다 호출한다(구조가 바뀔 수 있음).
         /// </summary>
@@ -108,8 +108,20 @@ namespace BagBack100.Dungeon
             for (int i = 0; i < colliders.Length; i++)
             {
                 Collider2D col = colliders[i];
-                if (col.gameObject.layer != wallLayer || col.isTrigger || !col.enabled || !col.gameObject.activeInHierarchy) continue;
-                if (col is TilemapCollider2D || col is CompositeCollider2D) continue;
+                if (col.gameObject.layer != wallLayer || col.isTrigger || !col.enabled || !IsActiveUnderRoot(col.transform)) continue;
+                if (col is CompositeCollider2D composite)
+                {
+                    // Outlines는 속이 빈 테두리라 칸 중심 OverlapPoint가 내부 칸을 놓쳐 벽이 뚫린다
+                    if (composite.geometryType == CompositeCollider2D.GeometryType.Outlines)
+                        _colliderIssues.Add($"{col.name}: CompositeCollider2D Geometry Type이 Outlines라 런타임 칸 판정이 내부를 놓칩니다(Polygons로).");
+                    continue;
+                }
+                if (col is TilemapCollider2D tileCol)
+                {
+                    // 기존 1칸 Wall 타일맵은 IsLocalCellWalkable이 HasTile로 이미 본다
+                    if (col.TryGetComponent(out Tilemap wallMap) && wallMap != _wallTilemap) CollectTilemapBlockedCells(wallMap);
+                    continue;
+                }
                 if (!(col is BoxCollider2D box))
                 {
                     _colliderIssues.Add($"{col.name}: BoxCollider2D가 아닌 Wall 콜라이더({col.GetType().Name})는 검증 칸 계산에서 빠집니다.");
@@ -139,6 +151,33 @@ namespace BagBack100.Dungeon
                     for (int x = cx0; x <= cx1; x++)
                         _colliderBlockedCells.Add(new Vector3Int(x, y, 0));
             }
+        }
+
+        // 아래쪽 외곽 벽 윗줄·벽 앞면 조각처럼 충돌 종류가 None인 타일은 이동 가능 칸으로 둔다
+        private void CollectTilemapBlockedCells(Tilemap map)
+        {
+            map.CompressBounds();
+            foreach (Vector3Int cell in map.cellBounds.allPositionsWithin)
+            {
+                if (!map.HasTile(cell)) continue;
+                Tile.ColliderType colliderType = map.GetColliderType(cell);
+                if (colliderType == Tile.ColliderType.None) continue;
+                // 프리팹 에셋에는 부모 Grid가 없어 GetCellCenterWorld를 쓸 수 없다. 셀 크기 1 규격으로 칸 중심을 직접 계산한다
+                Vector3 world = map.transform.TransformPoint(new Vector3(cell.x + 0.5f, cell.y + 0.5f, 0f));
+                Vector3 local = transform.InverseTransformPoint(world);
+                _colliderBlockedCells.Add(new Vector3Int(Mathf.FloorToInt(local.x), Mathf.FloorToInt(local.y), 0));
+            }
+        }
+
+        // 프리팹 에셋 안의 오브젝트는 씬에 없어 activeInHierarchy가 항상 false다. 층 루트까지 activeSelf로 따라 올라가 판정한다
+        private bool IsActiveUnderRoot(Transform t)
+        {
+            for (Transform cur = t; cur != null; cur = cur.parent)
+            {
+                if (!cur.gameObject.activeSelf) return false;
+                if (cur == transform) return true;
+            }
+            return true;
         }
 
         private static bool IsOnGridLine(float v) => Mathf.Abs(v - Mathf.Round(v)) <= GridAlignTolerance;
