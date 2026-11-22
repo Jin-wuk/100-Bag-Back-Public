@@ -111,10 +111,17 @@ namespace BagBack100.Data.Models
             _attack?.CollectWarnings("Attack", this);
             _attackWindup?.CollectWarnings("AttackWindup", this, true);
 
-            Sprite[] southAttack = _attack?.Get(FacingDir4.South);
-            if (southAttack != null && southAttack.Length > 0 && _attackHitFrame >= southAttack.Length)
+            // 타격 프레임 번호는 예고 전용 프레임이 없는 방향에서만 쓴다
+            if (_attack == null || _attackWindup == null) return;
+            for (int i = 0; i < 4; i++)
             {
-                Debug.LogWarning($"[SpriteAnimSetSO] {name}: 타격 프레임 번호({_attackHitFrame})가 공격 프레임 수({southAttack.Length}) 이상이라 타격 구간이 비어 있습니다.", this);
+                FacingDir4 dir = (FacingDir4)i;
+                Sprite[] windup = _attackWindup.Get(dir);
+                Sprite[] attack = _attack.Get(dir);
+                if ((windup == null || windup.Length == 0) && attack != null && attack.Length > 0 && _attackHitFrame >= attack.Length)
+                {
+                    Debug.LogWarning($"[SpriteAnimSetSO] {name}: {dir} 타격 프레임 번호({_attackHitFrame})가 공격 프레임 수({attack.Length}) 이상이라 타격 구간이 비어 있습니다.", this);
+                }
             }
         }
     }
