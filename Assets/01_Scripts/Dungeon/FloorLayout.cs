@@ -118,6 +118,12 @@ namespace BagBack100.Dungeon
                 }
                 if (col is TilemapCollider2D tileCol)
                 {
+                    // 합치기를 켰는데 Composite가 없거나 꺼져 있으면 물리 충돌이 생기지 않는다
+                    if (tileCol.usedByComposite && (tileCol.composite == null || !tileCol.composite.enabled))
+                    {
+                        _colliderIssues.Add($"{col.name}: usedByComposite인데 CompositeCollider2D가 없거나 꺼져 있어 런타임 충돌이 없습니다.");
+                        continue;
+                    }
                     // 기존 1칸 Wall 타일맵은 IsLocalCellWalkable이 HasTile로 이미 본다
                     if (col.TryGetComponent(out Tilemap wallMap) && wallMap != _wallTilemap) CollectTilemapBlockedCells(wallMap);
                     continue;
@@ -162,6 +168,9 @@ namespace BagBack100.Dungeon
                 if (!map.HasTile(cell)) continue;
                 Tile.ColliderType colliderType = map.GetColliderType(cell);
                 if (colliderType == Tile.ColliderType.None) continue;
+                // 벽 타일은 Grid/None만 쓴다. Sprite는 물리 모양이 칸 중심을 비울 수 있어 판정이 어긋날 수 있다
+                if (colliderType == Tile.ColliderType.Sprite)
+                    _colliderIssues.Add($"{map.name} ({cell.x},{cell.y}): 충돌 종류 Sprite 타일은 칸 판정과 어긋날 수 있습니다(Grid 또는 None).");
                 // 프리팹 에셋에는 부모 Grid가 없어 GetCellCenterWorld를 쓸 수 없다. 셀 크기 1 규격으로 칸 중심을 직접 계산한다
                 Vector3 world = map.transform.TransformPoint(new Vector3(cell.x + 0.5f, cell.y + 0.5f, 0f));
                 Vector3 local = transform.InverseTransformPoint(world);
