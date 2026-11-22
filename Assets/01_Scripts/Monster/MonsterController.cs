@@ -880,7 +880,8 @@ namespace BagBack100.Monster
 
         private void ReleaseBody()
         {
-            if (Grid == null || TileSystem.Instance == null) return;
+            // 점유 칸을 기억하고 있으면 Grid가 먼저 파괴돼도 해제할 수 있다
+            if ((!_hasOccupiedAnchor && Grid == null) || TileSystem.Instance == null) return;
             TileSystem.Instance.ReleaseFootprint(GetCurrentCell(), Footprint, gameObject);
         }
 

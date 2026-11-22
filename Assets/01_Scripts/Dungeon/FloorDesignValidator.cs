@@ -14,7 +14,7 @@ namespace BagBack100.Dungeon
     /// <summary>
     /// Role: 층 프리팹 규격 검증 (마커 개수·위치, 계단–탈출구 거리, 상자 후보 수, 상자로 막혀도 계단·탈출구 도달 가능, 보스 마커 위치, 지역 풀 구성·보스 프리팹, 층별 출현 몬스터).
     ///       에디터 메뉴와 런타임 생성기가 함께 쓰므로 UnityEditor API를 쓰지 않는다.
-    /// Dependencies: FloorLayout, FloorMarker, RegionConfigSO, FloorDesignSO
+    /// Dependencies: FloorLayout, FloorMarker, RegionConfigSO, FloorDesignSO, MonsterController(보스 몸 크기·마커 → 몸 좌하단)
     /// Events: 없음
     /// </summary>
     public static class FloorDesignValidator

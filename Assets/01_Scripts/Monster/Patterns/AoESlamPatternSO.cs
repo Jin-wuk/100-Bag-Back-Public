@@ -42,8 +42,10 @@ namespace BagBack100.Monster
 
             if (shape == AoESlamShape.ExpandingDiamond)
             {
-                float stepTime = totalTelegraph / (radius + 1);
-                for (int r = 0; r <= radius; r++)
+                // 여러 칸 몸은 몸 안(r = 0) 링이 없으므로 r = 1부터 펼쳐 첫 장판이 늦게 뜨지 않게 한다
+                int startR = size > 1 ? 1 : 0;
+                float stepTime = totalTelegraph / (radius + 1 - startR);
+                for (int r = startR; r <= radius; r++)
                 {
                     for (int x = anchor.x - r; x <= anchor.x + size - 1 + r; x++)
                     {
@@ -58,7 +60,7 @@ namespace BagBack100.Monster
                                     continue;
                                 }
                                 targetCellsBuffer.Add(cell);
-                                float remainingTime = totalTelegraph - (stepTime * r) + 0.15f;
+                                float remainingTime = totalTelegraph - (stepTime * (r - startR)) + 0.15f;
                                 monster.SpawnWarning(monster.Grid.GetCellCenterWorld(cell), remainingTime);
                             }
                         }
