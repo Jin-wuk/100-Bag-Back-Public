@@ -196,8 +196,10 @@ namespace BagBack100.Monster
 
         private void OnDestroy()
         {
-            // 층 정리·씬 종료로 파괴될 때의 안전망 (사망·강제 제거에서 이미 발행했으면 무시된다)
-            RaiseRemoved();
+            // 층 정리로 파괴될 때의 안전망 (사망·강제 제거에서 이미 발행했으면 무시된다).
+            // 씬이 내려가며(탈출·귀환석·사망으로 기지 이동, 플레이 정지) 파괴될 때는 scene.isLoaded가 false다.
+            // 이때 발행하면 파괴 순서에 따라 마지막 몬스터가 층 클리어로 판정돼 탈출 포탈이 다음 씬에 남으므로 발행하지 않는다.
+            if (gameObject.scene.isLoaded) RaiseRemoved();
             UnsubscribePlayerEvents();
             ClearActiveWarnings();
             HideAimLines();

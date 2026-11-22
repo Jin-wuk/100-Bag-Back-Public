@@ -124,6 +124,7 @@ namespace BagBack100.Dungeon
         {
             FloorStairs.OnStairsEntered -= HandleStairsEntered;
             GlobalEvents.OnPlayerCellChanged -= HandlePlayerCellChanged;
+            _clearTracker?.End();
             if (_isTransitioning) EndTransitionLock();
         }
 
