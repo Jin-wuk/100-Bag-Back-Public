@@ -675,9 +675,8 @@ namespace BagBack100.Dungeon
         public void UpdateSingleMonsterVisibility(MonsterController monster)
         {
             if (monster == null || _grid == null) return;
-            Vector3Int monsterCell = _grid.WorldToCell(monster.transform.position);
-            monsterCell.z = 0;
-            monster.SetVisibleByFog(IsCellVisible(monsterCell));
+            // 여러 칸 몸은 몸 칸 중 하나라도 보이면 보인다. 점유 칸 기준이라 이동 중 위치 보간과 무관하다
+            monster.SetVisibleByFog(monster.IsAnyBodyCellVisible(this, monster.GetCurrentCell()));
         }
 
         private void RefreshMonstersVisibility()

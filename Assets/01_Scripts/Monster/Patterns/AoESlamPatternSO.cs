@@ -31,7 +31,9 @@ namespace BagBack100.Monster
                 yield break;
             }
 
-            Vector3Int centerCell = monster.GetCurrentCell();
+            // 범위는 몸 사각형 기준으로 잡는다(1칸 몸이면 기존과 같음)
+            Vector3Int anchor = monster.GetCurrentCell();
+            int size = monster.Footprint;
             float totalTelegraph = GetEffectiveTelegraphDuration(monster);
             // 퍼지는 마름모는 장판을 다 깐 뒤 0.15초 더 기다렸다 판정하므로 타격 모션도 그만큼 늦춘다
             monster.NotifyAttackWindup(shape == AoESlamShape.ExpandingDiamond ? totalTelegraph + 0.15f : totalTelegraph);
@@ -43,13 +45,14 @@ namespace BagBack100.Monster
                 float stepTime = totalTelegraph / (radius + 1);
                 for (int r = 0; r <= radius; r++)
                 {
-                    for (int x = -r; x <= r; x++)
+                    for (int x = anchor.x - r; x <= anchor.x + size - 1 + r; x++)
                     {
-                        for (int y = -r; y <= r; y++)
+                        for (int y = anchor.y - r; y <= anchor.y + size - 1 + r; y++)
                         {
-                            if (Mathf.Abs(x) + Mathf.Abs(y) == r)
+                            Vector3Int cell = new Vector3Int(x, y, 0);
+                            // 여러 칸 몸은 몸 안(r = 0)에 장판을 깔지 않는다
+                            if (MonsterController.GetBodyManhattanDistance(anchor, size, cell) == r && !(size > 1 && r == 0))
                             {
-                                Vector3Int cell = centerCell + new Vector3Int(x, y, 0);
                                 if (Pathfinder.IsObstacle(monster.Grid, new Vector2Int(cell.x, cell.y), monster.ObstacleLayerMask))
                                 {
                                     continue;
@@ -68,13 +71,13 @@ namespace BagBack100.Monster
             {
                 Vector3 toPlayer = (monster.Player.transform.position - monster.transform.position).normalized;
                 Vector3Int forward = MonsterLocomotion.SnapTo4WayCell(toPlayer);
-                Vector3Int perp = new Vector3Int(-forward.y, forward.x, 0);
 
+                // 몸 앞쪽 가장자리에서 depth칸, 폭은 몸 폭 + 양옆 1칸
                 for (int depth = 1; depth <= radius + 1; depth++)
                 {
-                    for (int width = -1; width <= 1; width++)
+                    for (int k = -1; k <= size; k++)
                     {
-                        Vector3Int cell = centerCell + (forward * depth) + (perp * width);
+                        Vector3Int cell = GetForwardCell(anchor, size, forward, depth, k);
                         if (Pathfinder.IsObstacle(monster.Grid, new Vector2Int(cell.x, cell.y), monster.ObstacleLayerMask))
                         {
                             continue;
@@ -88,11 +91,12 @@ namespace BagBack100.Monster
             else
             {
                 // SquareAroundMonster (기본 3x3 주변 슬램)
-                for (int x = -radius; x <= radius; x++)
+                for (int x = anchor.x - radius; x <= anchor.x + size - 1 + radius; x++)
                 {
-                    for (int y = -radius; y <= radius; y++)
+                    for (int y = anchor.y - radius; y <= anchor.y + size - 1 + radius; y++)
                     {
-                        Vector3Int cell = centerCell + new Vector3Int(x, y, 0);
+                        Vector3Int cell = new Vector3Int(x, y, 0);
+                        if (size > 1 && MonsterController.GetBodyChebyshevDistance(anchor, size, cell) == 0) continue;
                         if (Pathfinder.IsObstacle(monster.Grid, new Vector2Int(cell.x, cell.y), monster.ObstacleLayerMask))
                         {
                             continue;
@@ -107,6 +111,14 @@ namespace BagBack100.Monster
             Vector3 hitDir = (monster.Player.transform.position - monster.transform.position).normalized;
             int damage = CalculateDamage(monster);
             monster.DealDamageToPlayerIfInCells(targetCellsBuffer, damage, hitDir, true);
+        }
+
+        private static Vector3Int GetForwardCell(Vector3Int anchor, int size, Vector3Int forward, int depth, int k)
+        {
+            if (forward.x > 0) return new Vector3Int(anchor.x + size - 1 + depth, anchor.y + k, 0);
+            if (forward.x < 0) return new Vector3Int(anchor.x - depth, anchor.y + k, 0);
+            if (forward.y > 0) return new Vector3Int(anchor.x + k, anchor.y + size - 1 + depth, 0);
+            return new Vector3Int(anchor.x + k, anchor.y - depth, 0);
         }
     }
 }

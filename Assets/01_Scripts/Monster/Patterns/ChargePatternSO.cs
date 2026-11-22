@@ -32,27 +32,47 @@ namespace BagBack100.Monster
                 yield break;
             }
 
-            Vector3Int startCell = monster.GetCurrentCell();
+            Vector3Int startAnchor = monster.GetCurrentCell();
+            int size = monster.Footprint;
             Vector3 toPlayer = (monster.Player.transform.position - monster.transform.position).normalized;
             Vector3Int chargeDir = MonsterLocomotion.SnapTo4WayCell(toPlayer);
 
-            List<Vector3Int> chargePathCells = monster.PatternCellsBuffer;
-            chargePathCells.Clear();
+            // 스텝마다 몸 좌하단 칸(anchor)과, 몸이 새로 들어가는 앞쪽 가장자리 칸(예고 장판)을 따로 모은다
+            List<Vector3Int> chargeAnchors = monster.PatternAnchorsBuffer;
+            List<Vector3Int> sweptCells = monster.PatternCellsBuffer;
+            chargeAnchors.Clear();
+            sweptCells.Clear();
             float telegraph = GetEffectiveTelegraphDuration(monster);
             monster.NotifyAttackWindup(telegraph);
             bool willHitWall = false;
 
-            // 1. 돌진 궤적 계산 및 바닥 장판 예고
+            // 1. 돌진 궤적 계산 및 바닥 장판 예고 (1칸 몸이면 앞 칸 하나씩 = 기존과 같음)
             for (int step = 1; step <= chargeDistance; step++)
             {
-                Vector3Int nextCell = startCell + (chargeDir * step);
-                if (Pathfinder.IsObstacle(monster.Grid, new Vector2Int(nextCell.x, nextCell.y), monster.ObstacleLayerMask))
+                Vector3Int nextAnchor = startAnchor + (chargeDir * step);
+                int edgeStart = sweptCells.Count;
+                AddLeadingEdge(nextAnchor, size, chargeDir, sweptCells);
+                bool blocked = false;
+                for (int i = edgeStart; i < sweptCells.Count; i++)
                 {
+                    Vector3Int c = sweptCells[i];
+                    if (Pathfinder.IsObstacle(monster.Grid, new Vector2Int(c.x, c.y), monster.ObstacleLayerMask))
+                    {
+                        blocked = true;
+                        break;
+                    }
+                }
+                if (blocked)
+                {
+                    sweptCells.RemoveRange(edgeStart, sweptCells.Count - edgeStart);
                     willHitWall = true;
                     break;
                 }
-                chargePathCells.Add(nextCell);
-                monster.SpawnWarning(monster.Grid.GetCellCenterWorld(nextCell), telegraph);
+                chargeAnchors.Add(nextAnchor);
+            }
+            for (int i = 0; i < sweptCells.Count; i++)
+            {
+                monster.SpawnWarning(monster.Grid.GetCellCenterWorld(sweptCells[i]), telegraph);
             }
 
             yield return new WaitForSeconds(telegraph);
@@ -61,35 +81,69 @@ namespace BagBack100.Monster
             bool hasHitPlayer = false;
             int damage = CalculateDamage(monster);
             Vector3 hitDirWorld = new Vector3(chargeDir.x, chargeDir.y, 0f).normalized;
+            List<Vector3Int> edgeBuffer = monster.PatternCellsBuffer;
+            // 다른 몬스터에 막혀 중간에 멈추면 벽에 박은 것이 아니므로 기절하지 않는다
+            bool stoppedByEntity = false;
 
-            for (int i = 0; i < chargePathCells.Count; i++)
+            for (int i = 0; i < chargeAnchors.Count; i++)
             {
-                Vector3Int currentCell = monster.GetCurrentCell();
-                Vector3Int stepCell = chargePathCells[i];
+                Vector3Int stepAnchor = chargeAnchors[i];
 
-                // 경로상의 플레이어 충돌 판정
-                if (!hasHitPlayer && monster.GetPlayerCell() == stepCell)
+                // 몸이 들어갈 앞줄에 플레이어가 있으면 점유하기 전에 때리고 그 앞에서 멈춘다(플레이어 칸을 덮지 않음)
+                edgeBuffer.Clear();
+                AddLeadingEdge(stepAnchor, size, chargeDir, edgeBuffer);
+                Vector3Int playerCell = monster.GetPlayerCell();
+                if (!hasHitPlayer && edgeBuffer.Contains(playerCell))
                 {
-                    hasHitPlayer = monster.DealDamageToPlayerAtCell(stepCell, damage, hitDirWorld, true);
-                    break; // 플레이어와 부딪히면 그 앞 칸에서 돌진 정지
+                    hasHitPlayer = monster.DealDamageToPlayerAtCell(playerCell, damage, hitDirWorld, true);
+                    break;
                 }
 
-                if (TileSystem.Instance.TryOccupyTile(stepCell, monster.gameObject, currentCell))
+                // 예고 동안 상자 같은 고정 장애물이 새로 생겼으면 그 앞을 벽으로 본다
+                if (IsAnyObstacle(monster, edgeBuffer))
                 {
-                    Vector3 worldTarget = monster.Grid.GetCellCenterWorld(stepCell);
+                    willHitWall = true;
+                    break;
+                }
+
+                if (monster.TryMoveBody(stepAnchor))
+                {
+                    Vector3 worldTarget = monster.GetBodyCenterWorld(stepAnchor);
                     yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(worldTarget, stepMoveDuration, 0.1f));
                 }
                 else
                 {
+                    stoppedByEntity = true;
                     break;
                 }
             }
 
             // 3. 플레이어를 맞추지 못하고 벽에 들이박았을 때 -> 벽 충돌 기절(Stun) 발동!
-            if (!hasHitPlayer && willHitWall && wallStunDuration > 0f)
+            if (!hasHitPlayer && !stoppedByEntity && willHitWall && wallStunDuration > 0f)
             {
                 GlobalEvents.OnCombatImpact?.Invoke(0.2f, 0.16f, 0.02f);
                 monster.ApplyStun(wallStunDuration);
+            }
+        }
+
+        private static bool IsAnyObstacle(MonsterController monster, List<Vector3Int> cells)
+        {
+            for (int i = 0; i < cells.Count; i++)
+            {
+                if (Pathfinder.IsObstacle(monster.Grid, new Vector2Int(cells[i].x, cells[i].y), monster.ObstacleLayerMask)) return true;
+            }
+            return false;
+        }
+
+        // anchor 몸에서 dir 쪽 가장자리 N칸(한 칸 전진할 때 새로 들어가는 칸)
+        private static void AddLeadingEdge(Vector3Int anchor, int size, Vector3Int dir, List<Vector3Int> result)
+        {
+            for (int k = 0; k < size; k++)
+            {
+                if (dir.x > 0) result.Add(new Vector3Int(anchor.x + size - 1, anchor.y + k, 0));
+                else if (dir.x < 0) result.Add(new Vector3Int(anchor.x, anchor.y + k, 0));
+                else if (dir.y > 0) result.Add(new Vector3Int(anchor.x + k, anchor.y + size - 1, 0));
+                else result.Add(new Vector3Int(anchor.x + k, anchor.y, 0));
             }
         }
     }
