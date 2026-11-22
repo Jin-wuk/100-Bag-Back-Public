@@ -246,6 +246,8 @@ namespace BagBack100.Dungeon
             ValidateDesign(region.BossFloorDesign, FloorBand.Boss, StairsRequirement.Optional, region, errors);
             CheckBossPrefab(region.MidBossPrefab, RegionConfigSO.MidBossFloor, region, warnings);
             CheckBossPrefab(region.BossPrefab, RegionConfigSO.BossFloor, region, warnings);
+            CheckBossFootprint(region.MidBossFloorDesign, region.MidBossPrefab, true, errors);
+            CheckBossFootprint(region.BossFloorDesign, region.BossPrefab, false, errors);
             CheckMonsterPool(region, errors, warnings);
             CheckColliderIssues(region.EarlyPool, region, warnings);
             CheckColliderIssues(region.LatePool, region, warnings);
@@ -372,6 +374,75 @@ namespace BagBack100.Dungeon
             else if (!prefab.TryGetComponent(out BagBack100.Monster.MonsterController monster) || !monster.IsBoss)
             {
                 warnings.Add($"[{region.name}] {floor}층 보스 프리팹 {prefab.name}의 데이터가 Boss 등급이 아닙니다. 전원 처치 규칙으로 동작합니다.");
+            }
+            else if (monster.Data != null && monster.Data.footprint > 1 && monster.Data.movementStyle != BagBack100.Data.Core.MonsterMovementStyle.HeavyChase)
+            {
+                warnings.Add($"[{region.name}] {floor}층 보스 {prefab.name}은 {monster.Data.footprint}×{monster.Data.footprint} 몸이라 이동 스타일 {monster.Data.movementStyle} 대신 HeavyChase로 움직입니다.");
+            }
+        }
+
+        /// <summary>계단·탈출구 주변 스폰 금지 반경. DungeonGenerator._markerSafeRadius 기본값과 같아야 런타임 SpawnBoss와 판정이 맞는다.</summary>
+        public const int MarkerSafeRadius = 1;
+
+        /// <summary>
+        /// 여러 칸 보스는 BossSpawn 마커 칸 하나가 아니라 몸 칸 전부가 런타임 SpawnBoss 조건(걸을 수 있음, 상자가 다 막혀도 도달,
+        /// 시작점에서 StartSafeSteps 초과, 계단·탈출구 금지 반경 밖, 상자 후보 칸 아님)을 만족해야 한다.
+        /// </summary>
+        private static void CheckBossFootprint(FloorDesignSO design, GameObject bossPrefab, bool hasStairs, List<string> errors)
+        {
+            if (design == null || design.LayoutPrefab == null) return;
+            int size = BagBack100.Monster.MonsterController.GetFootprint(bossPrefab);
+            if (size <= 1) return;
+
+            FloorLayout layout = design.LayoutPrefab;
+            FloorMarker bossMarker = layout.GetSingleMarker(FloorMarkerType.BossSpawn);
+            FloorMarker start = layout.GetSingleMarker(FloorMarkerType.PlayerStart);
+            if (bossMarker == null || start == null) return;
+
+            // 상자 후보 칸을 막은 채로 시작점에서 걸음 수를 잰다(CheckReachableWithChestsBlocked와 같은 규칙)
+            HashSet<Vector3Int> chests = BlockedBuffer;
+            chests.Clear();
+            layout.CollectMarkers(FloorMarkerType.ChestCandidate, MarkerBuffer);
+            for (int i = 0; i < MarkerBuffer.Count; i++) chests.Add(layout.GetLocalCell(MarkerBuffer[i]));
+            StepsBuffer.Clear();
+            QueueBuffer.Clear();
+            Vector3Int startCell = layout.GetLocalCell(start);
+            StepsBuffer[startCell] = 0;
+            QueueBuffer.Enqueue(startCell);
+            while (QueueBuffer.Count > 0)
+            {
+                Vector3Int curr = QueueBuffer.Dequeue();
+                for (int i = 0; i < CardinalDirs.Length; i++)
+                {
+                    Vector3Int next = curr + CardinalDirs[i];
+                    if (StepsBuffer.ContainsKey(next) || chests.Contains(next) || !layout.IsLocalCellWalkable(next)) continue;
+                    StepsBuffer[next] = StepsBuffer[curr] + 1;
+                    QueueBuffer.Enqueue(next);
+                }
+            }
+
+            FloorMarker exit = layout.GetSingleMarker(FloorMarkerType.Exit);
+            FloorMarker stairs = hasStairs ? layout.GetSingleMarker(FloorMarkerType.UpStairs) : null;
+            Vector3Int anchor = BagBack100.Monster.MonsterController.GetAnchorFromMarker(layout.GetLocalCell(bossMarker), size);
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    Vector3Int c = new Vector3Int(anchor.x + x, anchor.y + y, 0);
+                    string reason = null;
+                    if (!layout.IsLocalCellWalkable(c)) reason = "걸을 수 없는 칸";
+                    else if (chests.Contains(c)) reason = "상자 후보 칸";
+                    else if (!StepsBuffer.TryGetValue(c, out int steps)) reason = "상자 후보가 막히면 도달 불가";
+                    else if (steps <= StartSafeSteps) reason = $"시작점에서 {steps}걸음(필요 {StartSafeSteps}걸음 초과)";
+                    else if (exit != null && ChebyshevDistance(c, layout.GetLocalCell(exit)) <= MarkerSafeRadius) reason = "탈출구 스폰 금지 반경";
+                    else if (stairs != null && ChebyshevDistance(c, layout.GetLocalCell(stairs)) <= MarkerSafeRadius) reason = "계단 스폰 금지 반경";
+
+                    if (reason != null)
+                    {
+                        errors.Add($"[{layout.name}] {size}×{size} 보스 {bossPrefab.name}의 몸 칸({c.x},{c.y})이 {reason}이라 보스가 생성되지 않습니다.");
+                        return;
+                    }
+                }
             }
         }
 
