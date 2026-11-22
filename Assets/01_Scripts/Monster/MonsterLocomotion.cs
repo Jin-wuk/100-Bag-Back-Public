@@ -41,7 +41,14 @@ namespace BagBack100.Monster
 
             Vector3Int monsterCell = monster.GetCurrentCell();
             Vector3Int playerCell = monster.GetPlayerCell();
-            int gridDist = GetChebyshevDistance(monsterCell, playerCell);
+            int gridDist = monster.GetBodyChebyshevDistance(playerCell);
+
+            // 여러 칸 몸은 측면 우회·카이팅을 지원하지 않는다(보스 전용). 스타일과 무관하게 직진 추적
+            if (monster.Footprint > 1)
+            {
+                yield return HeavyChaseBodyStepRoutine(monster, monsterCell, playerCell);
+                yield break;
+            }
 
             switch (monster.Data.movementStyle)
             {
@@ -66,10 +73,9 @@ namespace BagBack100.Monster
                 Vector3Int currentCell = monster.GetCurrentCell();
                 Vector3Int targetCell = currentCell + FourDirs[Random.Range(0, FourDirs.Length)];
 
-                if (CanStepToCell(monster, targetCell) &&
-                    TileSystem.Instance.TryOccupyTile(targetCell, monster.gameObject, currentCell))
+                if (CanPlaceBody(monster, targetCell) && monster.TryMoveBody(targetCell))
                 {
-                    Vector3 endPos = monster.Grid.GetCellCenterWorld(targetCell);
+                    Vector3 endPos = monster.GetBodyCenterWorld(targetCell);
                     yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
                 }
             }
@@ -176,9 +182,7 @@ namespace BagBack100.Monster
                     }
                 }
 
-                if (bestRetreatCell != monsterCell &&
-                    TileSystem.Instance != null &&
-                    TileSystem.Instance.TryOccupyTile(bestRetreatCell, monster.gameObject, monsterCell))
+                if (bestRetreatCell != monsterCell && monster.TryMoveBody(bestRetreatCell))
                 {
                     Vector3 endPos = monster.Grid.GetCellCenterWorld(bestRetreatCell);
                     yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
@@ -203,7 +207,7 @@ namespace BagBack100.Monster
 
                 if (CanStepToCell(monster, strafeCell) &&
                     TileSystem.Instance.GetDangerCost(strafeCell) <= 0f &&
-                    TileSystem.Instance.TryOccupyTile(strafeCell, monster.gameObject, monsterCell))
+                    monster.TryMoveBody(strafeCell))
                 {
                     Vector3 endPos = monster.Grid.GetCellCenterWorld(strafeCell);
                     yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(endPos, monster.Data.GetEffectiveMoveDuration()));
@@ -232,10 +236,51 @@ namespace BagBack100.Monster
                 yield break;
             }
 
-            if (TileSystem.Instance != null && TileSystem.Instance.TryOccupyTile(nextCell, monster.gameObject, startCell))
+            if (monster.TryMoveBody(nextCell))
             {
                 yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(nextStepWorld, monster.Data.GetEffectiveMoveDuration()));
             }
+        }
+
+        /// <summary>
+        /// 여러 칸 몸: 플레이어 쪽으로 몸 단위 A* 한 걸음. 몸이 플레이어와 변으로 맞닿으면(맨해튼 1) 멈춘다.
+        /// </summary>
+        private static IEnumerator HeavyChaseBodyStepRoutine(MonsterController monster, Vector3Int anchor, Vector3Int playerCell)
+        {
+            int size = monster.Footprint;
+            if (MonsterController.GetBodyManhattanDistance(anchor, size, playerCell) <= 1)
+            {
+                yield break;
+            }
+
+            // 첫 걸음은 다른 몬스터가 막은 칸도 피한다. 장애물만 보는 경로가 잡몹 쪽으로 나면 매번 점유에 실패해 제자리에 서게 된다
+            bool found = Pathfinder.TryFindNextBodyStep(monster.Grid, anchor, size, playerCell, monster.ObstacleLayerMask,
+                next => !CanPlaceBody(monster, next), out Vector3Int nextAnchor);
+            if (!found || !CanPlaceBody(monster, nextAnchor)) yield break;
+
+            if (monster.TryMoveBody(nextAnchor))
+            {
+                yield return monster.StartActionCoroutine(monster.MoveToTileRoutine(monster.GetBodyCenterWorld(nextAnchor), monster.Data.GetEffectiveMoveDuration()));
+            }
+        }
+
+        /// <summary>몸(anchor = 좌하단)을 그 자리에 놓을 수 있는지: 몸 칸 전부 걸을 수 있고, 다른 엔티티가 없고, 플레이어 칸이 아님. 1칸이면 CanStepToCell과 같다.</summary>
+        public static bool CanPlaceBody(MonsterController monster, Vector3Int anchor)
+        {
+            int size = monster.Footprint;
+            if (size <= 1) return CanStepToCell(monster, anchor);
+
+            Vector3Int playerCell = monster.GetPlayerCell();
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    Vector3Int cell = new Vector3Int(anchor.x + x, anchor.y + y, 0);
+                    if (monster.Player != null && cell == playerCell) return false;
+                    if (!CanStepToCell(monster, cell)) return false;
+                }
+            }
+            return true;
         }
 
         public static bool CanStepToCell(MonsterController monster, Vector3Int cell)

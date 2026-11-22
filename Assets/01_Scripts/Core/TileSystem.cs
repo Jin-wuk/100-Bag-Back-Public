@@ -97,6 +97,47 @@ namespace BagBack100.Core
             }
         }
 
+        // --- Footprint (N×N 몸, anchor = 좌하단 칸) ---
+        // 몸 칸 하나라도 다른 엔티티가 차지하고 있으면 아무것도 바꾸지 않는다. 일부만 옮겨져 몸이 찢어지는 일을 막는다
+        public bool TryOccupyFootprint(Vector3Int newAnchor, int size, GameObject entity, Vector3Int oldAnchor)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    Vector3Int cell = new Vector3Int(newAnchor.x + x, newAnchor.y + y, 0);
+                    GameObject occupant = GetEntityAtTile(cell);
+                    if (occupant != null && occupant != entity) return false;
+                }
+            }
+
+            ReleaseFootprint(oldAnchor, size, entity);
+            RegisterFootprint(newAnchor, size, entity);
+            return true;
+        }
+
+        public void RegisterFootprint(Vector3Int anchor, int size, GameObject entity)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    _occupiedTiles[new Vector3Int(anchor.x + x, anchor.y + y, 0)] = entity;
+                }
+            }
+        }
+
+        public void ReleaseFootprint(Vector3Int anchor, int size, GameObject entity)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    ReleaseTile(new Vector3Int(anchor.x + x, anchor.y + y, 0), entity);
+                }
+            }
+        }
+
         // --- Items ---
         private Dictionary<Vector3Int, Map.LootableItem> _itemTiles = new Dictionary<Vector3Int, Map.LootableItem>();
 

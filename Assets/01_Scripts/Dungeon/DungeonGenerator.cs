@@ -124,6 +124,7 @@ namespace BagBack100.Dungeon
         {
             FloorStairs.OnStairsEntered -= HandleStairsEntered;
             GlobalEvents.OnPlayerCellChanged -= HandlePlayerCellChanged;
+            _clearTracker?.End();
             if (_isTransitioning) EndTransitionLock();
         }
 
@@ -408,17 +409,34 @@ namespace BagBack100.Dungeon
             }
 
             Vector3Int cell = LayoutToGridCell(layout, marker);
-            // 마커는 층 디자인에서 직접 찍은 위치이므로, 씬마다 다를 수 있는 잡몹용 _startSafeStepRadius 대신 검증기와 같은 기준을 쓴다
-            bool isUnusableCell = !reachableSteps.TryGetValue(cell, out int steps) || steps <= FloorDesignValidator.StartSafeSteps || occupiedCells.Contains(cell);
-            if (isUnusableCell)
+            int size = Monster.MonsterController.GetFootprint(prefab);
+            Vector3Int anchor = Monster.MonsterController.GetAnchorFromMarker(cell, size);
+            // 마커는 층 디자인에서 직접 찍은 위치이므로, 씬마다 다를 수 있는 잡몹용 _startSafeStepRadius 대신 검증기와 같은 기준을 쓴다.
+            // 여러 칸 보스는 몸 칸 전부가 조건을 만족해야 한다
+            for (int x = 0; x < size; x++)
             {
-                Debug.LogWarning($"[DungeonGenerator] {_currentFloorNumber}층 BossSpawn 칸({cell.x},{cell.y})에 보스를 놓을 수 없어 전원 처치 규칙으로 진행합니다.");
-                return;
+                for (int y = 0; y < size; y++)
+                {
+                    Vector3Int bodyCell = new Vector3Int(anchor.x + x, anchor.y + y, 0);
+                    bool isUnusableCell = !reachableSteps.TryGetValue(bodyCell, out int steps) || steps <= FloorDesignValidator.StartSafeSteps || occupiedCells.Contains(bodyCell);
+                    if (isUnusableCell)
+                    {
+                        Debug.LogWarning($"[DungeonGenerator] {_currentFloorNumber}층 BossSpawn 칸({cell.x},{cell.y})에 {size}×{size} 보스를 놓을 수 없어(막힌 몸 칸 {bodyCell.x},{bodyCell.y}) 전원 처치 규칙으로 진행합니다.");
+                        return;
+                    }
+                }
             }
 
-            SpawnEntity(prefab, _grid.GetCellCenterWorld(cell), _spawnRoot);
-            occupiedCells.Add(cell);
-            spawnedMonsterCells.Add(cell);
+            SpawnEntity(prefab, Monster.MonsterController.GetBodyCenterWorld(_grid, anchor, size), _spawnRoot);
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    Vector3Int bodyCell = new Vector3Int(anchor.x + x, anchor.y + y, 0);
+                    occupiedCells.Add(bodyCell);
+                    spawnedMonsterCells.Add(bodyCell);
+                }
+            }
         }
 
         // 몬스터면 현재 층 배율을 적용한다. 함정 등 다른 엔티티도 같은 경로로 생성된다

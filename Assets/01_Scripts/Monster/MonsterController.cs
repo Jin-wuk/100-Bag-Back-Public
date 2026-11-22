@@ -56,7 +56,10 @@ namespace BagBack100.Monster
         public GameObject DefaultProjectilePrefab => _defaultProjectilePrefab;
 
         // Stateless PatternSO(플라이웨이트 패턴)의 동시성 오염 및 GC 할당을 완벽 방지하기 위한 인스턴스별 전용 버퍼
-        public List<Vector3Int> PatternCellsBuffer { get; } = new List<Vector3Int>(25);
+        // 3×3 몸 둘레 반경 2 범위(40칸)까지 재할당 없이 담는다
+        public List<Vector3Int> PatternCellsBuffer { get; } = new List<Vector3Int>(64);
+        // 돌진처럼 예고 칸과 별도로 이동 경로(몸 좌하단 칸)를 들고 있어야 하는 패턴용
+        public List<Vector3Int> PatternAnchorsBuffer { get; } = new List<Vector3Int>(16);
         public List<Vector3> PatternDirectionsBuffer { get; } = new List<Vector3>(8);
 
         public event Action OnDamaged;
@@ -111,6 +114,9 @@ namespace BagBack100.Monster
         // 타일 이동 중 인터럽트 위치 정합성 플래그
         private bool _isMovingToTile;
         private Vector3 _currentDestinationWorldPos;
+        // 지금 TileSystem에 점유를 걸어 둔 몸 좌하단 칸
+        private Vector3Int _occupiedAnchor;
+        private bool _hasOccupiedAnchor;
 
         // 비주얼 & 경고 UI 풀링 관리
         private SpriteRenderer[] _renderers;
@@ -130,6 +136,7 @@ namespace BagBack100.Monster
         {
             Combat = GetComponent<EntityCombat>();
             _renderers = GetComponentsInChildren<SpriteRenderer>(true);
+            FitColliderToFootprint();
             OnSpawned?.Invoke(this);
         }
 
@@ -146,6 +153,7 @@ namespace BagBack100.Monster
         public void Initialize(MonsterDataSO data)
         {
             _monsterData = data;
+            FitColliderToFootprint();
             InitializeStatsFromData();
         }
 
@@ -173,8 +181,7 @@ namespace BagBack100.Monster
 
             if (Grid != null && TileSystem.Instance != null)
             {
-                Vector3Int startCell = GetCurrentCell();
-                TileSystem.Instance.RegisterInitialTile(startCell, gameObject);
+                RegisterBody();
             }
 
             if (FogOfWarSystem.Instance != null)
@@ -189,8 +196,10 @@ namespace BagBack100.Monster
 
         private void OnDestroy()
         {
-            // 층 정리·씬 종료로 파괴될 때의 안전망 (사망·강제 제거에서 이미 발행했으면 무시된다)
-            RaiseRemoved();
+            // 층 정리로 파괴될 때의 안전망 (사망·강제 제거에서 이미 발행했으면 무시된다).
+            // 씬이 내려가며(탈출·귀환석·사망으로 기지 이동, 플레이 정지) 파괴될 때는 scene.isLoaded가 false다.
+            // 이때 발행하면 파괴 순서에 따라 마지막 몬스터가 층 클리어로 판정돼 탈출 포탈이 다음 씬에 남으므로 발행하지 않는다.
+            if (gameObject.scene.isLoaded) RaiseRemoved();
             UnsubscribePlayerEvents();
             ClearActiveWarnings();
             HideAimLines();
@@ -200,10 +209,7 @@ namespace BagBack100.Monster
                 FogOfWarSystem.Instance.UnregisterMonster(this);
             }
 
-            if (Grid != null && TileSystem.Instance != null)
-            {
-                TileSystem.Instance.ReleaseTile(GetCurrentCell(), gameObject);
-            }
+            ReleaseBody();
         }
 
         private void SubscribePlayerEvents()
@@ -253,7 +259,7 @@ namespace BagBack100.Monster
                 }
 
                 int gridDist = Player != null
-                    ? MonsterLocomotion.GetChebyshevDistance(GetCurrentCell(), GetPlayerCell())
+                    ? GetBodyChebyshevDistance(GetPlayerCell())
                     : 999;
 
                 bool wasAggroed = _isAggroed;
@@ -265,7 +271,7 @@ namespace BagBack100.Monster
                     yield return new WaitForSeconds(0.25f);
                     if (_isDead || _isStunned || _isEvading) continue;
                     gridDist = Player != null
-                        ? MonsterLocomotion.GetChebyshevDistance(GetCurrentCell(), GetPlayerCell())
+                        ? GetBodyChebyshevDistance(GetPlayerCell())
                         : 999;
                 }
 
@@ -503,7 +509,8 @@ namespace BagBack100.Monster
                 return;
             }
 
-            if (_monsterData.movementStyle != MonsterMovementStyle.AgileFlank || _monsterData.evasiveStepCooldown <= 0f)
+            // 회피 스텝은 1칸 몸 전용 기동
+            if (_monsterData.movementStyle != MonsterMovementStyle.AgileFlank || _monsterData.evasiveStepCooldown <= 0f || Footprint > 1)
             {
                 return;
             }
@@ -513,7 +520,7 @@ namespace BagBack100.Monster
                 return;
             }
 
-            int gridDist = MonsterLocomotion.GetChebyshevDistance(GetCurrentCell(), GetPlayerCell());
+            int gridDist = GetBodyChebyshevDistance(GetPlayerCell());
             if (gridDist > 2)
             {
                 return;
@@ -563,7 +570,7 @@ namespace BagBack100.Monster
             }
 
             // 코너나 벽에 몰려 양쪽 측면이 모두 막혀 있으면 회피 실패! (플레이어의 포지셔닝 보상)
-            if (targetCell != currentCell && TileSystem.Instance.TryOccupyTile(targetCell, gameObject, currentCell))
+            if (targetCell != currentCell && TryMoveBody(targetCell))
             {
                 CombatFeedbackSystem.EnsureInstance().SpawnFloatingStatusText(
                     transform.position, "EVADE", new Color(0.25f, 0.95f, 1f, 1f), 4.2f);
@@ -621,7 +628,7 @@ namespace BagBack100.Monster
                     }
                 }
 
-                if (chosenCell != currentCell && TileSystem.Instance.TryOccupyTile(chosenCell, gameObject, currentCell))
+                if (chosenCell != currentCell && TryMoveBody(chosenCell))
                 {
                     CombatFeedbackSystem.EnsureInstance().SpawnFloatingStatusText(
                         transform.position, "ESCAPE", new Color(0.8f, 0.5f, 1f, 1f), 4.2f);
@@ -747,12 +754,135 @@ namespace BagBack100.Monster
         // 타일 이동, 전투 판정 및 경고 UI / 레이저 조준선 API
         // =====================================================================
 
+        // 몸의 좌하단 칸(anchor). 점유를 등록한 뒤에는 위치 역산 대신 기억해 둔 칸을 쓴다:
+        // 이동 중 transform은 홉 높이·보간이 섞여 있고, 2×2 몸의 중심은 칸 경계라 역산하면 다른 칸이 나와 유령 점유가 남는다
         public Vector3Int GetCurrentCell()
         {
+            if (_hasOccupiedAnchor) return _occupiedAnchor;
             if (Grid == null) return Vector3Int.zero;
-            Vector3Int cell = Grid.WorldToCell(transform.position);
+            return GetAnchorFromCenterWorld(Grid, transform.position, Footprint);
+        }
+
+        // --- 여러 칸 몸 (Footprint) ---
+        public int Footprint => ClampFootprint(_monsterData);
+
+        private static int ClampFootprint(MonsterDataSO data) => data != null ? Mathf.Clamp(data.footprint, 1, 3) : 1;
+
+        /// <summary>프리팹의 몸 크기. 생성 전 칸 계산(보스 스폰·층 검증)용</summary>
+        public static int GetFootprint(GameObject monsterPrefab)
+        {
+            if (monsterPrefab == null || !monsterPrefab.TryGetComponent(out MonsterController mc)) return 1;
+            return ClampFootprint(mc.Data);
+        }
+
+        public static Vector3Int GetAnchorFromCenterWorld(Grid grid, Vector3 centerWorld, int size)
+        {
+            float half = (size - 1) * 0.5f;
+            Vector3 cellSize = grid.cellSize;
+            Vector3Int cell = grid.WorldToCell(centerWorld - new Vector3(half * cellSize.x, half * cellSize.y, 0f));
             cell.z = 0;
             return cell;
+        }
+
+        public static Vector3 GetBodyCenterWorld(Grid grid, Vector3Int anchor, int size)
+        {
+            float half = (size - 1) * 0.5f;
+            Vector3 cellSize = grid.cellSize;
+            return grid.GetCellCenterWorld(anchor) + new Vector3(half * cellSize.x, half * cellSize.y, 0f);
+        }
+
+        // 보스 마커 칸 → 몸 좌하단 칸. 2×2는 마커가 좌하단, 3×3은 마커가 가운데
+        public static Vector3Int GetAnchorFromMarker(Vector3Int markerCell, int size)
+        {
+            int offset = (size - 1) / 2;
+            return new Vector3Int(markerCell.x - offset, markerCell.y - offset, 0);
+        }
+
+        public Vector3 GetBodyCenterWorld(Vector3Int anchor) => GetBodyCenterWorld(Grid, anchor, Footprint);
+
+        public bool IsBodyCell(Vector3Int cell)
+        {
+            Vector3Int a = GetCurrentCell();
+            int n = Footprint;
+            return cell.x >= a.x && cell.x < a.x + n && cell.y >= a.y && cell.y < a.y + n;
+        }
+
+        // 몸 사각형에서 cell까지의 축별 거리(몸 안이면 0)
+        private static void GetAxisGap(Vector3Int anchor, int size, Vector3Int cell, out int dx, out int dy)
+        {
+            dx = cell.x < anchor.x ? anchor.x - cell.x : (cell.x > anchor.x + size - 1 ? cell.x - (anchor.x + size - 1) : 0);
+            dy = cell.y < anchor.y ? anchor.y - cell.y : (cell.y > anchor.y + size - 1 ? cell.y - (anchor.y + size - 1) : 0);
+        }
+
+        public static int GetBodyChebyshevDistance(Vector3Int anchor, int size, Vector3Int cell)
+        {
+            GetAxisGap(anchor, size, cell, out int dx, out int dy);
+            return Mathf.Max(dx, dy);
+        }
+
+        public static int GetBodyManhattanDistance(Vector3Int anchor, int size, Vector3Int cell)
+        {
+            GetAxisGap(anchor, size, cell, out int dx, out int dy);
+            return dx + dy;
+        }
+
+        public int GetBodyChebyshevDistance(Vector3Int cell) => GetBodyChebyshevDistance(GetCurrentCell(), Footprint, cell);
+        public int GetBodyManhattanDistance(Vector3Int cell) => GetBodyManhattanDistance(GetCurrentCell(), Footprint, cell);
+
+        // 전리품 드랍·폭발 중심 칸. 짝수 몸은 가운데 4칸 중 좌하단
+        public Vector3Int GetCenterCell()
+        {
+            Vector3Int a = GetCurrentCell();
+            int offset = (Footprint - 1) / 2;
+            return new Vector3Int(a.x + offset, a.y + offset, 0);
+        }
+
+        public bool IsAnyBodyCellVisible(FogOfWarSystem fog, Vector3Int anchor)
+        {
+            int n = Footprint;
+            for (int x = 0; x < n; x++)
+            {
+                for (int y = 0; y < n; y++)
+                {
+                    if (fog.IsCellVisible(new Vector3Int(anchor.x + x, anchor.y + y, 0))) return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>몸 전체를 newAnchor로 옮겨 점유한다. 하나라도 막히면 아무것도 바꾸지 않고 false. 모든 몬스터 점유 이동은 이 함수를 거친다.</summary>
+        public bool TryMoveBody(Vector3Int newAnchor)
+        {
+            if (TileSystem.Instance == null) return false;
+            Vector3Int oldAnchor = GetCurrentCell();
+            if (!TileSystem.Instance.TryOccupyFootprint(newAnchor, Footprint, gameObject, oldAnchor)) return false;
+            _occupiedAnchor = newAnchor;
+            _hasOccupiedAnchor = true;
+            return true;
+        }
+
+        private void RegisterBody()
+        {
+            if (Grid == null || TileSystem.Instance == null) return;
+            _occupiedAnchor = GetAnchorFromCenterWorld(Grid, transform.position, Footprint);
+            _hasOccupiedAnchor = true;
+            TileSystem.Instance.RegisterFootprint(_occupiedAnchor, Footprint, gameObject);
+        }
+
+        // 투사체 트리거·플레이어 이동 폴백(OverlapPoint)이 몸 칸 어디서든 닿게 콜라이더를 몸 크기로 맞춘다. 1칸은 프리팹 값 그대로
+        private void FitColliderToFootprint()
+        {
+            int n = Footprint;
+            if (n <= 1 || !TryGetComponent(out BoxCollider2D box)) return;
+            box.offset = Vector2.zero;
+            box.size = new Vector2(n - 0.1f, n - 0.1f);
+        }
+
+        private void ReleaseBody()
+        {
+            // 점유 칸을 기억하고 있으면 Grid가 먼저 파괴돼도 해제할 수 있다
+            if ((!_hasOccupiedAnchor && Grid == null) || TileSystem.Instance == null) return;
+            TileSystem.Instance.ReleaseFootprint(GetCurrentCell(), Footprint, gameObject);
         }
 
         public Vector3Int GetPlayerCell()
@@ -769,11 +899,11 @@ namespace BagBack100.Monster
         /// </summary>
         public IEnumerator MoveToTileRoutine(Vector3 endPos, float customDuration = -1f, float hopHeight = 0f)
         {
+            // 도착 몸 칸 중 하나라도 시야 안이면 이동 시작부터 보이게 한다. 점유(TryMoveBody)가 먼저 끝나 있으므로 목적지 = 현재 anchor
             if (FogOfWarSystem.Instance != null && Grid != null)
             {
-                Vector3Int destCell = Grid.WorldToCell(endPos);
-                destCell.z = 0;
-                if (FogOfWarSystem.Instance.IsCellVisible(destCell))
+                Vector3Int destAnchor = _hasOccupiedAnchor ? _occupiedAnchor : GetAnchorFromCenterWorld(Grid, endPos, Footprint);
+                if (IsAnyBodyCellVisible(FogOfWarSystem.Instance, destAnchor))
                 {
                     SetVisibleByFog(true);
                 }
@@ -1035,6 +1165,7 @@ namespace BagBack100.Monster
                 !_isInRecoveryWindow &&
                 _monsterData != null &&
                 _monsterData.movementStyle == MonsterMovementStyle.RangedKiting &&
+                Footprint == 1 &&
                 _monsterData.escapeOnHitCooldown > 0f &&
                 Time.time >= _nextEscapeOnHitTime)
             {
@@ -1105,21 +1236,20 @@ namespace BagBack100.Monster
 
         private IEnumerator ExplosiveDeathRoutine()
         {
-            Vector3Int centerCell = GetCurrentCell();
+            // 폭발 범위 = 몸과 그 둘레 1칸 (1칸 몸이면 기존 3×3)
+            Vector3Int anchor = GetCurrentCell();
+            int size = Footprint;
             float fuseTime = 0.75f;
 
             // 퓨즈 동안 시체가 길을 막지 않도록 타일 점유를 먼저 해제 (OnDestroy의 재해제는 무해)
-            if (TileSystem.Instance != null)
-            {
-                TileSystem.Instance.ReleaseTile(centerCell, gameObject);
-            }
-            List<Vector3Int> blastCells = new List<Vector3Int>(9);
+            ReleaseBody();
+            List<Vector3Int> blastCells = new List<Vector3Int>((size + 2) * (size + 2));
 
-            for (int x = -1; x <= 1; x++)
+            for (int x = -1; x <= size; x++)
             {
-                for (int y = -1; y <= 1; y++)
+                for (int y = -1; y <= size; y++)
                 {
-                    Vector3Int c = centerCell + new Vector3Int(x, y, 0);
+                    Vector3Int c = anchor + new Vector3Int(x, y, 0);
                     blastCells.Add(c);
                     SpawnWarning(Grid.GetCellCenterWorld(c), fuseTime);
                 }
@@ -1137,7 +1267,9 @@ namespace BagBack100.Monster
             if (!IsSummon)
             {
                 int dropPoolId = _monsterData != null ? _monsterData.dropPoolID : 0;
-                GlobalEvents.OnMonsterDied?.Invoke(transform.position, dropPoolId);
+                // 2×2 몸의 중심은 칸 경계라 그대로 넘기면 드랍 칸이 흔들린다. 중심 칸의 가운데를 넘긴다
+                Vector3 dropPos = Grid != null ? Grid.GetCellCenterWorld(GetCenterCell()) : transform.position;
+                GlobalEvents.OnMonsterDied?.Invoke(dropPos, dropPoolId);
             }
             RaiseRemoved();
             Destroy(gameObject);
@@ -1158,10 +1290,7 @@ namespace BagBack100.Monster
             ClearActiveWarnings();
             HideAimLines();
 
-            if (Grid != null && TileSystem.Instance != null)
-            {
-                TileSystem.Instance.ReleaseTile(GetCurrentCell(), gameObject);
-            }
+            ReleaseBody();
 
             RaiseRemoved();
             Destroy(gameObject);
