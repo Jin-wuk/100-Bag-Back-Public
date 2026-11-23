@@ -260,9 +260,12 @@ namespace BagBack100.Player
         private void HandleAimInput(Vector3 aimDir)
         {
             if (CurrentState == PlayerState.Attacking) return;
-            
-            // 8방향 스냅(Snap)
-            float angle = Mathf.Atan2(aimDir.y, aimDir.x) * Mathf.Rad2Deg;
+            SetFacingSnapped8(aimDir);
+        }
+
+        private void SetFacingSnapped8(Vector3 dir)
+        {
+            float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
             float snappedAngle = Mathf.Round(angle / 45f) * 45f;
             float rad = snappedAngle * Mathf.Deg2Rad;
             _facingDirection = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0).normalized;
@@ -325,6 +328,15 @@ namespace BagBack100.Player
             // 타일 이동 후 선입력으로 발동된 경우, 도착한 현재 타일 기준으로 사거리 재검증 및 보정
             Vector3Int playerCell = _grid.WorldToCell(transform.position);
             playerCell.z = 0;
+
+            // 선입력 공격은 공격 종료 프레임에 바로 이어져 조준 입력(Attacking 중 무시)이 _facingDirection을 갱신할 틈이 없다.
+            // 애니·이펙트가 이전 방향을 보지 않도록, 사거리 보정보다 먼저 클릭한 칸 방향으로 바라보는 방향을 맞춘다
+            Vector3Int toTarget = targetCellPos - playerCell;
+            if (toTarget.x != 0 || toTarget.y != 0)
+            {
+                SetFacingSnapped8(new Vector3(toTarget.x, toTarget.y, 0f));
+            }
+
             int chebyshevDist = Mathf.Max(Mathf.Abs(playerCell.x - targetCellPos.x), Mathf.Abs(playerCell.y - targetCellPos.y));
             if (chebyshevDist == 0 || chebyshevDist > _stats.CurrentRange)
             {
