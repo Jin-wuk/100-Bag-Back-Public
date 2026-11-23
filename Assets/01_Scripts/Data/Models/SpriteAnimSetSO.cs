@@ -157,6 +157,15 @@ namespace BagBack100.Data.Models
                 if (entry == null) continue;
                 string label = $"패턴 공격 {i}";
                 if (entry.Pattern == null) Debug.LogWarning($"[SpriteAnimSetSO] {name}: {label}의 패턴이 비어 있습니다.", this);
+                // FindPatternAttack은 앞 항목만 찾으므로 같은 패턴이 또 있으면 뒤 항목은 쓰이지 않는다
+                for (int j = 0; j < i && entry.Pattern != null; j++)
+                {
+                    if (_patternAttacks[j] != null && _patternAttacks[j].Pattern == entry.Pattern)
+                    {
+                        Debug.LogWarning($"[SpriteAnimSetSO] {name}: {label}의 패턴 {entry.Pattern.name}이 패턴 공격 {j}와 중복이라 쓰이지 않습니다.", this);
+                        break;
+                    }
+                }
                 entry.Windup?.CollectWarnings(label + " Windup", this, true);
                 entry.Attack?.CollectWarnings(label + " Attack", this);
                 CheckHitFrame(entry.Windup, entry.Attack, entry.HitFrame, label);
