@@ -51,6 +51,17 @@ namespace BagBack100.Monster
             Refresh();
         }
 
+        // 테두리는 몬스터 밖(형제)에 있어 몬스터만 비활성화되면 혼자 남는다
+        private void OnDisable()
+        {
+            if (_renderer != null) _renderer.enabled = false;
+        }
+
+        private void OnEnable()
+        {
+            if (_renderer != null) Refresh();
+        }
+
         private void OnDestroy()
         {
             if (_renderer != null) Destroy(_renderer.gameObject);

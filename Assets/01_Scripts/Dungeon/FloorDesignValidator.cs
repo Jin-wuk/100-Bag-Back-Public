@@ -396,6 +396,10 @@ namespace BagBack100.Dungeon
                         {
                             warnings.Add($"[{region.name}] {floor}층 보스 {prefab.name}은 고정형인데 돌진 패턴 {data.patterns[i].name}이 있습니다. 고정형은 돌진하지 않습니다.");
                         }
+                        else if (data.patterns[i] is BagBack100.Monster.HitAndRunPatternSO)
+                        {
+                            warnings.Add($"[{region.name}] {floor}층 보스 {prefab.name}은 고정형인데 치고 빠지기 패턴 {data.patterns[i].name}이 있습니다. 백스텝 없이 제자리 타격만 합니다.");
+                        }
                     }
                 }
             }
