@@ -58,8 +58,8 @@ namespace BagBack100.Monster
         public GameObject DefaultProjectilePrefab => _defaultProjectilePrefab;
 
         // Stateless PatternSO(플라이웨이트 패턴)의 동시성 오염 및 GC 할당을 완벽 방지하기 위한 인스턴스별 전용 버퍼
-        // 3×3 몸 둘레 반경 2 범위(40칸)까지 재할당 없이 담는다
-        public List<Vector3Int> PatternCellsBuffer { get; } = new List<Vector3Int>(64);
+        // 5×5 몸 둘레 반경 3 범위(11×11 - 25 = 96칸)까지 재할당 없이 담는다
+        public List<Vector3Int> PatternCellsBuffer { get; } = new List<Vector3Int>(128);
         // 돌진처럼 예고 칸과 별도로 이동 경로(몸 좌하단 칸)를 들고 있어야 하는 패턴용
         public List<Vector3Int> PatternAnchorsBuffer { get; } = new List<Vector3Int>(16);
         public List<Vector3> PatternDirectionsBuffer { get; } = new List<Vector3>(8);
@@ -119,6 +119,8 @@ namespace BagBack100.Monster
         // 지금 TileSystem에 점유를 걸어 둔 몸 좌하단 칸
         private Vector3Int _occupiedAnchor;
         private bool _hasOccupiedAnchor;
+        public bool IsStationary => _monsterData != null && _monsterData.isStationary;
+        private static readonly WaitForSeconds StationaryIdleWait = new WaitForSeconds(0.1f);
 
         // 비주얼 & 경고 UI 풀링 관리
         private SpriteRenderer[] _renderers;
@@ -336,6 +338,12 @@ namespace BagBack100.Monster
                 }
 
                 // 2. 다음 행동 패턴 쿨타임이 돌고 있거나 사거리 조건이 맞지 않으면 멈추지 않고 이동(배회 또는 전투 포지셔닝) 수행!
+                // 고정형은 이동 대신 짧게 쉬며 다음 패턴 기회를 본다
+                if (IsStationary)
+                {
+                    yield return StationaryIdleWait;
+                    continue;
+                }
                 yield return StartActionCoroutine(MonsterLocomotion.ExecuteMoveStepRoutine(this));
 
                 // 3. 1칸 이동 후 다음 걸음까지의 이동 인터벌 대기 (비인식 배회 중에는 1.4배 여유롭게 이동)
@@ -515,7 +523,7 @@ namespace BagBack100.Monster
             }
 
             // 회피 스텝은 1칸 몸 전용 기동
-            if (_monsterData.movementStyle != MonsterMovementStyle.AgileFlank || _monsterData.evasiveStepCooldown <= 0f || Footprint > 1)
+            if (_monsterData.movementStyle != MonsterMovementStyle.AgileFlank || _monsterData.evasiveStepCooldown <= 0f || Footprint > 1 || IsStationary)
             {
                 return;
             }
@@ -772,7 +780,7 @@ namespace BagBack100.Monster
         // --- 여러 칸 몸 (Footprint) ---
         public int Footprint => ClampFootprint(_monsterData);
 
-        private static int ClampFootprint(MonsterDataSO data) => data != null ? Mathf.Clamp(data.footprint, 1, 3) : 1;
+        private static int ClampFootprint(MonsterDataSO data) => data != null ? Mathf.Clamp(data.footprint, 1, 5) : 1;
 
         /// <summary>프리팹의 몸 크기. 생성 전 칸 계산(보스 스폰·층 검증)용</summary>
         public static int GetFootprint(GameObject monsterPrefab)
@@ -859,7 +867,7 @@ namespace BagBack100.Monster
         /// <summary>몸 전체를 newAnchor로 옮겨 점유한다. 하나라도 막히면 아무것도 바꾸지 않고 false. 모든 몬스터 점유 이동은 이 함수를 거친다.</summary>
         public bool TryMoveBody(Vector3Int newAnchor)
         {
-            if (TileSystem.Instance == null) return false;
+            if (TileSystem.Instance == null || IsStationary) return false;
             Vector3Int oldAnchor = GetCurrentCell();
             if (!TileSystem.Instance.TryOccupyFootprint(newAnchor, Footprint, gameObject, oldAnchor)) return false;
             _occupiedAnchor = newAnchor;
@@ -1172,6 +1180,7 @@ namespace BagBack100.Monster
                 _monsterData != null &&
                 _monsterData.movementStyle == MonsterMovementStyle.RangedKiting &&
                 Footprint == 1 &&
+                !IsStationary &&
                 _monsterData.escapeOnHitCooldown > 0f &&
                 Time.time >= _nextEscapeOnHitTime)
             {
@@ -1249,7 +1258,9 @@ namespace BagBack100.Monster
 
             // 퓨즈 동안 시체가 길을 막지 않도록 타일 점유를 먼저 해제 (OnDestroy의 재해제는 무해)
             ReleaseBody();
-            List<Vector3Int> blastCells = new List<Vector3Int>((size + 2) * (size + 2));
+            // 행동 코루틴은 Die에서 모두 멈췄으므로 패턴 버퍼를 재사용한다 (GC 없음)
+            List<Vector3Int> blastCells = PatternCellsBuffer;
+            blastCells.Clear();
 
             for (int x = -1; x <= size; x++)
             {

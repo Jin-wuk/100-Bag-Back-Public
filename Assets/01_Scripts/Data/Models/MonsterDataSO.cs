@@ -25,9 +25,11 @@ namespace BagBack100.Data.Models
         public int range = 1;
         [Tooltip("플레이어를 감지하고 추적/교전을 시작하는 반경(칸)")]
         public int zocRadius = 6;
-        [Tooltip("몸 크기(N×N칸). 1 = 일반 몬스터. 2·3은 보스용이며 이동은 HeavyChase로만 동작한다")]
-        [Range(1, 3)]
+        [Tooltip("몸 크기(N×N칸). 1 = 일반 몬스터. 2 이상은 보스용이며 이동은 HeavyChase로만 동작한다. 규칙: 5 = 고정형, 3·4 = 이동형 (11 설계안)")]
+        [Range(1, 5)]
         public int footprint = 1;
+        [Tooltip("체크 시 이동하지 않는 고정형. 제자리에서 플레이어를 바라보며 패턴만 쓰고, 돌진 패턴은 쓰지 않는다")]
+        public bool isStationary = false;
 
         [Header("1. 이동 템포 및 스타일 (Locomotion)")]
         [Tooltip("HeavyChase: 직진 추적 / AgileFlank: 측면·후방 우회 / RangedKiting: 거리 유지 카이팅")]

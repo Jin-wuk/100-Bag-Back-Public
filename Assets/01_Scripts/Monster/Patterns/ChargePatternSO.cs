@@ -25,6 +25,13 @@ namespace BagBack100.Monster
         [Min(0f)]
         public float wallStunDuration = 1.5f;
 
+        // 고정형은 몸을 옮길 수 없으므로 돌진하지 않는다
+        public override bool CanExecute(MonsterController monster, int gridDistanceToPlayer)
+        {
+            if (monster != null && monster.IsStationary) return false;
+            return base.CanExecute(monster, gridDistanceToPlayer);
+        }
+
         public override IEnumerator ExecuteRoutine(MonsterController monster)
         {
             if (monster == null || monster.Grid == null || monster.Player == null || TileSystem.Instance == null)

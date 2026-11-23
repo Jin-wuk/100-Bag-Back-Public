@@ -375,9 +375,29 @@ namespace BagBack100.Dungeon
             {
                 warnings.Add($"[{region.name}] {floor}층 보스 프리팹 {prefab.name}의 데이터가 Boss 등급이 아닙니다. 전원 처치 규칙으로 동작합니다.");
             }
-            else if (monster.Data != null && monster.Data.footprint > 1 && monster.Data.movementStyle != BagBack100.Data.Core.MonsterMovementStyle.HeavyChase)
+            else if (monster.Data != null)
             {
-                warnings.Add($"[{region.name}] {floor}층 보스 {prefab.name}은 {monster.Data.footprint}×{monster.Data.footprint} 몸이라 이동 스타일 {monster.Data.movementStyle} 대신 HeavyChase로 움직입니다.");
+                var data = monster.Data;
+                int n = data.footprint;
+                if (n > 1 && !data.isStationary && data.movementStyle != BagBack100.Data.Core.MonsterMovementStyle.HeavyChase)
+                {
+                    warnings.Add($"[{region.name}] {floor}층 보스 {prefab.name}은 {n}×{n} 몸이라 이동 스타일 {data.movementStyle} 대신 HeavyChase로 움직입니다.");
+                }
+                // 크기 규칙(11 설계안): 5 = 고정형. 보스방 기둥 사이 통로가 5칸이라 5×5 이동형은 자주 끼인다
+                if (n >= 5 && !data.isStationary)
+                {
+                    warnings.Add($"[{region.name}] {floor}층 보스 {prefab.name}은 {n}×{n} 이동형입니다. 5×5 이상은 고정형(isStationary) 규칙이고, 이동하면 통로에 끼일 수 있습니다.");
+                }
+                if (data.isStationary && data.patterns != null)
+                {
+                    for (int i = 0; i < data.patterns.Count; i++)
+                    {
+                        if (data.patterns[i] is BagBack100.Monster.ChargePatternSO)
+                        {
+                            warnings.Add($"[{region.name}] {floor}층 보스 {prefab.name}은 고정형인데 돌진 패턴 {data.patterns[i].name}이 있습니다. 고정형은 돌진하지 않습니다.");
+                        }
+                    }
+                }
             }
         }
 
