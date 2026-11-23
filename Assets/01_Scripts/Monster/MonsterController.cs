@@ -1358,6 +1358,8 @@ namespace BagBack100.Monster
         {
             // 전리품은 몬스터 몸 칸을 피해 놓이므로(LootSystem) 자기 몸 칸이 비어 있어야 몸 중심 주변에 떨어진다. OnDestroy의 재해제는 무해
             ReleaseBody();
+            // Destroy는 프레임 끝에 일어나 몸 크기 콜라이더가 남는다. LootSystem은 Monster 레이어를 장애물로 보므로 먼저 꺼야 드랍 칸 탐색이 몸 밖으로 퍼진다
+            if (TryGetComponent(out Collider2D bodyCollider)) bodyCollider.enabled = false;
             if (!IsSummon)
             {
                 int dropPoolId = _monsterData != null ? _monsterData.dropPoolID : 0;
