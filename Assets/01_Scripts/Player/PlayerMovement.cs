@@ -120,7 +120,7 @@ namespace BagBack100.Player
             // Grid API를 통해 완벽한 타일 중앙값 획득
             Vector3 startPos = _grid.GetCellCenterWorld(_grid.WorldToCell(transform.position));
             
-            _currentPath = Pathfinder.FindPath(_grid, startPos, targetPos, _obstacleLayerMask);
+            _currentPath = Pathfinder.FindPath(_grid, startPos, targetPos, _obstacleLayerMask, false);
             if (_currentPath.Count > 0)
             {
                 if (_moveCoroutine != null)
@@ -343,7 +343,7 @@ namespace BagBack100.Player
                 if (_hasPendingTarget)
                 {
                     _hasPendingTarget = false;
-                    _currentPath = Pathfinder.FindPath(_grid, endPos, _pendingTarget, _obstacleLayerMask);
+                    _currentPath = Pathfinder.FindPath(_grid, endPos, _pendingTarget, _obstacleLayerMask, false);
                 }
             }
 

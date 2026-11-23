@@ -395,7 +395,15 @@ namespace BagBack100.Combat
             return false;
         }
 
-        private bool IsBlocked(Vector3Int cell) => Pathfinder.IsObstacle(_grid, new Vector2Int(cell.x, cell.y), _obstacleLayerMask);
+        private bool IsBlocked(Vector3Int cell) => IsBlocked(cell, _obstacleLayerMask);
+        private bool IsBlocked(Vector3Int cell, LayerMask mask) => Pathfinder.IsObstacle(_grid, new Vector2Int(cell.x, cell.y), mask);
+
+        // 몬스터 몸 칸에 떨어진 아이템은 밟을 수 없어 줍지 못한다(고정형 보스면 영원히). 플레이어 칸은 기존처럼 허용
+        private static bool IsMonsterCell(Vector3Int cell)
+        {
+            GameObject occupant = TileSystem.Instance.GetEntityAtTile(cell);
+            return occupant != null && occupant.TryGetComponent(out BagBack100.Monster.MonsterController _);
+        }
 
         private void SpawnLootableItem(RuntimeItem item, Vector3 position, bool avoidOriginCell)
         {
@@ -443,6 +451,20 @@ namespace BagBack100.Combat
         /// </summary>
         private Vector3Int GetNearestEmptyItemTile(Vector3Int startCell, bool avoidOriginCell)
         {
+            if (TryFindEmptyItemTile(startCell, avoidOriginCell, _obstacleLayerMask, out Vector3Int cell)) return cell;
+
+            // 몬스터 콜라이더에 사방이 막혀 탐색이 갇힌 경우. 몬스터는 곧 비켜나므로 벽만 보고 다시 찾는다.
+            // 시작 칸으로 되돌리면 같은 칸에 아이템이 겹쳐 등록이 덮어써지고, 덮인 아이템은 줍지 못한다
+            int monsterLayer = LayerMask.NameToLayer("Monster");
+            LayerMask wallsOnly = monsterLayer >= 0 ? (LayerMask)(_obstacleLayerMask & ~(1 << monsterLayer)) : _obstacleLayerMask;
+            if (wallsOnly != _obstacleLayerMask && TryFindEmptyItemTile(startCell, avoidOriginCell, wallsOnly, out cell)) return cell;
+
+            Debug.LogWarning($"[LootSystem] {startCell} 주변에 빈 드랍 칸이 없어 시작 칸에 놓습니다. 같은 칸의 기존 아이템은 줍지 못할 수 있습니다.");
+            return startCell;
+        }
+
+        private bool TryFindEmptyItemTile(Vector3Int startCell, bool avoidOriginCell, LayerMask mask, out Vector3Int result)
+        {
             _discardQueue.Clear();
             _discardVisited.Clear();
             _discardQueue.Enqueue(startCell);
@@ -451,12 +473,13 @@ namespace BagBack100.Combat
             while (_discardQueue.Count > 0)
             {
                 Vector3Int curr = _discardQueue.Dequeue();
-                bool isObstacle = IsBlocked(curr);
+                bool isObstacle = IsBlocked(curr, mask);
 
                 bool canPlaceHere = !(avoidOriginCell && curr == startCell) && !TileSystem.Instance.IsNoDropCell(curr);
-                if (canPlaceHere && !isObstacle && TileSystem.Instance.GetItemAtTile(curr) == null)
+                if (canPlaceHere && !isObstacle && TileSystem.Instance.GetItemAtTile(curr) == null && !IsMonsterCell(curr))
                 {
-                    return curr;
+                    result = curr;
+                    return true;
                 }
 
                 if (isObstacle && curr != startCell) continue;
@@ -468,14 +491,15 @@ namespace BagBack100.Combat
                     if (_discardVisited.Contains(next)) continue;
 
                     bool isDiagonal = dir.x != 0 && dir.y != 0;
-                    if (isDiagonal && (IsBlocked(new Vector3Int(curr.x + dir.x, curr.y, 0)) || IsBlocked(new Vector3Int(curr.x, curr.y + dir.y, 0)))) continue;
+                    if (isDiagonal && (IsBlocked(new Vector3Int(curr.x + dir.x, curr.y, 0), mask) || IsBlocked(new Vector3Int(curr.x, curr.y + dir.y, 0), mask))) continue;
 
                     _discardVisited.Add(next);
                     _discardQueue.Enqueue(next);
                 }
             }
 
-            return startCell;
+            result = startCell;
+            return false;
         }
     }
 }

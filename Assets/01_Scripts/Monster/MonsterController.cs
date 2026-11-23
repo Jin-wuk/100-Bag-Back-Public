@@ -58,8 +58,8 @@ namespace BagBack100.Monster
         public GameObject DefaultProjectilePrefab => _defaultProjectilePrefab;
 
         // Stateless PatternSO(플라이웨이트 패턴)의 동시성 오염 및 GC 할당을 완벽 방지하기 위한 인스턴스별 전용 버퍼
-        // 3×3 몸 둘레 반경 2 범위(40칸)까지 재할당 없이 담는다
-        public List<Vector3Int> PatternCellsBuffer { get; } = new List<Vector3Int>(64);
+        // 5×5 몸 둘레 반경 3 범위(11×11 - 25 = 96칸)까지 재할당 없이 담는다
+        public List<Vector3Int> PatternCellsBuffer { get; } = new List<Vector3Int>(128);
         // 돌진처럼 예고 칸과 별도로 이동 경로(몸 좌하단 칸)를 들고 있어야 하는 패턴용
         public List<Vector3Int> PatternAnchorsBuffer { get; } = new List<Vector3Int>(16);
         public List<Vector3> PatternDirectionsBuffer { get; } = new List<Vector3>(8);
@@ -119,6 +119,18 @@ namespace BagBack100.Monster
         // 지금 TileSystem에 점유를 걸어 둔 몸 좌하단 칸
         private Vector3Int _occupiedAnchor;
         private bool _hasOccupiedAnchor;
+        // 여러 칸 몸이 이동하는 동안 아직 풀지 않은 옛 몸 좌하단 칸 (도착·중단·제거 때 뒷줄 해제)
+        private Vector3Int _pendingReleaseAnchor;
+        private bool _hasPendingRelease;
+        private bool _isBodyRegistered;
+
+        /// <summary>점유 칸이 바뀔 때(등록·이동 시작·뒷줄 해제·제거) 발행. 발밑 표시(View) 갱신용 지역 이벤트</summary>
+        public event Action OnBodyCellsChanged;
+        /// <summary>안개 표시 상태가 바뀔 때 발행. 발밑 표시가 몬스터와 함께 숨도록</summary>
+        public event Action<bool> OnFogVisibilityChanged;
+        public bool IsVisibleByFog { get; private set; } = true;
+        public bool IsStationary => _monsterData != null && _monsterData.isStationary;
+        private static readonly WaitForSeconds StationaryIdleWait = new WaitForSeconds(0.1f);
 
         // 비주얼 & 경고 UI 풀링 관리
         private SpriteRenderer[] _renderers;
@@ -336,6 +348,12 @@ namespace BagBack100.Monster
                 }
 
                 // 2. 다음 행동 패턴 쿨타임이 돌고 있거나 사거리 조건이 맞지 않으면 멈추지 않고 이동(배회 또는 전투 포지셔닝) 수행!
+                // 고정형은 이동 대신 짧게 쉬며 다음 패턴 기회를 본다
+                if (IsStationary)
+                {
+                    yield return StationaryIdleWait;
+                    continue;
+                }
                 yield return StartActionCoroutine(MonsterLocomotion.ExecuteMoveStepRoutine(this));
 
                 // 3. 1칸 이동 후 다음 걸음까지의 이동 인터벌 대기 (비인식 배회 중에는 1.4배 여유롭게 이동)
@@ -515,7 +533,7 @@ namespace BagBack100.Monster
             }
 
             // 회피 스텝은 1칸 몸 전용 기동
-            if (_monsterData.movementStyle != MonsterMovementStyle.AgileFlank || _monsterData.evasiveStepCooldown <= 0f || Footprint > 1)
+            if (_monsterData.movementStyle != MonsterMovementStyle.AgileFlank || _monsterData.evasiveStepCooldown <= 0f || Footprint > 1 || IsStationary)
             {
                 return;
             }
@@ -754,6 +772,8 @@ namespace BagBack100.Monster
                 transform.position = _currentDestinationWorldPos;
                 _isMovingToTile = false;
             }
+            // TryMoveBody 성공 직후 MoveToTileRoutine 시작 전 틈에 끊겨도 뒷줄이 남지 않게 이동 여부와 무관하게 정리
+            FlushPendingRelease();
         }
 
         // =====================================================================
@@ -772,7 +792,7 @@ namespace BagBack100.Monster
         // --- 여러 칸 몸 (Footprint) ---
         public int Footprint => ClampFootprint(_monsterData);
 
-        private static int ClampFootprint(MonsterDataSO data) => data != null ? Mathf.Clamp(data.footprint, 1, 3) : 1;
+        private static int ClampFootprint(MonsterDataSO data) => data != null ? Mathf.Clamp(data.footprint, 1, 5) : 1;
 
         /// <summary>프리팹의 몸 크기. 생성 전 칸 계산(보스 스폰·층 검증)용</summary>
         public static int GetFootprint(GameObject monsterPrefab)
@@ -859,11 +879,60 @@ namespace BagBack100.Monster
         /// <summary>몸 전체를 newAnchor로 옮겨 점유한다. 하나라도 막히면 아무것도 바꾸지 않고 false. 모든 몬스터 점유 이동은 이 함수를 거친다.</summary>
         public bool TryMoveBody(Vector3Int newAnchor)
         {
-            if (TileSystem.Instance == null) return false;
+            if (TileSystem.Instance == null || IsStationary) return false;
+            int size = Footprint;
             Vector3Int oldAnchor = GetCurrentCell();
-            if (!TileSystem.Instance.TryOccupyFootprint(newAnchor, Footprint, gameObject, oldAnchor)) return false;
+
+            if (size <= 1)
+            {
+                if (!TileSystem.Instance.TryOccupyFootprint(newAnchor, size, gameObject, oldAnchor)) return false;
+                _occupiedAnchor = newAnchor;
+                _hasOccupiedAnchor = true;
+                return true;
+            }
+
+            // 여러 칸 몸: 이동하는 동안 옛 칸도 막아 둔다. 그림이 미끄러져 지나가는 칸이 비면 통과·헛스윙이 생긴다 (11 설계안 4.4절)
+            FlushPendingRelease();
+            if (!TileSystem.Instance.TryOccupyFootprintKeepOld(newAnchor, size, gameObject)) return false;
+            if (_hasOccupiedAnchor && oldAnchor != newAnchor)
+            {
+                _pendingReleaseAnchor = oldAnchor;
+                _hasPendingRelease = true;
+            }
             _occupiedAnchor = newAnchor;
             _hasOccupiedAnchor = true;
+            OnBodyCellsChanged?.Invoke();
+            return true;
+        }
+
+        /// <summary>
+        /// 이동 중 남겨 둔 옛 몸 칸 중 새 몸 밖의 칸(뒷줄)을 푼다. 대기 중인 해제가 없으면 아무것도 안 하므로 여러 번 불러도 안전하다.
+        /// 호출 지점: 이동 도착(MoveToTileRoutine), StopActionCoroutines, ReleaseBody, 다음 TryMoveBody
+        /// </summary>
+        private void FlushPendingRelease()
+        {
+            if (!_hasPendingRelease) return;
+            _hasPendingRelease = false;
+            if (TileSystem.Instance != null)
+            {
+                TileSystem.Instance.ReleaseFootprintExcept(_pendingReleaseAnchor, _occupiedAnchor, Footprint, gameObject);
+            }
+            OnBodyCellsChanged?.Invoke();
+        }
+
+        /// <summary>지금 실제로 점유한 칸을 감싸는 사각형(이동 중이면 옛 몸 + 새 몸). 점유가 없으면 false</summary>
+        public bool TryGetOccupiedCellBounds(out Vector3Int min, out Vector3Int max)
+        {
+            min = max = Vector3Int.zero;
+            if (!_isBodyRegistered || !_hasOccupiedAnchor) return false;
+            int n = Footprint;
+            min = _occupiedAnchor;
+            max = new Vector3Int(_occupiedAnchor.x + n - 1, _occupiedAnchor.y + n - 1, 0);
+            if (_hasPendingRelease)
+            {
+                min = Vector3Int.Min(min, _pendingReleaseAnchor);
+                max = Vector3Int.Max(max, new Vector3Int(_pendingReleaseAnchor.x + n - 1, _pendingReleaseAnchor.y + n - 1, 0));
+            }
             return true;
         }
 
@@ -873,6 +942,8 @@ namespace BagBack100.Monster
             _occupiedAnchor = GetAnchorFromCenterWorld(Grid, transform.position, Footprint);
             _hasOccupiedAnchor = true;
             TileSystem.Instance.RegisterFootprint(_occupiedAnchor, Footprint, gameObject);
+            _isBodyRegistered = true;
+            OnBodyCellsChanged?.Invoke();
         }
 
         // 투사체 트리거·플레이어 이동 폴백(OverlapPoint)이 몸 칸 어디서든 닿게 콜라이더를 몸 크기로 맞춘다. 1칸은 프리팹 값 그대로
@@ -888,7 +959,18 @@ namespace BagBack100.Monster
         {
             // 점유 칸을 기억하고 있으면 Grid가 먼저 파괴돼도 해제할 수 있다
             if ((!_hasOccupiedAnchor && Grid == null) || TileSystem.Instance == null) return;
+            // 이동 중 제거(사망·자폭·강제 제거·파괴)되면 남겨 둔 뒷줄도 함께 푼다
+            if (_hasPendingRelease)
+            {
+                _hasPendingRelease = false;
+                TileSystem.Instance.ReleaseFootprint(_pendingReleaseAnchor, Footprint, gameObject);
+            }
             TileSystem.Instance.ReleaseFootprint(GetCurrentCell(), Footprint, gameObject);
+            if (_isBodyRegistered)
+            {
+                _isBodyRegistered = false;
+                OnBodyCellsChanged?.Invoke();
+            }
         }
 
         public Vector3Int GetPlayerCell()
@@ -937,6 +1019,7 @@ namespace BagBack100.Monster
             }
             transform.position = endPos;
             _isMovingToTile = false;
+            FlushPendingRelease();
 
             if (FogOfWarSystem.Instance != null)
             {
@@ -1172,6 +1255,7 @@ namespace BagBack100.Monster
                 _monsterData != null &&
                 _monsterData.movementStyle == MonsterMovementStyle.RangedKiting &&
                 Footprint == 1 &&
+                !IsStationary &&
                 _monsterData.escapeOnHitCooldown > 0f &&
                 Time.time >= _nextEscapeOnHitTime)
             {
@@ -1249,7 +1333,9 @@ namespace BagBack100.Monster
 
             // 퓨즈 동안 시체가 길을 막지 않도록 타일 점유를 먼저 해제 (OnDestroy의 재해제는 무해)
             ReleaseBody();
-            List<Vector3Int> blastCells = new List<Vector3Int>((size + 2) * (size + 2));
+            // 행동 코루틴은 Die에서 모두 멈췄으므로 패턴 버퍼를 재사용한다 (GC 없음)
+            List<Vector3Int> blastCells = PatternCellsBuffer;
+            blastCells.Clear();
 
             for (int x = -1; x <= size; x++)
             {
@@ -1270,6 +1356,10 @@ namespace BagBack100.Monster
 
         private void FinalizeDeath()
         {
+            // 전리품은 몬스터 몸 칸을 피해 놓이므로(LootSystem) 자기 몸 칸이 비어 있어야 몸 중심 주변에 떨어진다. OnDestroy의 재해제는 무해
+            ReleaseBody();
+            // Destroy는 프레임 끝에 일어나 몸 크기 콜라이더가 남는다. LootSystem은 Monster 레이어를 장애물로 보므로 먼저 꺼야 드랍 칸 탐색이 몸 밖으로 퍼진다
+            if (TryGetComponent(out Collider2D bodyCollider)) bodyCollider.enabled = false;
             if (!IsSummon)
             {
                 int dropPoolId = _monsterData != null ? _monsterData.dropPoolID : 0;
@@ -1318,6 +1408,11 @@ namespace BagBack100.Monster
 
         public void SetVisibleByFog(bool isVisible)
         {
+            if (IsVisibleByFog != isVisible)
+            {
+                IsVisibleByFog = isVisible;
+                OnFogVisibilityChanged?.Invoke(isVisible);
+            }
             if (_renderers == null) return;
             for (int i = 0; i < _renderers.Length; i++)
             {
