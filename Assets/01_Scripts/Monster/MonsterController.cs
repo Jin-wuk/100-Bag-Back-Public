@@ -126,6 +126,9 @@ namespace BagBack100.Monster
 
         /// <summary>점유 칸이 바뀔 때(등록·이동 시작·뒷줄 해제·제거) 발행. 발밑 표시(View) 갱신용 지역 이벤트</summary>
         public event Action OnBodyCellsChanged;
+        /// <summary>안개 표시 상태가 바뀔 때 발행. 발밑 표시가 몬스터와 함께 숨도록</summary>
+        public event Action<bool> OnFogVisibilityChanged;
+        public bool IsVisibleByFog { get; private set; } = true;
         public bool IsStationary => _monsterData != null && _monsterData.isStationary;
         private static readonly WaitForSeconds StationaryIdleWait = new WaitForSeconds(0.1f);
 
@@ -1401,6 +1404,11 @@ namespace BagBack100.Monster
 
         public void SetVisibleByFog(bool isVisible)
         {
+            if (IsVisibleByFog != isVisible)
+            {
+                IsVisibleByFog = isVisible;
+                OnFogVisibilityChanged?.Invoke(isVisible);
+            }
             if (_renderers == null) return;
             for (int i = 0; i < _renderers.Length; i++)
             {
