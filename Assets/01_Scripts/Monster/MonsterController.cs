@@ -119,6 +119,13 @@ namespace BagBack100.Monster
         // 지금 TileSystem에 점유를 걸어 둔 몸 좌하단 칸
         private Vector3Int _occupiedAnchor;
         private bool _hasOccupiedAnchor;
+        // 여러 칸 몸이 이동하는 동안 아직 풀지 않은 옛 몸 좌하단 칸 (도착·중단·제거 때 뒷줄 해제)
+        private Vector3Int _pendingReleaseAnchor;
+        private bool _hasPendingRelease;
+        private bool _isBodyRegistered;
+
+        /// <summary>점유 칸이 바뀔 때(등록·이동 시작·뒷줄 해제·제거) 발행. 발밑 표시(View) 갱신용 지역 이벤트</summary>
+        public event Action OnBodyCellsChanged;
         public bool IsStationary => _monsterData != null && _monsterData.isStationary;
         private static readonly WaitForSeconds StationaryIdleWait = new WaitForSeconds(0.1f);
 
@@ -762,6 +769,8 @@ namespace BagBack100.Monster
                 transform.position = _currentDestinationWorldPos;
                 _isMovingToTile = false;
             }
+            // TryMoveBody 성공 직후 MoveToTileRoutine 시작 전 틈에 끊겨도 뒷줄이 남지 않게 이동 여부와 무관하게 정리
+            FlushPendingRelease();
         }
 
         // =====================================================================
@@ -868,10 +877,59 @@ namespace BagBack100.Monster
         public bool TryMoveBody(Vector3Int newAnchor)
         {
             if (TileSystem.Instance == null || IsStationary) return false;
+            int size = Footprint;
             Vector3Int oldAnchor = GetCurrentCell();
-            if (!TileSystem.Instance.TryOccupyFootprint(newAnchor, Footprint, gameObject, oldAnchor)) return false;
+
+            if (size <= 1)
+            {
+                if (!TileSystem.Instance.TryOccupyFootprint(newAnchor, size, gameObject, oldAnchor)) return false;
+                _occupiedAnchor = newAnchor;
+                _hasOccupiedAnchor = true;
+                return true;
+            }
+
+            // 여러 칸 몸: 이동하는 동안 옛 칸도 막아 둔다. 그림이 미끄러져 지나가는 칸이 비면 통과·헛스윙이 생긴다 (11 설계안 4.4절)
+            FlushPendingRelease();
+            if (!TileSystem.Instance.TryOccupyFootprintKeepOld(newAnchor, size, gameObject)) return false;
+            if (_hasOccupiedAnchor && oldAnchor != newAnchor)
+            {
+                _pendingReleaseAnchor = oldAnchor;
+                _hasPendingRelease = true;
+            }
             _occupiedAnchor = newAnchor;
             _hasOccupiedAnchor = true;
+            OnBodyCellsChanged?.Invoke();
+            return true;
+        }
+
+        /// <summary>
+        /// 이동 중 남겨 둔 옛 몸 칸 중 새 몸 밖의 칸(뒷줄)을 푼다. 대기 중인 해제가 없으면 아무것도 안 하므로 여러 번 불러도 안전하다.
+        /// 호출 지점: 이동 도착(MoveToTileRoutine), StopActionCoroutines, ReleaseBody, 다음 TryMoveBody
+        /// </summary>
+        private void FlushPendingRelease()
+        {
+            if (!_hasPendingRelease) return;
+            _hasPendingRelease = false;
+            if (TileSystem.Instance != null)
+            {
+                TileSystem.Instance.ReleaseFootprintExcept(_pendingReleaseAnchor, _occupiedAnchor, Footprint, gameObject);
+            }
+            OnBodyCellsChanged?.Invoke();
+        }
+
+        /// <summary>지금 실제로 점유한 칸을 감싸는 사각형(이동 중이면 옛 몸 + 새 몸). 점유가 없으면 false</summary>
+        public bool TryGetOccupiedCellBounds(out Vector3Int min, out Vector3Int max)
+        {
+            min = max = Vector3Int.zero;
+            if (!_isBodyRegistered || !_hasOccupiedAnchor) return false;
+            int n = Footprint;
+            min = _occupiedAnchor;
+            max = new Vector3Int(_occupiedAnchor.x + n - 1, _occupiedAnchor.y + n - 1, 0);
+            if (_hasPendingRelease)
+            {
+                min = Vector3Int.Min(min, _pendingReleaseAnchor);
+                max = Vector3Int.Max(max, new Vector3Int(_pendingReleaseAnchor.x + n - 1, _pendingReleaseAnchor.y + n - 1, 0));
+            }
             return true;
         }
 
@@ -881,6 +939,8 @@ namespace BagBack100.Monster
             _occupiedAnchor = GetAnchorFromCenterWorld(Grid, transform.position, Footprint);
             _hasOccupiedAnchor = true;
             TileSystem.Instance.RegisterFootprint(_occupiedAnchor, Footprint, gameObject);
+            _isBodyRegistered = true;
+            OnBodyCellsChanged?.Invoke();
         }
 
         // 투사체 트리거·플레이어 이동 폴백(OverlapPoint)이 몸 칸 어디서든 닿게 콜라이더를 몸 크기로 맞춘다. 1칸은 프리팹 값 그대로
@@ -896,7 +956,18 @@ namespace BagBack100.Monster
         {
             // 점유 칸을 기억하고 있으면 Grid가 먼저 파괴돼도 해제할 수 있다
             if ((!_hasOccupiedAnchor && Grid == null) || TileSystem.Instance == null) return;
+            // 이동 중 제거(사망·자폭·강제 제거·파괴)되면 남겨 둔 뒷줄도 함께 푼다
+            if (_hasPendingRelease)
+            {
+                _hasPendingRelease = false;
+                TileSystem.Instance.ReleaseFootprint(_pendingReleaseAnchor, Footprint, gameObject);
+            }
             TileSystem.Instance.ReleaseFootprint(GetCurrentCell(), Footprint, gameObject);
+            if (_isBodyRegistered)
+            {
+                _isBodyRegistered = false;
+                OnBodyCellsChanged?.Invoke();
+            }
         }
 
         public Vector3Int GetPlayerCell()
@@ -945,6 +1016,7 @@ namespace BagBack100.Monster
             }
             transform.position = endPos;
             _isMovingToTile = false;
+            FlushPendingRelease();
 
             if (FogOfWarSystem.Instance != null)
             {

@@ -101,19 +101,49 @@ namespace BagBack100.Core
         // 몸 칸 하나라도 다른 엔티티가 차지하고 있으면 아무것도 바꾸지 않는다. 일부만 옮겨져 몸이 찢어지는 일을 막는다
         public bool TryOccupyFootprint(Vector3Int newAnchor, int size, GameObject entity, Vector3Int oldAnchor)
         {
-            for (int x = 0; x < size; x++)
-            {
-                for (int y = 0; y < size; y++)
-                {
-                    Vector3Int cell = new Vector3Int(newAnchor.x + x, newAnchor.y + y, 0);
-                    GameObject occupant = GetEntityAtTile(cell);
-                    if (occupant != null && occupant != entity) return false;
-                }
-            }
+            if (!IsFootprintFree(newAnchor, size, entity)) return false;
 
             ReleaseFootprint(oldAnchor, size, entity);
             RegisterFootprint(newAnchor, size, entity);
             return true;
+        }
+
+        /// <summary>
+        /// 옛 몸 칸은 그대로 두고 새 몸 칸만 추가 점유한다. 여러 칸 몸이 미끄러져 이동하는 동안 그림이 덮은 칸이 비지 않게 하려는 것이고,
+        /// 뒷줄 해제는 호출자가 도착·중단 때 ReleaseFootprintExcept로 한다 (11 설계안 4.4절)
+        /// </summary>
+        public bool TryOccupyFootprintKeepOld(Vector3Int newAnchor, int size, GameObject entity)
+        {
+            if (!IsFootprintFree(newAnchor, size, entity)) return false;
+            RegisterFootprint(newAnchor, size, entity);
+            return true;
+        }
+
+        public bool IsFootprintFree(Vector3Int anchor, int size, GameObject entity)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    GameObject occupant = GetEntityAtTile(new Vector3Int(anchor.x + x, anchor.y + y, 0));
+                    if (occupant != null && occupant != entity) return false;
+                }
+            }
+            return true;
+        }
+
+        // oldAnchor 몸 칸 중 keepAnchor 몸에 속하지 않는 칸만 해제한다
+        public void ReleaseFootprintExcept(Vector3Int oldAnchor, Vector3Int keepAnchor, int size, GameObject entity)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    Vector3Int cell = new Vector3Int(oldAnchor.x + x, oldAnchor.y + y, 0);
+                    bool inKeep = cell.x >= keepAnchor.x && cell.x < keepAnchor.x + size && cell.y >= keepAnchor.y && cell.y < keepAnchor.y + size;
+                    if (!inKeep) ReleaseTile(cell, entity);
+                }
+            }
         }
 
         public void RegisterFootprint(Vector3Int anchor, int size, GameObject entity)
