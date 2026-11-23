@@ -397,6 +397,13 @@ namespace BagBack100.Combat
 
         private bool IsBlocked(Vector3Int cell) => Pathfinder.IsObstacle(_grid, new Vector2Int(cell.x, cell.y), _obstacleLayerMask);
 
+        // 몬스터 몸 칸에 떨어진 아이템은 밟을 수 없어 줍지 못한다(고정형 보스면 영원히). 플레이어 칸은 기존처럼 허용
+        private static bool IsMonsterCell(Vector3Int cell)
+        {
+            GameObject occupant = TileSystem.Instance.GetEntityAtTile(cell);
+            return occupant != null && occupant.TryGetComponent(out BagBack100.Monster.MonsterController _);
+        }
+
         private void SpawnLootableItem(RuntimeItem item, Vector3 position, bool avoidOriginCell)
         {
             if (_grid == null || TileSystem.Instance == null)
@@ -454,7 +461,7 @@ namespace BagBack100.Combat
                 bool isObstacle = IsBlocked(curr);
 
                 bool canPlaceHere = !(avoidOriginCell && curr == startCell) && !TileSystem.Instance.IsNoDropCell(curr);
-                if (canPlaceHere && !isObstacle && TileSystem.Instance.GetItemAtTile(curr) == null)
+                if (canPlaceHere && !isObstacle && TileSystem.Instance.GetItemAtTile(curr) == null && !IsMonsterCell(curr))
                 {
                     return curr;
                 }

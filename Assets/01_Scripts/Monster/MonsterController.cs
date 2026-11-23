@@ -1356,6 +1356,8 @@ namespace BagBack100.Monster
 
         private void FinalizeDeath()
         {
+            // 전리품은 몬스터 몸 칸을 피해 놓이므로(LootSystem) 자기 몸 칸이 비어 있어야 몸 중심 주변에 떨어진다. OnDestroy의 재해제는 무해
+            ReleaseBody();
             if (!IsSummon)
             {
                 int dropPoolId = _monsterData != null ? _monsterData.dropPoolID : 0;
