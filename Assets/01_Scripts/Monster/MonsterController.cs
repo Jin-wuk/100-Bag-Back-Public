@@ -47,6 +47,8 @@ namespace BagBack100.Monster
         // 패턴(공격)을 시작할 때 플레이어 쪽 방향과 횟수를 기록한다. 외형이 "마지막 행동 방향"을 잡는 기준
         public Vector3 LastActionDirection { get; private set; }
         public int ActionCount { get; private set; }
+        // 지금 실행 중인 패턴(폴백 근접·패턴 밖이면 null). 외형이 패턴별 공격 애니를 고르는 기준
+        public MonsterPatternSO CurrentPattern { get; private set; }
 
         public EntityCombat Combat { get; private set; }
         public Grid Grid { get; private set; }
@@ -291,10 +293,12 @@ namespace BagBack100.Monster
                             _patternCooldownExpirations[selectedPattern] = Time.time + selectedPattern.patternCooldown;
                             _nextGlobalPatternTime = Time.time + _monsterData.globalPatternCooldown;
 
+                            CurrentPattern = selectedPattern;
                             MarkActionTowardPlayer();
                             yield return StartActionCoroutine(selectedPattern.ExecuteRoutine(this));
 
                             _isExecutingPattern = false;
+                            CurrentPattern = null;
                             HideAimLines();
 
                             // 개별 패턴 쿨타임 및 글로벌 행동 쿨타임 등록
@@ -314,6 +318,7 @@ namespace BagBack100.Monster
                             // 패턴 SO가 하나도 등록되지 않은 에셋을 위한 안전 폴백 기본 근접 공격
                             patternTriggered = true;
                             _isExecutingPattern = true;
+                            CurrentPattern = null;
                             MarkActionTowardPlayer();
                             yield return StartActionCoroutine(ExecuteFallbackMeleeRoutine());
                             _isExecutingPattern = false;
@@ -741,6 +746,7 @@ namespace BagBack100.Monster
                 }
             }
             _actionChildCoroutines.Clear();
+            CurrentPattern = null;
 
             // 타일 이동 도중 중단됐다면, 공중에 뜨거나 중간 타일에 걸치지 않도록 이미 점유한 목적지 좌표로 즉시 정렬
             if (_isMovingToTile)
@@ -1287,6 +1293,7 @@ namespace BagBack100.Monster
             CurrentState = MonsterAIState.Dead;
 
             StopAllCoroutines();
+            CurrentPattern = null;
             ClearActiveWarnings();
             HideAimLines();
 
