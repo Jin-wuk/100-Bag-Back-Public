@@ -6,8 +6,8 @@ namespace BagBack100.Monster
     /// <summary>
     /// Role: 몬스터가 바라보는 방향에 맞춰 SpriteRenderer의 4방향 스프라이트 프레임만 바꾼다 (대기 루프, 공격 = 예고 구간 + 타격 구간). 색·스케일·표시 여부(피격·스턴·안개 연출)는 건드리지 않는다.
     ///       방향은 플레이어처럼 마지막 행동 기준: 이동 중 = 이동 방향, 패턴(공격)을 시작하면 그 순간의 플레이어 쪽, 그 외에는 그대로 유지.
-    ///       이동 모션은 없다. 칸 사이를 이동하는 동안에도 대기 프레임을 재생한다.
-    /// Dependencies: SpriteAnimSetSO(대기·공격 프레임), DirectionalSpriteSO(애니 SO가 없을 때 정지 이미지), MonsterController(이동 상태·이동 방향·마지막 행동 방향·패턴 실행 여부)
+    ///       이동 프레임이 없으면 칸 사이를 이동하는 동안에도 대기 프레임을 재생하고, 있으면(나무 walk) 이동 프레임을 반복한다. 공격 애니는 패턴별로 고를 수 있다.
+    /// Dependencies: SpriteAnimSetSO(대기·이동·공격·패턴별 공격 프레임), DirectionalSpriteSO(애니 SO가 없을 때 정지 이미지), MonsterController(이동 상태·이동 방향·마지막 행동 방향·패턴 실행 여부)
     /// Events: 없음 (구독: MonsterController.OnAttackWindup)
     /// </summary>
     [RequireComponent(typeof(SpriteRenderer))]
@@ -35,6 +35,13 @@ namespace BagBack100.Monster
         private float _phaseTime;
         private float _windupDuration;
         private float _idleTime;
+        private float _moveTime;
+
+        // 이번 공격에 쓸 프레임 세트. 예고 시작 때 패턴으로 골라 고정한다(목록에 없으면 기본 공격)
+        private DirectionalFrames _curWindup;
+        private DirectionalFrames _curAttack;
+        private int _curHitFrame;
+        private bool _curLoopStrike;
 
         private void Awake()
         {
@@ -61,10 +68,31 @@ namespace BagBack100.Monster
             if (_monster == null) return;
             _monster.OnAttackWindup -= HandleAttackWindup;
             _phase = AnimPhase.Idle;
+            _moveTime = 0f;
+            _curWindup = null;
+            _curAttack = null;
         }
 
         private void HandleAttackWindup(float duration)
         {
+            if (_animSet != null)
+            {
+                PatternAttackAnim patternAnim = _animSet.FindPatternAttack(_monster.CurrentPattern);
+                if (patternAnim != null)
+                {
+                    _curWindup = patternAnim.Windup;
+                    _curAttack = patternAnim.Attack;
+                    _curHitFrame = patternAnim.HitFrame;
+                    _curLoopStrike = patternAnim.LoopStrikeWhileExecuting;
+                }
+                else
+                {
+                    _curWindup = _animSet.AttackWindup;
+                    _curAttack = _animSet.Attack;
+                    _curHitFrame = _animSet.AttackHitFrame;
+                    _curLoopStrike = _animSet.LoopStrikeWhileExecuting;
+                }
+            }
             _phase = AnimPhase.Windup;
             _phaseTime = 0f;
             _windupDuration = Mathf.Max(0.01f, duration);
@@ -114,9 +142,11 @@ namespace BagBack100.Monster
         {
             // 예고용 프레임이 따로 있으면(고슴도치 몸 말기) 예고 = 그 프레임 전체, 타격 = 공격 프레임 전체.
             // 없으면 공격 프레임 하나를 타격 프레임 번호에서 나눠 앞은 예고, 뒤는 타격으로 쓴다
-            Sprite[] attack = _animSet.Attack.Get(_facing);
+            if (_phase == AnimPhase.Idle || _curAttack == null) return PickIdleOrMoveFrame(dt);
+
+            Sprite[] attack = _curAttack.Get(_facing);
             int attackCount = attack != null ? attack.Length : 0;
-            Sprite[] windupFrames = _animSet.AttackWindup.Get(_facing);
+            Sprite[] windupFrames = _curWindup != null ? _curWindup.Get(_facing) : null;
             int windupStart = 0;
             int windupLength;
             int strikeStart;
@@ -128,7 +158,7 @@ namespace BagBack100.Monster
             else
             {
                 windupFrames = attack;
-                windupLength = Mathf.Min(_animSet.AttackHitFrame, attackCount);
+                windupLength = Mathf.Min(_curHitFrame, attackCount);
                 strikeStart = windupLength;
             }
             int strikeLength = attackCount - strikeStart;
@@ -151,7 +181,7 @@ namespace BagBack100.Monster
             {
                 _phaseTime += dt;
                 int index = (int)(_phaseTime * _animSet.AttackFps);
-                if (strikeLength > 0 && index >= strikeLength && _animSet.LoopStrikeWhileExecuting && _monster.IsExecutingPattern)
+                if (strikeLength > 0 && index >= strikeLength && _curLoopStrike && _monster.IsExecutingPattern)
                 {
                     index %= strikeLength;
                 }
@@ -163,6 +193,23 @@ namespace BagBack100.Monster
                 _idleTime = 0f;
             }
 
+            return PickIdleOrMoveFrame(dt);
+        }
+
+        // 이동 프레임이 있는 몬스터(나무 walk)는 칸을 건너는 동안 이동 프레임을 반복한다.
+        // 칸 사이 대기(moveInterval)에도 _moveTime을 되감지 않아 다음 칸에서 이어 재생된다(짧은 이동마다 앞 프레임만 도는 것 방지)
+        private Sprite PickIdleOrMoveFrame(float dt)
+        {
+            if (_monster.IsMovingToTile)
+            {
+                Sprite[] move = _animSet.Move.Get(_facing);
+                if (move != null && move.Length > 0)
+                {
+                    _moveTime += dt * _animSet.MoveFps;
+                    if (_moveTime >= move.Length) _moveTime -= move.Length * (int)(_moveTime / move.Length);
+                    return move[(int)_moveTime];
+                }
+            }
             return PickIdleFrame(dt);
         }
 

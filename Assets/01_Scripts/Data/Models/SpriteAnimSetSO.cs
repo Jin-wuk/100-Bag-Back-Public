@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
+using BagBack100.Monster;
 
 namespace BagBack100.Data.Models
 {
@@ -58,9 +60,28 @@ namespace BagBack100.Data.Models
         FullCyclePerTile  // 한 칸에 사이클 전체
     }
 
+    // (몬스터) 특정 패턴에서 기본 공격 애니 대신 쓸 프레임 세트. 예고·타격 규칙은 기본 공격과 같다
+    [Serializable]
+    public class PatternAttackAnim
+    {
+        [SerializeField] private MonsterPatternSO _pattern;
+        [Tooltip("예고 전용 프레임. 비어 있으면 _attack[0.._hitFrame-1]을 예고로 쓴다")]
+        [SerializeField] private DirectionalFrames _windup = new DirectionalFrames();
+        [SerializeField] private DirectionalFrames _attack = new DirectionalFrames();
+        [SerializeField, Min(0)] private int _hitFrame = 0;
+        [SerializeField] private bool _loopStrikeWhileExecuting = false;
+
+        public MonsterPatternSO Pattern => _pattern;
+        public DirectionalFrames Windup => _windup;
+        public DirectionalFrames Attack => _attack;
+        public int HitFrame => _hitFrame;
+        public bool LoopStrikeWhileExecuting => _loopStrikeWhileExecuting;
+    }
+
     /// <summary>
     /// Role: 캐릭터 1종의 4방향 스프라이트 애니메이션 정적 데이터 (대기·이동·공격 프레임과 재생 속도).
-    /// Dependencies: 없음
+    ///       몬스터는 패턴별 공격 애니(_patternAttacks)와 이동 중 반복 재생할 이동 프레임(_moveFps)을 추가로 쓸 수 있다.
+    /// Dependencies: MonsterPatternSO(패턴별 공격 애니 키)
     /// Events: 없음
     /// </summary>
     [CreateAssetMenu(fileName = "NewSpriteAnimSet", menuName = "BagBack100/Data/SpriteAnimSet")]
@@ -81,6 +102,10 @@ namespace BagBack100.Data.Models
         [SerializeField, Min(0)] private int _attackHitFrame = 0;
         [Tooltip("(몬스터) 패턴이 끝나지 않았으면(돌진 이동 등) 타격 프레임을 반복한다")]
         [SerializeField] private bool _loopStrikeWhileExecuting = false;
+        [Tooltip("(몬스터) 패턴별 공격 애니. 목록에 없는 패턴은 위 기본 공격 애니를 쓴다")]
+        [SerializeField] private List<PatternAttackAnim> _patternAttacks = new List<PatternAttackAnim>();
+        [Tooltip("(몬스터) 이동 프레임이 있을 때 이동 중 반복 재생 속도. 플레이어는 칸 진행도로 재생하므로 쓰지 않는다")]
+        [SerializeField, Min(0.1f)] private float _moveFps = 10f;
         [SerializeField, Min(0.1f)] private float _idleFps = 4f;
         [Tooltip("공격 프레임 초당 프레임 수. 1회 재생 후 마지막 프레임을 유지한다")]
         [SerializeField, Min(0.1f)] private float _attackFps = 12f;
@@ -101,6 +126,18 @@ namespace BagBack100.Data.Models
         public float AttackFps => _attackFps;
         public float StepChainGap => _stepChainGap;
         public int DashFrame => _dashFrame;
+        public float MoveFps => _moveFps;
+
+        // 패턴 수가 적어 선형 탐색. 할당 없음
+        public PatternAttackAnim FindPatternAttack(MonsterPatternSO pattern)
+        {
+            if (pattern == null || _patternAttacks == null) return null;
+            for (int i = 0; i < _patternAttacks.Count; i++)
+            {
+                if (_patternAttacks[i] != null && _patternAttacks[i].Pattern == pattern) return _patternAttacks[i];
+            }
+            return null;
+        }
 
         private void OnValidate()
         {
@@ -111,16 +148,42 @@ namespace BagBack100.Data.Models
             _attack?.CollectWarnings("Attack", this);
             _attackWindup?.CollectWarnings("AttackWindup", this, true);
 
-            // 타격 프레임 번호는 예고 전용 프레임이 없는 방향에서만 쓴다
-            if (_attack == null || _attackWindup == null) return;
+            CheckHitFrame(_attackWindup, _attack, _attackHitFrame, "기본 공격");
+
+            if (_patternAttacks == null) return;
+            for (int i = 0; i < _patternAttacks.Count; i++)
+            {
+                PatternAttackAnim entry = _patternAttacks[i];
+                if (entry == null) continue;
+                string label = $"패턴 공격 {i}";
+                if (entry.Pattern == null) Debug.LogWarning($"[SpriteAnimSetSO] {name}: {label}의 패턴이 비어 있습니다.", this);
+                // FindPatternAttack은 앞 항목만 찾으므로 같은 패턴이 또 있으면 뒤 항목은 쓰이지 않는다
+                for (int j = 0; j < i && entry.Pattern != null; j++)
+                {
+                    if (_patternAttacks[j] != null && _patternAttacks[j].Pattern == entry.Pattern)
+                    {
+                        Debug.LogWarning($"[SpriteAnimSetSO] {name}: {label}의 패턴 {entry.Pattern.name}이 패턴 공격 {j}와 중복이라 쓰이지 않습니다.", this);
+                        break;
+                    }
+                }
+                entry.Windup?.CollectWarnings(label + " Windup", this, true);
+                entry.Attack?.CollectWarnings(label + " Attack", this);
+                CheckHitFrame(entry.Windup, entry.Attack, entry.HitFrame, label);
+            }
+        }
+
+        // 타격 프레임 번호는 예고 전용 프레임이 없는 방향에서만 쓴다
+        private void CheckHitFrame(DirectionalFrames windupFrames, DirectionalFrames attackFrames, int hitFrame, string label)
+        {
+            if (attackFrames == null || windupFrames == null) return;
             for (int i = 0; i < 4; i++)
             {
                 FacingDir4 dir = (FacingDir4)i;
-                Sprite[] windup = _attackWindup.Get(dir);
-                Sprite[] attack = _attack.Get(dir);
-                if ((windup == null || windup.Length == 0) && attack != null && attack.Length > 0 && _attackHitFrame >= attack.Length)
+                Sprite[] windup = windupFrames.Get(dir);
+                Sprite[] attack = attackFrames.Get(dir);
+                if ((windup == null || windup.Length == 0) && attack != null && attack.Length > 0 && hitFrame >= attack.Length)
                 {
-                    Debug.LogWarning($"[SpriteAnimSetSO] {name}: {dir} 타격 프레임 번호({_attackHitFrame})가 공격 프레임 수({attack.Length}) 이상이라 타격 구간이 비어 있습니다.", this);
+                    Debug.LogWarning($"[SpriteAnimSetSO] {name}: {label} {dir} 타격 프레임 번호({hitFrame})가 공격 프레임 수({attack.Length}) 이상이라 타격 구간이 비어 있습니다.", this);
                 }
             }
         }
