@@ -44,8 +44,12 @@ namespace BagBack100.Core
         /// <param name="startWorldPos">시작 월드 좌표</param>
         /// <param name="targetWorldPos">목표 월드 좌표</param>
         /// <param name="obstacleLayerMask">장애물로 인식할 레이어 마스크 (Wall 등)</param>
+        /// <param name="useDangerCost">
+        /// 위험 칸(공격 경고) 회피 비용을 쓸지. AI용. 플레이어는 false: 입력한 칸으로 가야 하고, 위험 칸이 목표면 비용(+50)만큼
+        /// 탐색이 넓게 퍼져 MaxSearchIterations를 넘기고 바로 옆 칸 이동도 실패한다
+        /// </param>
         /// <returns>월드 좌표 기준 경로 리스트 (도달 불가능 시 빈 리스트 반환)</returns>
-        public static List<Vector3> FindPath(Grid grid, Vector3 startWorldPos, Vector3 targetWorldPos, LayerMask obstacleLayerMask)
+        public static List<Vector3> FindPath(Grid grid, Vector3 startWorldPos, Vector3 targetWorldPos, LayerMask obstacleLayerMask, bool useDangerCost = true)
         {
             if (grid == null) return new List<Vector3>();
 
@@ -105,7 +109,7 @@ namespace BagBack100.Core
                         continue;
 
                     float dangerCost = 0f;
-                    if (TileSystem.Instance != null)
+                    if (useDangerCost && TileSystem.Instance != null)
                     {
                         dangerCost = TileSystem.Instance.GetDangerCost(new Vector3Int(neighborPos.x, neighborPos.y, 0));
                     }
