@@ -3,12 +3,13 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using BagBack100.Data.Core;
 using BagBack100.Core;
+using BagBack100.Data.Models;
 
 namespace BagBack100.Player
 {
     /// <summary>
     /// Role: 플레이어 기본 스탯 + 장비 보너스 합산, HP/MP 관리, 피격(방어력 경감, 피격 무적, 보스 처치 후 무적), 사망 처리(가방·장비 증발 후 허브 복귀).
-    /// Dependencies: EquipmentManager, InventoryManager, CombatMath, PlayerSessionData
+    /// Dependencies: PlayerBaseStatsSO(기본 스탯), EquipmentManager, InventoryManager, CombatMath, PlayerSessionData
     /// Events: OnManagerCreated(static), OnStatsChanged, GlobalEvents.OnEntityDamaged
     /// </summary>
     [RequireComponent(typeof(EquipmentManager))]
@@ -18,13 +19,8 @@ namespace BagBack100.Player
         public event Action<int, int, int, int, float, int> OnStatsChanged;
 
         [Header("Base Stats")]
-        [SerializeField] private int _baseHp = 100;
-        [SerializeField] private int _baseMp = 50;
-        [SerializeField] private int _baseAttack = 10;
-        [SerializeField] private int _baseDefense = 5;
-        [SerializeField] private float _baseSpeed = 10f; // 이동 속도
-        [SerializeField] private float _baseAttackSpeed = 1f; // 초당 공격 횟수
-        [SerializeField] private int _baseRange = 1;
+        [Tooltip("장비 보너스를 더하기 전 기본 스탯. 던전 Player.prefab과 허브 Manager가 같은 에셋을 쓴다")]
+        [SerializeField] private PlayerBaseStatsSO _baseStats;
 
         [Header("Hit Invincibility (모든 피격 동일, 유저 결정 2026-11-05)")]
         [Tooltip("피격 후 모든 피해를 무시하는 시간(초)")]
@@ -60,6 +56,7 @@ namespace BagBack100.Player
         {
             _equipmentManager = GetComponent<EquipmentManager>();
             _inventoryManager = GetComponent<InventoryManager>();
+            if (_baseStats == null) Debug.LogError($"[PlayerStatManager] {name}: 기본 스탯 SO(_baseStats)가 연결되지 않아 스탯을 계산하지 않습니다.", this);
             _hitFeedbackRenderer = GetComponentInChildren<SpriteRenderer>();
             // 차징 연출이 색을 바꾸므로 복구 기준은 피격 순간의 색이 아니라 여기서 저장한 기본색이다
             if (_hitFeedbackRenderer != null) _hitFeedbackBaseColor = _hitFeedbackRenderer.color;
@@ -91,12 +88,14 @@ namespace BagBack100.Player
 
         private void CalculateStats()
         {
+            if (_baseStats == null) return;
+
             var eqStats = _equipmentManager != null
                 ? _equipmentManager.GetTotalStats()
                 : (hp: 0, mp: 0, atk: 0, def: 0, speed: 0f, range: 0, atkSpeedBonus: 0f, weaponBaseAtkSpeed: 0f);
 
-            MaxHp = Mathf.Max(1, _baseHp + eqStats.hp);
-            MaxMp = Mathf.Max(0, _baseMp + eqStats.mp);
+            MaxHp = Mathf.Max(1, _baseStats.Hp + eqStats.hp);
+            MaxMp = Mathf.Max(0, _baseStats.Mp + eqStats.mp);
 
             if (!_isInitialized)
             {
@@ -110,15 +109,15 @@ namespace BagBack100.Player
                 CurrentMp = Mathf.Clamp(CurrentMp, 0, MaxMp);
             }
 
-            CurrentAttack = _baseAttack + eqStats.atk;
-            CurrentDefense = _baseDefense + eqStats.def;
-            CurrentRange = _baseRange + eqStats.range;
+            CurrentAttack = _baseStats.Attack + eqStats.atk;
+            CurrentDefense = _baseStats.Defense + eqStats.def;
+            CurrentRange = _baseStats.Range + eqStats.range;
 
-            CurrentSpeed = Mathf.Max(1f, _baseSpeed + eqStats.speed);
+            CurrentSpeed = Mathf.Max(1f, _baseStats.Speed + eqStats.speed);
             
             // 공격 속도 계산 로직
             // 무기의 고유 공격 속도가 우선순위, 없으면 플레이어 기본 스탯 사용, 이후 악세서리 등 합산
-            float baseAtkSpd = eqStats.weaponBaseAtkSpeed > 0f ? eqStats.weaponBaseAtkSpeed : _baseAttackSpeed;
+            float baseAtkSpd = eqStats.weaponBaseAtkSpeed > 0f ? eqStats.weaponBaseAtkSpeed : _baseStats.AttackSpeed;
             CurrentAttackSpeed = Mathf.Max(0.1f, baseAtkSpd + eqStats.atkSpeedBonus);
 
             OnStatsChanged?.Invoke(CurrentHp, CurrentMp, CurrentAttack, CurrentDefense, CurrentSpeed, CurrentRange);

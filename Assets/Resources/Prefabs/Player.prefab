@@ -271,13 +271,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 28a755c4851ecba4294878e2f7cb3a4b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _baseHp: 100
-  _baseMp: 50
-  _baseAttack: 10
-  _baseDefense: 5
-  _baseSpeed: 8
-  _baseAttackSpeed: 1.82
-  _baseRange: 1
+  _baseStats: {fileID: 11400000, guid: c86400127eb7f754687cd30d30f0443b, type: 2}
   _hitInvincibleDuration: 0.5
   _hitFlashDuration: 0.1
   _hitBlinkInterval: 0.08
