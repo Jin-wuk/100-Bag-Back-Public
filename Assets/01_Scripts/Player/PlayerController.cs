@@ -90,6 +90,8 @@ namespace BagBack100.Player
         [SerializeField] private GameObject _defaultMeleeEffectPrefab;
         [Tooltip("이동 중에도 콤보(1~3타)가 유지되는 최대 시간(초)")]
         [SerializeField] private float _comboResetTime = 1.5f;
+        [Tooltip("기본 공격 판정 칸을 몬스터 길찾기의 위험 칸으로 표시하는 시간(초). 공격 간격(약 0.55초)보다 짧아야 연타 사이에 몬스터가 들어올 틈이 생긴다")]
+        [SerializeField] private float _meleeDangerDuration = 0.3f;
 
         [Header("Micro-Mechanics: Input Buffer Settings")]
         [Tooltip("선입력(Input Buffering)이 유효하게 유지되는 최대 시간(초). 모션 종료/타일 안착 직전 입력만 수용하여 광클 폭주를 방지합니다.")]
@@ -394,7 +396,7 @@ namespace BagBack100.Player
                 for (int i = 0; i < _weaponHitboxCellBuffer.Count; i++)
                 {
                     Vector3Int cell = _weaponHitboxCellBuffer[i];
-                    BagBack100.Core.TileSystem.Instance.SetDanger(cell, 1f);
+                    BagBack100.Core.TileSystem.Instance.SetDanger(cell, _meleeDangerDuration);
                     GameObject occupant = BagBack100.Core.TileSystem.Instance.GetEntityAtTile(cell);
                     if (occupant != null && occupant != gameObject && !_meleeTargetBuffer.Contains(occupant))
                     {

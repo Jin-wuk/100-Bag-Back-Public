@@ -226,6 +226,19 @@ namespace BagBack100.Monster
                 yield break;
             }
 
+            // 위험 칸을 피하는 길이 너무 길면(1칸 통로에서 플레이어 등 뒤로 도는 길 등) 돌아가지 않고 위험이 풀릴 때까지 기다린다.
+            // 맨해튼 거리는 위험 무시 경로 길이의 하한이라, 그 안쪽이면 두 번째 A*를 생략한다
+            int detourLimit = monster.Data.dangerDetourLimit;
+            int manhattan = Mathf.Abs(targetCell.x - startCell.x) + Mathf.Abs(targetCell.y - startCell.y);
+            if (path.Count > manhattan + detourLimit)
+            {
+                List<Vector3> plainPath = Pathfinder.FindPath(monster.Grid, startWorld, targetWorld, monster.ObstacleLayerMask, false);
+                if (plainPath.Count > 0 && path.Count > plainPath.Count + detourLimit)
+                {
+                    yield break;
+                }
+            }
+
             Vector3 nextStepWorld = path[0];
             Vector3Int nextCell = monster.Grid.WorldToCell(nextStepWorld);
             nextCell.z = 0;

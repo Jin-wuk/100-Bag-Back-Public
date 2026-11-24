@@ -48,6 +48,9 @@ namespace BagBack100.Data.Models
         public float burstRestDuration = 0.6f;
         [Tooltip("대치: 쿨타임 때문에 공격을 못 해도 사거리 안이면 움직이지 않고 플레이어를 바라보며 기다린다. 원거리 카이팅은 끈다")]
         public bool holdWhenInRange = false;
+        [Tooltip("위험 칸(플레이어 공격 판정)을 피해 돌아가는 길이 직선 길보다 이 걸음 수보다 더 길면 돌아가지 않고 제자리에서 기다린다. 1칸 통로에서 연타에 밀려 뒤돌아 가는 것을 막는다")]
+        [Min(0)]
+        public int dangerDetourLimit = 3;
 
         [Header("2. 다음 행동 패턴까지의 시간 (Action Rhythm)")]
         [Tooltip("패턴 종료 후 다음 공격 패턴을 발동하기까지의 글로벌 쿨타임(초). 이 시간 동안에도 몬스터는 이동할 수 있음.")]
