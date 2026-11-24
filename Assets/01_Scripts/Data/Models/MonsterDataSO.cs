@@ -40,6 +40,14 @@ namespace BagBack100.Data.Models
         [Tooltip("타일 1칸 이동 완료 후 다음 칸 이동까지의 대기 시간(초)")]
         [Min(0.02f)]
         public float moveInterval = 0.25f;
+        [Tooltip("몰아 걷기: 쉬지 않고 걷는 걸음 수. 다 걸으면 burstRestDuration만큼 쉰다. 0이면 끔(쉬지 않고 계속 이동). 11 설계안 4.6절")]
+        [Min(0)]
+        public int walkBurstSteps = 0;
+        [Tooltip("몰아 걷기 후 쉬는 시간(초). 쉬는 중에도 패턴 쿨타임이 끝나면 바로 공격한다")]
+        [Min(0f)]
+        public float burstRestDuration = 0.6f;
+        [Tooltip("대치: 쿨타임 때문에 공격을 못 해도 사거리 안이면 움직이지 않고 플레이어를 바라보며 기다린다. 원거리 카이팅은 끈다")]
+        public bool holdWhenInRange = false;
 
         [Header("2. 다음 행동 패턴까지의 시간 (Action Rhythm)")]
         [Tooltip("패턴 종료 후 다음 공격 패턴을 발동하기까지의 글로벌 쿨타임(초). 이 시간 동안에도 몬스터는 이동할 수 있음.")]

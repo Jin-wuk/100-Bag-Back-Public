@@ -21,9 +21,14 @@ MonoBehaviour:
   speed: 5
   range: 4
   zocRadius: 7
+  footprint: 1
+  isStationary: 0
   movementStyle: 2
   moveDuration: 0.28
   moveInterval: 0.25
+  walkBurstSteps: 3
+  burstRestDuration: 0.6
+  holdWhenInRange: 0
   globalPatternCooldown: 2
   telegraphTime: 0.7
   evasiveStepCooldown: 0
