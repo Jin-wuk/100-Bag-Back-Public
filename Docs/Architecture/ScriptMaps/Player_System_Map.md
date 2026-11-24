@@ -23,7 +23,7 @@
 | `PlayerMovement.cs` | 칸 단위 이동과 보행 연출(칸마다 뛰는 포물선. 프리팹 값은 높이 0.08칸, 틸트·스쿼시 0). 걷기 예약 칸(`ReservedCell`) 기록. 대시 이동(`Dash`: 착지 칸 점유 후 이전 칸 해제, 직선 보간, 사망 시 중단, 끝나면 `OnTileReached` → `OnDashFinished`). 대시 중 `CurrentTargetTileWorldPos`는 착지 칸(위치 예측 패턴용). 걸음·대시의 시작→도착 방향 `CurrentStepDirection`, 지금 칸의 진행도 `CurrentStepProgress`와 걸음 번호 `StepCount`(스프라이트 애니메이션용) |
 | `PlayerSpriteVisual.cs` | 스프라이트 프레임만 교체(색·스케일 연출은 건드리지 않음). `SpriteAnimSetSO`의 4방향 대기·이동·공격 프레임 사용. 재생 세트는 장착 무기로 고름: 무기 슬롯이 비면 `_unarmedAnimSet`(맨손, 지금은 `Data_SO/AnimSO/Player_AnimSet`), 무기가 있으면 `WeaponDataSO.PlayerAnimSet` → 비면 `_defaultArmedAnimSet`(기본 칼 세트 `Player_Sword_AnimSet`, 64×64 시트 S·W·E·N 순 9프레임씩, PPU 32, 피벗 (0.5, 21/64) = 맨손 피벗 13/48에 캔버스 여백 8px) → 비면 맨손 세트. `Start`(EquipmentManager 세션 복원 이후)와 `EquipmentManager.OnEquipmentChanged`마다 다시 고르고, 세트가 바뀌면 대기·공격 재생 상태를 초기화. 맨손·무기 세트는 캔버스 크기가 달라도 되지만 PPU와 캐릭터 발 기준점(캔버스 여백을 반영한 피벗 픽셀 위치)은 같게 맞춘다(다르면 교체 순간 캐릭터가 밀려 보임). 방향은 마우스 조준이 아니라 마지막 행동(걸음·대시·공격) 방향. 대기 = 대기 프레임 반복(비어 있으면 이동 0프레임), 이동 = 칸 하나를 건너는 동안 걸음 방향 이동 프레임을 한 번 재생(도약→착지, 칸 진행도 기준이라 이동 속도와 자동으로 맞음). 이동 프레임은 9프레임 한 사이클(`chr_explorer_move_<방향>_01~09`). `_moveCycleMode` = `HalfCyclePerTile`이면 칸마다 반 사이클: 같은 방향으로 이어 걸으면(쉰 시간 ≤ `StepChainGap` 0.1초) 앞 절반(0~4)·뒤 절반(4~8)을 번갈아 쓰고, 방향이 바뀌거나 멈췄다 걸으면 앞 절반부터. `FullCyclePerTile`이면 칸마다 전체(이어 걷기에 `_moveAlt`가 있으면 번갈아 씀, 지금은 비어 있음), 대시 = 이동 1프레임 고정, 공격 = `EntityCombat.OnMeleeAttack`·`OnRangedAttack`마다 처음부터 1회 재생 후 공격 잠금 동안 마지막 프레임 유지. 대각선은 좌우 우선. 콤보 단계와 무관하게 같은 모션 |
 | `EntityCombat.cs` | 공격 판정과 후딜레이(`Time.unscaledDeltaTime`). 공격 대상이 `IAttackInteractable`(상자)이면 피해 대신 상호작용 호출. 몬스터용 즉시 타격(`ApplyImmediateHit`) |
-| `PlayerStatManager.cs` | 기본 스탯 + 장비 합산, 피격 시(`IsInvincible`은 `DungeonGenerator`가 켜고 끔, `IsHitInvincible`은 피격마다 0.5초, 둘 중 하나면 무시) `CombatMath.Mitigate`로 방어력 경감 후 실제 적용 피해 반환, `OnEntityDamaged` 발행. HP 0이면 결과 기록 → 가방·장비 초기화 → 기지 복귀 |
+| `PlayerStatManager.cs` | 기본 스탯(`PlayerBaseStatsSO` = `Data_SO/PlayerSO/PlayerBaseStats`, 미연결이면 에러 로그 후 계산 생략) + 장비 합산. 던전 `Player.prefab`과 허브 `Manager` 오브젝트에 하나씩 있고 같은 SO를 씀(허브는 피격·사망 경로가 호출되지 않음, HP·MP는 최대치), 피격 시(`IsInvincible`은 `DungeonGenerator`가 켜고 끔, `IsHitInvincible`은 피격마다 0.5초, 둘 중 하나면 무시) `CombatMath.Mitigate`로 방어력 경감 후 실제 적용 피해 반환, `OnEntityDamaged` 발행. HP 0이면 결과 기록 → 가방·장비 초기화 → 기지 복귀 |
 | `PlayerCombatState.cs` | `OnEntityDamaged`를 구독해 마지막 타격·피격 후 5초간 전투 중 판정, `OnCombatStateChanged` |
 | `CombatMath.cs` | `DEF/(100+DEF)` 점감, 음수 방어력 증폭(최대 2.0배), 관통력 |
 | `GamePauseService.cs` | `Time.timeScale` 단일 소유. 일시정지 요청자 집합 + 히트스톱 |
@@ -43,7 +43,7 @@
 
 | 스크립트 | 역할 |
 | --- | --- |
-| `HubSystem.cs` | `OnHubObjectClicked` 분기(던전 포탈 = 월드맵, 창고, 대장간 = 제작소, 잡화상). `Esc`는 월드맵이 열려 있으면 `DungeonEntranceUI.TryCloseTopLayer()`로 한 겹씩 닫고, 월드맵이 열려 있으면 `Tab`(가방)을 무시. 플레이어가 없는 기지에서도 가방·장비·창고·파우치·퀵슬롯 매니저 존재 보장 |
+| `HubSystem.cs` | `OnHubObjectClicked` 분기(던전 포탈 = 월드맵, 창고, 대장간 = 제작소, 잡화상). `Esc`는 월드맵이 열려 있으면 `DungeonEntranceUI.TryCloseTopLayer()`로 한 겹씩 닫고, 월드맵이 열려 있으면 `Tab`(가방)을 무시. 플레이어가 없는 기지에서도 가방·장비·창고·파우치·퀵슬롯 매니저 존재 보장(`PlayerStatManager`는 SO 연결이 필요해 씬 `Manager`에 직접 배치하고 없으면 경고만) |
 | `HubTradeSystem.cs` | 잡화상 판매: `baseValue` × 수량 → 지갑 골드. 구매: `ShopCatalogSO` 가격, 가방 → 창고 순으로 넣고 둘 다 차면 취소. `OnTradeFailed`, `OnTradeCompleted` |
 | `CraftingSystem.cs` 외 제작소 | 테크트리 해금·재제작. 상세는 [Hub_System_Map.md](Hub_System_Map.md) |
 | `StorageManager.cs` | 창고(30칸). `StorageItems`와 동기화. `_stackLimit`(10)을 `SlotContainer` 최소 겹침 한도로 넘겨 재료를 등급과 무관하게 겹침 |
@@ -63,7 +63,7 @@
 | 에디터 `UIKitImportSettings` / `UIKitLayoutBuilder` | `Tools/UI Kit/Apply Import Settings`(키트·월드맵·기지 스프라이트 임포트 설정. 기지 배경 `hub_bg_camp`만 PPU 16·가운데 피벗, 월드맵 안개만 Read/Write), `Build Inventory And Hotbar`(프리팹 재구성), `Apply To Scenes`(인벤토리 루트 왼쪽 절반, 씬 하위 RectTransform 오버라이드 되돌림, DASH 표시), `Apply Hub`(창고 패널 재구성, 잡화상·대장간 스킨, 기지 오브젝트 스프라이트·콜라이더, 포탈 `hub_portal`). 새 패널은 1024×576 기준 단위 + 배율 1080/576(12 설계안) |
 | `ShopPanelUI.cs` / `GoldDisplayUI.cs` / `RunResultUI.cs` / `UIToast.cs` | 잡화상 목록(스크롤 영역, 하단에 판매 칸), 지갑 골드, 결과 화면(한 번 표시 후 비움), 알림 |
 | `DungeonUIManager.cs` | 던전 가방 패널. 열려 있는 동안 이동 차단 + `GamePauseService` 일시정지 요청. 플레이어의 `PlayerCombatState`를 캐싱해 전투 중이면 Tab·보상 화면 열기를 거부하고 `UIToast`(던전 HUD의 FloorToast)로 안내. 소모품 사용 실패 사유(`ConsumableController.OnUseFailed`)도 같은 토스트로 표시. 닫기는 항상 허용(단 확인창·층 전환의 입력 잠금 중에는 Esc 무시) |
-| `PlayerStatsUIController.cs` | HP·MP·스탯 텍스트 |
+| `PlayerStatsUIController.cs` | HP·MP·스탯 텍스트. `PlayerStatManager.OnManagerCreated` 구독 + `Awake`·`OnEnable`에서 현재 매니저를 찾아 다시 연결(꺼진 패널 대비), 매니저가 바뀌면 이전 `OnStatsChanged` 구독 해제 |
 
 ---
 

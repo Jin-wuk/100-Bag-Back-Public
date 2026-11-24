@@ -7,8 +7,8 @@ namespace BagBack100.Hub
 {
     /// <summary>
     /// Role: 허브 내 시스템 및 상태를 관리하는 2계층 System. 싱글톤을 쓰지 않고 전역 이벤트를 받아 분기한다.
-    ///       플레이어가 없는 허브에서도 창고·가방·장비·퀵슬롯 매니저가 존재하도록 보장한다.
-    /// Dependencies: DungeonEntranceUI, 대장간(제작)·잡화상(구매·판매) 패널, StorageManager, InventoryManager, EquipmentManager, QuickSlotManager, SecurePouchManager
+    ///       플레이어가 없는 허브에서도 창고·가방·장비·퀵슬롯 매니저가 존재하도록 보장한다. 스탯(PlayerStatManager)은 기본 스탯 SO 연결이 필요해 씬 Manager에 직접 배치하고, 없으면 경고만 남긴다.
+    /// Dependencies: DungeonEntranceUI, 대장간(제작)·잡화상(구매·판매) 패널, StorageManager, InventoryManager, EquipmentManager, QuickSlotManager, SecurePouchManager, PlayerStatManager(존재 확인만)
     /// Events: 없음 (구독: GlobalEvents.OnHubObjectClicked)
     /// </summary>
     public class HubSystem : MonoBehaviour
@@ -66,6 +66,12 @@ namespace BagBack100.Hub
             if (FindObjectOfType<SecurePouchManager>() == null)
             {
                 inventory.gameObject.AddComponent<SecurePouchManager>();
+            }
+
+            // 기본 스탯 SO가 있어야 동작하므로 AddComponent로 만들지 않는다. 장비 패널 스탯 표시가 비는 원인을 바로 알 수 있게 경고만 남긴다
+            if (FindObjectOfType<PlayerStatManager>() == null)
+            {
+                Debug.LogWarning("[HubSystem] 허브 씬에 PlayerStatManager가 없어 장비 패널 스탯이 표시되지 않습니다. Manager 오브젝트에 PlayerStatManager를 붙이고 PlayerBaseStats SO를 연결하세요.", this);
             }
         }
 

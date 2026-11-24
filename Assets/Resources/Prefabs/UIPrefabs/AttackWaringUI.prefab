@@ -98,4 +98,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _renderer: {fileID: 7035379011755318102}
-  _warningColor: {r: 1, g: 0, b: 0, a: 0.5}
+  _warningColor: {r: 1, g: 0, b: 0, a: 0.27450982}
