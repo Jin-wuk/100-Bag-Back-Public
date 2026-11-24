@@ -21,15 +21,9 @@
 
 ## 아트와 에셋
 
-캐릭터·몬스터·보스·전리품 아이콘·UI 키트는 PixelLab으로 만든 뒤 직접 다듬었고, 공격 이펙트는 코드로 그리는 픽셀 이펙트 도구로 만들었습니다. 외부 에셋은 아래만 남아 있습니다.
+캐릭터·몬스터·보스·전리품 아이콘·UI 키트는 PixelLab으로 만든 뒤 직접 다듬었고, 공격 이펙트는 코드로 그리는 픽셀 이펙트 도구로 만들었습니다.
 
-| 에셋 | 라이선스 | 레포 포함 |
-| --- | --- | --- |
-| [Kenney](https://www.kenney.nl) Tiny Dungeon 외 | CC0 | 포함 |
-| [Dungeon Gathering - Under The Castle Set](https://snowhex.itch.io/dungeon-gathering) (SnowHex) | 게임 사용 허용, 재판매 금지 | 포함 |
-| [GUI Parts](https://assetstore.unity.com/packages/2d/gui/icons/gui-parts-159068) (PONETI) | 재배포 금지 | **제외**. 가방·퀵슬롯·창고 패널의 프레임 스프라이트 2개만 사용. 없으면 그 부분만 비어 보이고 플레이에는 지장 없음. 넣을 위치: `Assets/Art/Sprites/GUI_Parts/` |
-
-예전에 쓰던 이펙트·UI 에셋(bdragon1727 이펙트, Free UI 패키지)은 직접 만든 것으로 바꿨고, 재배포 금지라 전체 이력에서도 제외했습니다.
+바닥 타일 일부는 [Kenney](https://www.kenney.nl)(CC0)와 [SnowHex](https://snowhex.itch.io/dungeon-gathering)의 무료 에셋을 썼습니다. 재배포가 금지된 [GUI Parts](https://assetstore.unity.com/packages/2d/gui/icons/gui-parts-159068)(프레임 스프라이트 2개)는 레포에서 뺐습니다. 없으면 가방·퀵슬롯·창고 패널의 테두리만 비어 보이고, 넣으려면 `Assets/Art/Sprites/GUI_Parts/`에 두면 됩니다.
 
 ## 조작법
 
