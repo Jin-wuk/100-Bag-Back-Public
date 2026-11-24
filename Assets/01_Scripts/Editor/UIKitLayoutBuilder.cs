@@ -14,7 +14,7 @@ namespace BagBack100.EditorTools
     ///       패널은 1024×576 기준 단위로 만들고 배율 1080/576을 걸어, 1080 기준인 기존 캔버스·UI를 건드리지 않는다.
     ///       여러 번 실행해도 같은 결과가 나오게 이름으로 찾고 없으면 만든다.
     /// Dependencies: InventoryUIController, SecurePouchUIController, EquipmentSlotUI, PlayerStatsUIController, QuickSlotBarUI,
-    ///               QuickSlotSlotUI, DashCooldownUI, GridCellUI, TrashSlotUI
+    ///               QuickSlotSlotUI, DashCooldownUI, GridCellUI, TrashSlotUI, PlayerVitalsHUD(던전 HP/MP 오브)
     /// Events: 없음
     /// </summary>
     public static class UIKitLayoutBuilder
@@ -26,6 +26,7 @@ namespace BagBack100.EditorTools
         private const string InventoryPrefab = PrefabFolder + "InventoryPanel.prefab";
         private const string EquipmentPrefab = PrefabFolder + "EquipmentPanel.prefab";
         private const string QuickSlotPrefab = PrefabFolder + "QuickSlotBar.prefab";
+        private const string VitalsOrbPrefab = PrefabFolder + "VitalsOrb.prefab";
         private const string ItemUIPrefab = "Assets/Resources/Prefabs/ItemUI.prefab";
         private const string DungeonScene = "Assets/Scenes/03_DungeonScene.unity";
         private const string HubScene = "Assets/Scenes/02_HubScene.unity";
@@ -65,7 +66,85 @@ namespace BagBack100.EditorTools
             Debug.Log("[UIKitLayoutBuilder] 허브·던전 씬 적용 완료");
         }
 
+        [MenuItem("Tools/UI Kit/Build Vitals Orb")]
+        public static void BuildVitalsOrbMenu()
+        {
+            // 던전 씬을 Single로 열어 바꾸므로, 저장 안 한 변경이 있으면 먼저 묻는다
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            BuildVitalsOrb();
+
+            var active = SceneManager.GetActiveScene().path;
+            var dungeon = EditorSceneManager.OpenScene(DungeonScene, OpenSceneMode.Single);
+            ApplyVitalsOrb(dungeon);
+            EditorSceneManager.MarkSceneDirty(dungeon);
+            EditorSceneManager.SaveScene(dungeon);
+            if (!string.IsNullOrEmpty(active) && active != DungeonScene) EditorSceneManager.OpenScene(active, OpenSceneMode.Single);
+            Debug.Log("[UIKitLayoutBuilder] HP/MP 오브 프리팹·던전 배치 완료");
+        }
+
         // ================= Prefabs =================
+
+        // 64×64 분할 오브: 뒤→앞 Bg, HpTrail, MpTrail, HpFill, MpFill, Frame. 채움·잔상은 아래→위 Filled
+        private static void BuildVitalsOrb()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(VitalsOrbPrefab);
+            var root = existing != null
+                ? PrefabUtility.LoadPrefabContents(VitalsOrbPrefab)
+                : new GameObject("VitalsOrb", typeof(RectTransform));
+            var rootRect = (RectTransform)root.transform;
+            rootRect.sizeDelta = new Vector2(64, 64);
+
+            var bg = OrbLayer(rootRect, "Bg", Kit("ui_orb_bg"), false, Color.white);
+            var hpTrail = OrbLayer(rootRect, "HpTrail", Kit("ui_orb_fill_hp"), true, OrbTrailColor);
+            var mpTrail = OrbLayer(rootRect, "MpTrail", Kit("ui_orb_fill_mp"), true, OrbTrailColor);
+            var hpFill = OrbLayer(rootRect, "HpFill", Kit("ui_orb_fill_hp"), true, Color.white);
+            var mpFill = OrbLayer(rootRect, "MpFill", Kit("ui_orb_fill_mp"), true, Color.white);
+            var frame = OrbLayer(rootRect, "Frame", Kit("ui_orb_frame"), false, Color.white);
+            bg.transform.SetSiblingIndex(0);
+            hpTrail.transform.SetSiblingIndex(1);
+            mpTrail.transform.SetSiblingIndex(2);
+            hpFill.transform.SetSiblingIndex(3);
+            mpFill.transform.SetSiblingIndex(4);
+            frame.transform.SetSiblingIndex(5);
+
+            var hud = GetOrAdd<PlayerVitalsHUD>(root);
+            SetRef(hud, "_hpFill", hpFill);
+            SetRef(hud, "_mpFill", mpFill);
+            SetRef(hud, "_hpTrail", hpTrail);
+            SetRef(hud, "_mpTrail", mpTrail);
+
+            PrefabUtility.SaveAsPrefabAsset(root, VitalsOrbPrefab);
+            if (existing != null) PrefabUtility.UnloadPrefabContents(root);
+            else Object.DestroyImmediate(root);
+        }
+
+        // 잔상은 채움 스프라이트를 반투명 흰색으로 틴트해 쓴다 (유저 결정)
+        private static readonly Color OrbTrailColor = new Color(1f, 1f, 1f, 0.6f);
+
+        private static Image OrbLayer(RectTransform parent, string name, Sprite sprite, bool filled, Color color)
+        {
+            var t = parent.Find(name);
+            var go = t != null ? t.gameObject : new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(parent, false);
+            StretchInset((RectTransform)go.transform, 0);
+            var image = GetOrAdd<Image>(go);
+            image.sprite = sprite;
+            image.color = color;
+            image.raycastTarget = false;
+            image.preserveAspect = false;
+            if (filled)
+            {
+                image.type = Image.Type.Filled;
+                image.fillMethod = Image.FillMethod.Vertical;
+                image.fillOrigin = (int)Image.OriginVertical.Bottom;
+                image.fillAmount = 0.89f;
+            }
+            else
+            {
+                image.type = Image.Type.Simple;
+            }
+            return image;
+        }
 
         private static void BuildSlotPrefabs()
         {
@@ -353,6 +432,17 @@ namespace BagBack100.EditorTools
             PrefabUtility.UnloadPrefabContents(root);
         }
 
+        // 핫바 왼쪽, 바닥선 정렬. 핫바 폭 188(44×4 + 4×3)의 왼쪽 끝에서 간격 8, 오브 64×64 (기준 단위, KitScale 배율)
+        private static void PlaceVitalsOrbRoot(RectTransform rootRect)
+        {
+            rootRect.anchorMin = rootRect.anchorMax = new Vector2(0.5f, 0f);
+            rootRect.pivot = new Vector2(0.5f, 0f);
+            rootRect.sizeDelta = new Vector2(64, 64);
+            float centerX = -(4 * 44 + 3 * 4) * 0.5f - 8f - 32f;
+            rootRect.anchoredPosition = new Vector2(centerX * KitScale, 8 * KitScale);
+            rootRect.localScale = new Vector3(KitScale, KitScale, 1f);
+        }
+
         // 화면 아래 중앙, 44×44 4칸 + 간격 4, 바닥에서 8 기준 단위
         private static void PlaceHotbarRoot(RectTransform rootRect)
         {
@@ -558,6 +648,7 @@ namespace BagBack100.EditorTools
             }
             ApplyInventoryRoots(dungeon);
             ApplyQuickSlotBars(dungeon, true);
+            ApplyVitalsOrb(dungeon);
             EditorSceneManager.MarkSceneDirty(dungeon);
             EditorSceneManager.SaveScene(dungeon);
 
@@ -588,6 +679,36 @@ namespace BagBack100.EditorTools
                     PrefabUtility.RecordPrefabInstancePropertyModifications(rt);
                 }
             }
+        }
+
+        // 던전 전용. 핫바와 같은 캔버스 아래에 오브 인스턴스를 두고(없으면 만들고) 위치를 맞춘다. 프리팹이 없으면 건너뛴다
+        private static void ApplyVitalsOrb(Scene scene)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(VitalsOrbPrefab);
+            if (prefab == null) return;
+
+            QuickSlotBarUI bar = null;
+            PlayerVitalsHUD hud = null;
+            foreach (var go in scene.GetRootGameObjects())
+            {
+                if (bar == null) bar = go.GetComponentInChildren<QuickSlotBarUI>(true);
+                if (hud == null) hud = go.GetComponentInChildren<PlayerVitalsHUD>(true);
+            }
+            if (bar == null)
+            {
+                Debug.LogWarning("[UIKitLayoutBuilder] 던전 씬에 핫바가 없어 HP/MP 오브를 배치하지 않습니다.");
+                return;
+            }
+
+            if (hud == null)
+            {
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, bar.transform.parent);
+                instance.transform.SetSiblingIndex(bar.transform.GetSiblingIndex());
+                hud = instance.GetComponent<PlayerVitalsHUD>();
+            }
+            RevertChildRectOverrides(hud.gameObject);
+            PlaceVitalsOrbRoot((RectTransform)hud.transform);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(hud.transform);
         }
 
         private static void ApplyQuickSlotBars(Scene scene, bool showDash)

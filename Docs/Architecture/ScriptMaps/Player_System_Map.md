@@ -63,6 +63,7 @@
 | 에디터 `UIKitImportSettings` / `UIKitLayoutBuilder` | `Tools/UI Kit/Apply Import Settings`(키트·월드맵·기지 스프라이트 임포트 설정. 기지 배경 `hub_bg_camp`만 PPU 16·가운데 피벗, 월드맵 안개만 Read/Write), `Build Inventory And Hotbar`(프리팹 재구성), `Apply To Scenes`(인벤토리 루트 왼쪽 절반, 씬 하위 RectTransform 오버라이드 되돌림, DASH 표시), `Apply Hub`(창고 패널 재구성, 잡화상·대장간 스킨, 기지 오브젝트 스프라이트·콜라이더, 포탈 `hub_portal`). 새 패널은 1024×576 기준 단위 + 배율 1080/576(12 설계안) |
 | `ShopPanelUI.cs` / `GoldDisplayUI.cs` / `RunResultUI.cs` / `UIToast.cs` | 잡화상 목록(스크롤 영역, 하단에 판매 칸), 지갑 골드, 결과 화면(한 번 표시 후 비움), 알림 |
 | `DungeonUIManager.cs` | 던전 가방 패널. 열려 있는 동안 이동 차단 + `GamePauseService` 일시정지 요청. 플레이어의 `PlayerCombatState`를 캐싱해 전투 중이면 Tab·보상 화면 열기를 거부하고 `UIToast`(던전 HUD의 FloorToast)로 안내. 소모품 사용 실패 사유(`ConsumableController.OnUseFailed`)도 같은 토스트로 표시. 닫기는 항상 허용(단 확인창·층 전환의 입력 잠금 중에는 Esc 무시) |
+| `PlayerVitalsHUD.cs` | 던전 HP/MP 분할 오브(`UIPrefabs/VitalsOrb.prefab`, 던전 Canvas의 핫바 왼쪽). `PlayerStatManager.OnManagerCreated` 구독 + `Awake`·`OnEnable` 재바인딩, `OnStatsChanged`마다 `CurrentHp/MaxHp`·`CurrentMp/MaxMp`를 `_fillMin`~`_fillMax`(0.11~0.89)로 매핑. 잔상(`HpTrail`·`MpTrail`, 채움 스프라이트 흰색 a 0.6): 값이 줄면 `_trailHoldTime` 뒤 `_trailDropSpeed`로 따라 내림, 늘거나 최대치가 바뀌면 즉시 맞춤. `Update`는 잔상이 채움보다 높을 때만 움직임(스케일 시간). 배치는 `Tools/UI Kit/Build Vitals Orb`(프리팹 생성 + 던전 배치)와 `Apply To Scenes`의 던전 단계 |
 | `PlayerStatsUIController.cs` | HP·MP·스탯 텍스트. `PlayerStatManager.OnManagerCreated` 구독 + `Awake`·`OnEnable`에서 현재 매니저를 찾아 다시 연결(꺼진 패널 대비), 매니저가 바뀌면 이전 `OnStatsChanged` 구독 해제 |
 
 ---
