@@ -28,13 +28,16 @@ graph TD
         DZ["DungeonZone.cs<br>- Floor Path: Combat / Corridor<br>- Box Bounds & Gizmos"]
         FC["FloorChest.cs<br>- Blocks Tile (TileSystem)<br>- Open by Player Attack<br>- OnChestOpened"]
         DE["DungeonExit.cs<br>- Cell Arrival Detection<br>- Exit Request / Scene Transition"]
-        UI["DungeonEntranceUI.cs<br>- Enter Dungeon"]
+        UI["DungeonEntranceUI.cs<br>- Hub World Map / Entry Panel<br>- Enter Dungeon"]
+        WMN["WorldMapNodeUI.cs<br>- Hover / Click Local Events"]
         FVO["FogVisibilityObject.cs<br>- VisibleOnly / RememberWhenExplored<br>- Renderer Culling Sync"]
         FVS["FogVisionSource.cs<br>- Torch / Shrine Light Source<br>- RequireDiscovered Option"]
         SHADER["FogOfDungeonMist.shader<br>- Bilinear Mask Sampling<br>- Smooth Edge Gradient"]
     end
 
     %% Dependencies
+    WMN -->|Hovered / Clicked| UI
+    UI -->|Reads Name / Bosses / Pool| RC
     UI -->|LoadScene| DG
     DG -->|Floor: Reads Config| RC
     RC -->|Pools| FD
@@ -157,7 +160,7 @@ graph TD
 
 ### 2.10. `FloorDesignSO` / `RegionConfigSO` (`ScriptableObject`)
 *   **`FloorDesignSO`**: 층 프리팹, 구간(`Early` 1~5 / `Late` 6~9 / `Boss`), 가중치.
-*   **`RegionConfigSO`**: 지역 번호·이름, 1~5 풀, 6~9 풀, 일반 몬스터 풀(`MonsterPool`), 5층·10층 보스 디자인과 보스 프리팹, 층 배율(`_hpPerFloor`, `_atkPerFloor`, 1층·9층 `RarityWeights`), 1~9층 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 상자 드랍 풀 ID, 디버그 "디자인 중복 허용".
+*   **`RegionConfigSO`**: 지역 번호·이름(게임 UI 영어, 층 HUD와 월드맵이 같이 씀), 월드맵 표시(`_description`, `_mapIcon`, `_mapIconPosition` = 344×192 지도 좌상단 기준 픽셀), 1~5 풀, 6~9 풀, 일반 몬스터 풀(`MonsterPool`), 5층·10층 보스 디자인과 보스 프리팹, 층 배율(`_hpPerFloor`, `_atkPerFloor`, 1층·9층 `RarityWeights`), 1~9층 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률), 상자 드랍 풀 ID, 디버그 "디자인 중복 허용".
 
 ### 2.11. `FloorDesignValidator` (static)
 *   **역할**: 런타임·에디터 공용 규격 검증. 시작점 1, 탈출구 1, 계단 1(10층 보스층은 0~1), 마커 칸 보행 가능·중복 없음, 계단–탈출구 체비쇼프 거리 ≥ 3, 상자 후보 ≥ 구간 최대 굴림 횟수, 풀 구간 일치. `BossSpawn`은 보스층 1개·일반층 0개, 시작점 5걸음 초과, 계단·탈출구와 3칸 이상. 지역 검증은 보스 프리팹 누락·비 Boss 데이터를 경고. 크기 2 이상 보스는 `CheckBossFootprint`로 5·10층 디자인의 마커 기준 몸 모든 칸을 런타임 `SpawnBoss`와 같은 조건(보행 가능, 상자 후보 아님, 상자가 막혀도 도달·시작 5걸음 초과, 계단·탈출구 `MarkerSafeRadius` 1칸 밖)으로 오류 검사, `HeavyChase`가 아닌 이동 스타일은 경고.
@@ -170,6 +173,12 @@ graph TD
 
 ### 2.13. `FloorHUD` (`MonoBehaviour`, UI)
 *   **역할**: 현재 층 상시 표시(우측 상단), 층 진입 배너(상단 중앙), 층 전환 암전. `GlobalEvents.OnFloorTransitionStarted`/`OnFloorEntered`/`OnFloorCleared` 구독(OnEnable/OnDisable), 클리어 시 `UIToast`로 알림(탈출구 열림 여부 포함), 연출은 unscaled time. 서식 `{0}` 지역 번호, `{1}` 층, `{2}` 지역 이름.
+
+### 2.13b. `DungeonEntranceUI` / `WorldMapNodeUI` (`MonoBehaviour`, UI)
+*   **위치**: 허브 `Canvas/WorldMapPanel`(평소 꺼짐). `HubSystem._dungeonEntranceUI`가 참조하고, 포탈 클릭 시 `ShowPanel()`.
+*   **`DungeonEntranceUI`**: `Awake`에서 `Resources.LoadAll<RegionConfigSO>`를 RegionId 순으로 캐싱. `ShowPanel`마다 지도 루트(`MapRoot`, 344×192)에 화면 픽셀 기준 최대 정수배(여백 32px)를 걸고(캔버스 `scaleFactor`로 나눔), `PlayerSessionData.IsRegionUnlocked`인 지역만 미리 둔 노드(`_regionNodes`)에 아이콘·좌표를 바인딩한다(노드가 모자라면 경고). 아이콘 클릭 → 입장 패널 채우기(보스 이름은 `MidBossPrefab`/`BossPrefab`의 `MonsterController.Data.monsterName`, 몬스터는 `MonsterPool`을 `MonsterDataSO` 기준 중복 제거 + 프리팹 `SpriteRenderer` 스프라이트를 아이콘으로, 지역별 캐시) → 아이콘 오른쪽(넘치면 왼쪽)에 정수 좌표로 배치. 몬스터 슬롯은 미리 만든 6개를 켜고 끈다. `TryCloseTopLayer()`로 `Esc`를 입장 패널 → 지도 순으로 처리. 툴팁 하나를 모든 노드가 공유.
+*   **`WorldMapNodeUI`**: `IPointerEnter/Exit/ClickHandler`. 호버 시 `_hoverScale` 확대와 `_highlightTarget` 색 강조(UI 정점 색은 1을 못 넘어 평소 0.86 회색 → 호버 흰색), `Hovered`/`Clicked` 로컬 이벤트만 발행(`_clickable` false면 클릭 없음). `_alphaHitThreshold`로 안개처럼 투명 부분이 넓은 이미지는 불투명 픽셀만 반응(텍스처 Read/Write 필요). `OnDisable`에서 호버 상태를 되돌려 다음에 열 때 확대가 남지 않게 한다.
+*   **에디터 메뉴 `Tools/UI Kit/Build World Map`**(`WorldMapLayoutBuilder`): `WorldMapPanel` 계층(Dim, MapRoot 4겹, Node_Region1, 안개 노드, 입장 패널, 툴팁, 닫기 버튼과 `ESC` 배지)을 이름으로 찾아 만들고, 예전 `DungeonPanel` 삭제, `HubSystem` 참조 연결, `Region1Config`의 이름·설명(비어 있을 때만)·아이콘·좌표를 채운다. 지도 아래 1 단위 = 지도 1픽셀, 키트 9-slice는 `pixelsPerUnitMultiplier` 1.
 
 ### 2.14. `FloorGrayBoxBuilder` (Editor)
 *   메뉴 `BagBack100/Floor/Create Gray Box Floors`: 회색 박스 층 3장(일반 2 + 보스 1)과 `Region1Config`·`FloorDesignSO` 생성 후 검증. 템플릿은 `Floor_GrayBox_Normal01.prefab`의 Floor·Wall(먼저 복제 후 템플릿을 닫고 저장). A4b 이후 세 층은 숲 타일로 칠해져 있어 다시 실행하면 덮어써진다.

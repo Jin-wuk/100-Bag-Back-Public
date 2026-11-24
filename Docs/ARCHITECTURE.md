@@ -271,7 +271,7 @@ flowchart TD
 
 | 클래스 | 책임 |
 | --- | --- |
-| `RegionConfigSO` | 지역 하나의 설정: 초반(1~4층)·후반(6~9층) 디자인 풀, 5층·10층 고정 디자인, 층별 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률, 몬스터 수), 층 배율(몬스터 HP·ATK, 드랍 등급 비율), 일반 몬스터 풀(`MonsterPool`), 상자 드랍 풀 ID |
+| `RegionConfigSO` | 지역 하나의 설정: 초반(1~4층)·후반(6~9층) 디자인 풀, 5층·10층 고정 디자인, 층별 규칙(`FloorRule`: 탈출구 확률, 상자 굴림 횟수·확률, 몬스터 수), 층 배율(몬스터 HP·ATK, 드랍 등급 비율), 일반 몬스터 풀(`MonsterPool`), 상자 드랍 풀 ID, 월드맵 표시(이름·설명·아이콘·지도 좌표) |
 | `FloorDesignSO` | 층 디자인 하나: 층 프리팹, 가중치 |
 | `FloorLayout` / `FloorMarker` | 층 프리팹 루트(바닥·벽 타일맵, 마커, 구역)와 칸 역할 마커(시작점·위층 계단·탈출구·상자 후보·보스 위치) |
 | 숲 맵(A4a) | 바닥 = `Floor` 타일맵에 그림 타일 직접(팔레트 `Forest_Floor`), 벽 = Wall 레이어 벽 타일맵 3장(`WallBack` 0, `WallFront` 2, `WallInner` 1 Individual)에 덤불 32×32 타일 78종(팔레트 `Forest_Walls`, 칸별 충돌은 Tile `colliderType`). `FloorLayout`이 벽 타일·콜라이더 칸을 물리 없이 계산해 검증에 반영 |
@@ -283,7 +283,8 @@ flowchart TD
 | `FloorStairs` | 위층 계단. 잠긴 채 생성, 클리어 시 열림. 칸 도착으로 지역 이벤트만 던짐 |
 | `FloorChest` | 칸을 막는 상자. 공격(`IAttackInteractable`)을 받으면 열리고 `OnChestOpened` 발행 |
 | `DungeonExit` | 탈출 포탈. 클리어 시 확률 생성, 칸 도착 시 탈출 요청 이벤트, 확인되면 결과 기록 후 기지로 전환 |
-| `DungeonEntranceUI` | 기지의 던전 입장 버튼 |
+| `DungeonEntranceUI` | 기지의 전체 화면 월드맵(정수배 확대, 해금 지역 아이콘, 안개 툴팁)과 아이콘 옆 입장 패널(이름·설명·보스·몬스터), `Esc` 한 겹씩 닫기, 던전 씬 로드 |
+| `WorldMapNodeUI` | 월드맵의 호버·클릭 대상(지역 아이콘·안개·몬스터 아이콘). 호버 확대·강조 후 로컬 이벤트(`Hovered`, `Clicked`)만 냄 |
 | `FloorHUD` | 현재 층 상시 표시와 층 진입 배너 |
 | `FogOfWarSystem` / `FogVisibilityObject` / `FogVisionSource` | 전장의 안개, 엔티티 가시성, 보조 광원 |
 
