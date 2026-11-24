@@ -31,6 +31,7 @@ namespace BagBack100.UI
         [SerializeField, Min(0.01f)] private float _trailDropSpeed = 0.9f;
 
         private PlayerStatManager _stats;
+        private bool _subscribed;
         private float _hpTrailHold;
         private float _mpTrailHold;
         private int _lastMaxHp;
@@ -48,10 +49,22 @@ namespace BagBack100.UI
             BindExisting();
         }
 
+        // 꺼져 있는 동안에는 값을 받지 않는다. 다시 켜지면 OnEnable에서 현재 값으로 맞춘다
+        private void OnDisable()
+        {
+            Unsubscribe();
+        }
+
         private void OnDestroy()
         {
             PlayerStatManager.OnManagerCreated -= Bind;
-            if (_stats != null) _stats.OnStatsChanged -= HandleStatsChanged;
+            Unsubscribe();
+        }
+
+        private void Unsubscribe()
+        {
+            if (_stats != null && _subscribed) _stats.OnStatsChanged -= HandleStatsChanged;
+            _subscribed = false;
         }
 
         // ??는 파괴된 UnityEngine.Object를 null로 보지 않으므로 != null 오버로드로 확인한다
@@ -63,11 +76,13 @@ namespace BagBack100.UI
 
         private void Bind(PlayerStatManager manager)
         {
-            if (manager == null || manager == _stats) return;
+            if (manager == null || !isActiveAndEnabled) return;
+            if (manager == _stats && _subscribed) return;
 
-            if (_stats != null) _stats.OnStatsChanged -= HandleStatsChanged;
+            Unsubscribe();
             _stats = manager;
             _stats.OnStatsChanged += HandleStatsChanged;
+            _subscribed = true;
 
             // 처음 붙을 때는 잔상 없이 현재 값으로 맞춘다
             _lastMaxHp = _stats.MaxHp;
