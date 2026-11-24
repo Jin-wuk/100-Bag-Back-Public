@@ -43,6 +43,10 @@ namespace BagBack100.Player
         private SlotContainer _container;
         // 배낭 SO는 런타임에 바뀌지 않으므로 처음 한 번만 찾는다 (-1 = 아직 안 찾음)
         private static int s_largestBackpackBonus = -1;
+
+        // 도메인 리로드를 끈 Enter Play Mode에서도 플레이마다 배낭 SO 값을 다시 읽게 한다
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticCache() => s_largestBackpackBonus = -1;
         private readonly List<RuntimeItem> _overflowBuffer = new List<RuntimeItem>();
 
         private void Awake()

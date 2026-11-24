@@ -205,6 +205,10 @@ namespace BagBack100.UI
         public void OnItemBeginDrag(DraggableItemUI draggedItem, PointerEventData eventData)
         {
             _heldItemUI = draggedItem;
+            // 칸 크기·배율이 컨테이너마다 달라서, 옮긴 부모 아래에서도 칸에 있을 때와 같은 화면상 크기로 맞춘다.
+            // SetHeldState가 크기를 바꾸므로 그 전에 잰다
+            RectTransform heldRect = _heldItemUI.rectTransform;
+            Vector2 worldSize = Vector2.Scale(heldRect.rect.size, heldRect.lossyScale);
             _heldItemUI.SetHeldState(true);
 
             // 패널 잘림(Mask) 및 타 패널에 가려짐 방지를 위해 최상단 캔버스를 우선 부모로 설정합니다.
@@ -216,9 +220,6 @@ namespace BagBack100.UI
                 targetParent = rootCanvas != null ? rootCanvas.GetComponent<RectTransform>() : _gridContainer;
             }
 
-            // 칸 크기·배율이 컨테이너마다 달라서, 옮긴 부모 아래에서도 화면상 크기가 같게 맞춘다
-            RectTransform heldRect = _heldItemUI.rectTransform;
-            Vector2 worldSize = Vector2.Scale(heldRect.rect.size, heldRect.lossyScale);
             _heldItemUI.transform.SetParent(targetParent, false);
             Vector3 parentScale = targetParent.lossyScale;
             heldRect.anchorMin = heldRect.anchorMax = new Vector2(0.5f, 0.5f);

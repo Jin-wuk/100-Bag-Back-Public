@@ -33,7 +33,7 @@ namespace BagBack100.EditorTools
         private const string HubSpriteFolder = "Assets/Art/Sprites/Hub/";
 
         // 기존 캔버스는 1080 높이 기준 픽셀. 스펙은 576 높이 기준이라 패널에 이 배율을 건다
-        public const float KitScale = 1080f / 576f;
+        private const float KitScale = 1080f / 576f;
         // 아트 1px = 기준 단위 2 (스프라이트 PPU 100, 캔버스 Reference PPU 100 기준)
         private const float PixelMultiplier = 0.5f;
         // 잡화상·대장간 패널(1080 기준 단위 750×950)을 가방 패널과 같은 화면 높이(438 × KitScale)로 줄이는 배율
