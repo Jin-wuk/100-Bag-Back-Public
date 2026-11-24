@@ -330,6 +330,7 @@ flowchart TD
 | `TechTreePanelUI` | 제작소 화면. 탭별 장비 줄·노드·연결선, 노드 상세와 `Unlock`/`Craft`. `CraftingSystem`에만 묻고 갱신 플래그로 `LateUpdate`에서 1회 갱신 |
 | `DungeonUIManager` | 던전 가방 패널 열기·닫기와 일시정지 요청. 전투 중(`PlayerCombatState`)이면 열기 거부 + HUD 토스트. 소모품 사용 실패 사유(`ConsumableController.OnUseFailed`)도 토스트로 표시 |
 | `ExitConfirmUI` | 던전을 떠나는 확인창. `DungeonExit.OnExitRequested`(포탈)와 `ConsumableController.OnReturnStoneRequested`(귀환석)를 받아 일시정지·입력 잠금 후 확인/취소를 요청한 쪽에 전달 |
+| `PlayerVitalsHUD` | 던전 HP/MP 분할 오브 (핫바 왼쪽, 감소 잔상) |
 | `PlayerStatsUIController` | HP·MP·스탯 텍스트 |
 | `UISortingOverride` | UI 정렬 순서 보정 |
 
