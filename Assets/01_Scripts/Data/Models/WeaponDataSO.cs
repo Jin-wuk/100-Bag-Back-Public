@@ -40,6 +40,12 @@ namespace BagBack100.Data.Models
             return weaponPrefab;
         }
 
+        // 전용 이펙트가 있는 타수는 자동 변형(2타 상하 반전)을 하지 않는다. 올려베기를 뒤집으면 내려베기가 되기 때문
+        public bool HasComboEffectPrefab(int comboStep)
+        {
+            return comboEffectPrefabs != null && comboStep >= 0 && comboStep < comboEffectPrefabs.Length && comboEffectPrefabs[comboStep] != null;
+        }
+
         public GameObject GetChargedEffectPrefab()
         {
             return chargedEffectPrefab != null ? chargedEffectPrefab : weaponPrefab;
