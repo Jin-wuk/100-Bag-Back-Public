@@ -36,11 +36,13 @@
 
 | 단계 | 줄 | 해금 비용 | 재제작 | 만든 장비 판매가 |
 | --- | --- | --- | --- | --- |
-| 1 | 무기·투구·갑옷·신발·배낭 | Bramble Hog(1~5층)·Amber Snail(1~10층, 같은 드랍 풀) 일반 전리품 ×3 + 150G | 100G | 30G |
-| 2 | 무기·투구·갑옷·신발 | 3~7층 몬스터(Leaf Mantis) 일반 ×3 + Bramble Hog 희귀 ×1 + 400G (무기는 + 설계도) | 250G | 75G |
-| 3 | 무기·투구·갑옷·신발 | 5~10층 몬스터(Pinecone Owl) 일반 ×3 + Leaf Mantis 희귀 ×1 + Pinecone Owl 희귀 ×1 + 900G (무기는 + 설계도) | 500G | 150G |
+| 1 | 무기·갑옷·배낭 / 투구·신발 | Bramble Hog Pelt ×3(배낭은 ×2 + Wood Log Bundle ×1) / Amber Snail Slime ×3 + 150G | 100G | 30G |
+| 2 | 무기·갑옷 / 투구·신발 | Leaf Mantis Chitin ×3 / Forest Berries ×3 + 희귀 1개(Bramble Hog Spine 또는 Iron Ore) + 400G (무기는 + 설계도) | 250G | 75G |
+| 3 | 무기·투구·갑옷·신발 | Pinecone Scale ×3 + 희귀 2개(Leaf Mantis Scythe·Pinecone Leaf Fin·Iron Ore 중) + 900G (무기는 + 설계도) | 500G | 150G |
 
-- 같은 단계의 노드끼리 재료 종류를 나눠, 한 전리품에 수요가 몰리지 않게 했습니다.
+- 노드별 재료는 2026-11-24 지역 1 숲 전리품으로 교체한 값입니다([Items.md](Items.md) 2.3절). Wood Log Bundle·Forest Berries·Iron Ore는 여러 몬스터가 같이 떨어뜨리는 숲 공용 재료입니다. 공용 재료 쏠림을 줄이려고 1단계 투구·신발은 달팽이 재료, 3단계는 모두 부엉이 재료(5~10층)를 쓰게 조정했습니다(2026-11-24, 유저 결정). 그래서 3단계 일반 재료는 네 노드가 모두 Pinecone Scale입니다.
+
+- 같은 단계의 노드끼리 재료 종류를 나눠, 한 전리품에 수요가 몰리지 않게 했습니다. 단 3단계 일반 재료는 예외로 모두 Pinecone Scale입니다.
 - 만든 장비 판매가 = 재제작 골드 × 30%. 재제작비보다 싸서 만들어 팔아 골드를 불릴 수 없습니다.
 
 ## 3. 잡화상 (구매·판매)
