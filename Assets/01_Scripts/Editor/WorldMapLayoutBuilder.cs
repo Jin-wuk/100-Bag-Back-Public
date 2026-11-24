@@ -275,7 +275,7 @@ namespace BagBack100.EditorTools
             return rt;
         }
 
-        // ESC 키 배지 (부모 왼쪽 위 기준 x, y)
+        // ESC 키 배지 (부모 왼쪽 위 기준 x, y). 이름 "EscBadge"로 찾으므로 부모 하나에 배지 하나만 둔다 (지도, 입장 패널에 각 1개)
         private static void Badge(RectTransform parent, float x, float y)
         {
             var badge = GetOrCreateChild(parent, "EscBadge");
