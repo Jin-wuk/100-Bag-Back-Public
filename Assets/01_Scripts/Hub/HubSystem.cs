@@ -83,10 +83,14 @@ namespace BagBack100.Hub
         {
             if (Input.GetKeyDown(KeyCode.Escape))
             {
+                // 월드맵이 열려 있으면 입장 패널 → 지도 순으로 한 겹씩 닫는다
+                if (_dungeonEntranceUI != null && _dungeonEntranceUI.TryCloseTopLayer()) return;
                 CloseAllPanels();
             }
             else if (Input.GetKeyDown(KeyCode.Tab))
             {
+                // 전체 화면 월드맵 위로 가방이 겹치지 않게 막는다
+                if (_dungeonEntranceUI != null && _dungeonEntranceUI.IsOpen) return;
                 ToggleInventoryUI();
             }
         }
@@ -96,7 +100,7 @@ namespace BagBack100.Hub
             switch (objectType)
             {
                 case HubObjectType.DungeonPortal:
-                    Debug.Log("[HubSystem] 던전 포탈 클릭됨: 던전 진입 UI 오픈");
+                    Debug.Log("[HubSystem] 던전 포탈 클릭됨: 월드맵 오픈");
                     CloseStorageUI();
                     if (_dungeonEntranceUI != null)
                     {
