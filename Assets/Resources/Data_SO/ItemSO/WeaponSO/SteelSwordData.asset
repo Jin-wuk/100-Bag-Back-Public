@@ -27,12 +27,12 @@ MonoBehaviour:
   speedBonus: 0
   rangeBonus: 0
   baseAttackSpeed: 1.82
-  weaponPrefab: {fileID: 5652963309051762746, guid: bafb2bceacc5e0c40930aa2c1279a60f, type: 3}
+  weaponPrefab: {fileID: 2083815942815212037, guid: 3cce7a5efc7d77949beddd6e2cc6101f, type: 3}
   hitboxPattern: 0
   shakeMultiplier: 1
   hitStopMultiplier: 1
   comboEffectPrefabs:
-  - {fileID: 5150531852397687639, guid: 38513ab97355b1a4c8161834110c077f, type: 3}
-  - {fileID: 4709745210147160306, guid: bf7c83f9b69541a4cbf7ef1a19053a34, type: 3}
-  - {fileID: 768599453594338528, guid: 397de633440663f49943a0c2800aa7a6, type: 3}
+  - {fileID: 2083815942815212037, guid: 3cce7a5efc7d77949beddd6e2cc6101f, type: 3}
+  - {fileID: 7919681663845061768, guid: 0cd088dd746314c4380c60653a90d959, type: 3}
   chargedEffectPrefab: {fileID: 0}
+  _playerAnimSet: {fileID: 0}
