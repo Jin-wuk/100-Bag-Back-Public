@@ -130,7 +130,17 @@ namespace BagBack100.Monster
         public event Action<bool> OnFogVisibilityChanged;
         public bool IsVisibleByFog { get; private set; } = true;
         public bool IsStationary => _monsterData != null && _monsterData.isStationary;
-        private static readonly WaitForSeconds StationaryIdleWait = new WaitForSeconds(0.1f);
+        // 고정형 대기·대치·몰아 걷기 쉬기를 0.1초 단위로 돌며 매번 패턴을 먼저 시도한다 (11 설계안 4.6절)
+        private static readonly WaitForSeconds ShortPollWait = new WaitForSeconds(0.1f);
+
+        // 이동 템포 B+C (11 설계안 4.6절)
+        private int _successfulMoveCount;
+        private int _burstStepCount;
+        private float _restUntil;
+        /// <summary>대치 중이거나 고정형이 제자리 대기 중이면 true. Visual이 LookTargetDirection으로 시선을 돌린다</summary>
+        public bool IsHoldingPosition { get; private set; }
+        /// <summary>대치 중 바라볼 방향(플레이어 쪽). 공격 애니를 트리거하는 ActionCount와 분리했다</summary>
+        public Vector3 LookTargetDirection { get; private set; }
 
         // 비주얼 & 경고 UI 풀링 관리
         private SpriteRenderer[] _renderers;
@@ -278,6 +288,7 @@ namespace BagBack100.Monster
 
                 bool wasAggroed = _isAggroed;
                 bool isCurrentlyAggroed = EvaluateAggroState(gridDist);
+                if (wasAggroed && !isCurrentlyAggroed) ResetTempo();
 
                 // 비인식(Patrol) -> 어그로(Aggro) 최초 진입 시 '!' 팝업과 함께 0.25초 인지 반응 딜레이 부여
                 if (!wasAggroed && isCurrentlyAggroed)
@@ -300,6 +311,7 @@ namespace BagBack100.Monster
                         {
                             patternTriggered = true;
                             _isExecutingPattern = true;
+                            IsHoldingPosition = false;
 
                             // 패턴이 인터럽트(돌진 벽 충돌 기절 등)로 끊겨 아래 등록 코드가 실행되지 않아도 쿨타임이 적용되도록 시전 시점에 먼저 등록
                             _patternCooldownExpirations[selectedPattern] = Time.time + selectedPattern.patternCooldown;
@@ -330,6 +342,7 @@ namespace BagBack100.Monster
                             // 패턴 SO가 하나도 등록되지 않은 에셋을 위한 안전 폴백 기본 근접 공격
                             patternTriggered = true;
                             _isExecutingPattern = true;
+                            IsHoldingPosition = false;
                             CurrentPattern = null;
                             MarkActionTowardPlayer();
                             yield return StartActionCoroutine(ExecuteFallbackMeleeRoutine());
@@ -344,6 +357,7 @@ namespace BagBack100.Monster
 
                 if (patternTriggered)
                 {
+                    ResetTempo();
                     continue;
                 }
 
@@ -351,10 +365,43 @@ namespace BagBack100.Monster
                 // 고정형은 이동 대신 짧게 쉬며 다음 패턴 기회를 본다
                 if (IsStationary)
                 {
-                    yield return StationaryIdleWait;
+                    // 고정형은 몰아 걷기·대치 판정 없이 항상 제자리에서 플레이어를 바라본다
+                    if (isCurrentlyAggroed) HoldTowardPlayer();
+                    else IsHoldingPosition = false;
+                    yield return ShortPollWait;
                     continue;
                 }
+
+                // 대치(C): 쿨타임만 아니면 지금 칠 수 있는 거리면 움직이지 않고 바라보며 기다린다
+                if (isCurrentlyAggroed && _monsterData.holdWhenInRange && HasPatternInRangeIgnoringCooldown(gridDist))
+                {
+                    if (!IsHoldingPosition)
+                    {
+                        _burstStepCount = 0;
+                        _restUntil = 0f;
+                    }
+                    HoldTowardPlayer();
+                    yield return ShortPollWait;
+                    continue;
+                }
+                IsHoldingPosition = false;
+
+                // 몰아 걷기(B): 쉬는 중이면 이동만 건너뛴다. 배회는 기존 템포 그대로
+                bool useBurst = isCurrentlyAggroed && _monsterData.walkBurstSteps > 0;
+                if (useBurst && Time.time < _restUntil)
+                {
+                    yield return ShortPollWait;
+                    continue;
+                }
+
+                // 막힘·배회 확률 실패로 제자리일 수 있어 실제로 몸이 옮겨졌을 때만 센다
+                int movesBefore = _successfulMoveCount;
                 yield return StartActionCoroutine(MonsterLocomotion.ExecuteMoveStepRoutine(this));
+                if (useBurst && _successfulMoveCount != movesBefore && ++_burstStepCount >= _monsterData.walkBurstSteps)
+                {
+                    _burstStepCount = 0;
+                    _restUntil = Time.time + _monsterData.burstRestDuration;
+                }
 
                 // 3. 1칸 이동 후 다음 걸음까지의 이동 인터벌 대기 (비인식 배회 중에는 1.4배 여유롭게 이동)
                 float waitInterval = isCurrentlyAggroed
@@ -487,6 +534,45 @@ namespace BagBack100.Monster
 
             selectedPattern = _candidatePatterns[_candidatePatterns.Count - 1];
             return true;
+        }
+
+        private void ResetTempo()
+        {
+            _burstStepCount = 0;
+            _restUntil = 0f;
+            IsHoldingPosition = false;
+        }
+
+        private void HoldTowardPlayer()
+        {
+            IsHoldingPosition = true;
+            if (Player == null) return;
+            Vector3 toPlayer = Player.transform.position - transform.position;
+            if (toPlayer.x != 0f || toPlayer.y != 0f) LookTargetDirection = new Vector3(toPlayer.x, toPlayer.y, 0f);
+        }
+
+        // 쿨타임을 무시하고, 사거리가 가장 짧은 패턴(근접 몬스터면 1칸 근접)에 들어왔는지만 본다.
+        // 모든 패턴 기준이면 돌진(2~4칸)이 쿨타임 중이어도 4칸에서 멈춰 붙지 않는다 (2026-11-23 유저 결정).
+        // 상하좌우 전용 근접은 대각선이면 false라 다시 움직인다
+        private bool HasPatternInRangeIgnoringCooldown(int gridDistToPlayer)
+        {
+            if (Player == null) return false;
+            // 패턴 시도와 같은 거리 가드. 없으면 maxRange가 이보다 긴 패턴은 대치만 하고 영영 쓰지 못한다
+            if (gridDistToPlayer > _monsterData.zocRadius + 1) return false;
+            if (_monsterData.patterns == null || _monsterData.patterns.Count == 0) return gridDistToPlayer <= 1;
+
+            int shortestRange = int.MaxValue;
+            for (int i = 0; i < _monsterData.patterns.Count; i++)
+            {
+                MonsterPatternSO pattern = _monsterData.patterns[i];
+                if (pattern != null && pattern.maxRange < shortestRange) shortestRange = pattern.maxRange;
+            }
+            for (int i = 0; i < _monsterData.patterns.Count; i++)
+            {
+                MonsterPatternSO pattern = _monsterData.patterns[i];
+                if (pattern != null && pattern.maxRange == shortestRange && pattern.CanExecute(this, gridDistToPlayer)) return true;
+            }
+            return false;
         }
 
         private void MarkActionTowardPlayer()
@@ -710,6 +796,7 @@ namespace BagBack100.Monster
         private void TriggerInterruptRoutine(IEnumerator routine)
         {
             StopActionCoroutines();
+            ResetTempo();
 
             _isExecutingPattern = false;
             ClearActiveWarnings();
@@ -888,6 +975,7 @@ namespace BagBack100.Monster
                 if (!TileSystem.Instance.TryOccupyFootprint(newAnchor, size, gameObject, oldAnchor)) return false;
                 _occupiedAnchor = newAnchor;
                 _hasOccupiedAnchor = true;
+                _successfulMoveCount++;
                 return true;
             }
 
@@ -901,6 +989,7 @@ namespace BagBack100.Monster
             }
             _occupiedAnchor = newAnchor;
             _hasOccupiedAnchor = true;
+            _successfulMoveCount++;
             OnBodyCellsChanged?.Invoke();
             return true;
         }
