@@ -5,9 +5,9 @@ namespace BagBack100.Monster
 {
     /// <summary>
     /// Role: 몬스터가 바라보는 방향에 맞춰 SpriteRenderer의 4방향 스프라이트 프레임만 바꾼다 (대기 루프, 공격 = 예고 구간 + 타격 구간). 색·스케일·표시 여부(피격·스턴·안개 연출)는 건드리지 않는다.
-    ///       방향은 플레이어처럼 마지막 행동 기준: 이동 중 = 이동 방향, 패턴(공격)을 시작하면 그 순간의 플레이어 쪽, 그 외에는 그대로 유지.
+    ///       방향은 플레이어처럼 마지막 행동 기준: 이동 중 = 이동 방향, 패턴(공격)을 시작하면 그 순간의 플레이어 쪽, 대치·고정형 대기 중 = 플레이어 쪽, 그 외에는 그대로 유지.
     ///       이동 프레임이 없으면 칸 사이를 이동하는 동안에도 대기 프레임을 재생하고, 있으면(나무 walk) 이동 프레임을 반복한다. 공격 애니는 패턴별로 고를 수 있다.
-    /// Dependencies: SpriteAnimSetSO(대기·이동·공격·패턴별 공격 프레임), DirectionalSpriteSO(애니 SO가 없을 때 정지 이미지), MonsterController(이동 상태·이동 방향·마지막 행동 방향·패턴 실행 여부)
+    /// Dependencies: SpriteAnimSetSO(대기·이동·공격·패턴별 공격 프레임), DirectionalSpriteSO(애니 SO가 없을 때 정지 이미지), MonsterController(이동 상태·이동 방향·마지막 행동 방향·대치 시선·패턴 실행 여부)
     /// Events: 없음 (구독: MonsterController.OnAttackWindup)
     /// </summary>
     [RequireComponent(typeof(SpriteRenderer))]
@@ -125,6 +125,11 @@ namespace BagBack100.Monster
             {
                 // 패턴 시작 순간에만 방향을 잡는다. 예고·공격 중에 플레이어를 따라 돌지 않는다
                 _facing = DirectionalSpriteSO.FromVector(_monster.LastActionDirection, _facing);
+            }
+            else if (_monster.IsHoldingPosition)
+            {
+                // 대치·고정형 대기 중에는 플레이어를 따라 돈다(공격 애니 없이 시선만)
+                _facing = DirectionalSpriteSO.FromVector(_monster.LookTargetDirection, _facing);
             }
             _lastActionCount = _monster.ActionCount;
 
