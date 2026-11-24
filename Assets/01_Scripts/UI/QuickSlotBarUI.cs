@@ -6,18 +6,22 @@ using BagBack100.Player;
 namespace BagBack100.UI
 {
     /// <summary>
-    /// Role: 퀵슬롯 1·2·3 HUD. 등록된 소모품의 아이콘·가방 내 총 수량·공용 쿨타임을 표시한다.
+    /// Role: 퀵슬롯 1·2·3 HUD. 등록된 소모품의 아이콘·가방 내 총 수량·공용 쿨타임을 표시한다. 4번째 DASH 칸은 표시 여부만 정한다(쿨타임은 DashCooldownUI).
     /// Dependencies: QuickSlotManager, InventoryManager, ConsumableController(던전), QuickSlotSlotUI
     /// Events: 없음 (구독: QuickSlotManager.OnQuickSlotsChanged, InventoryManager.OnInventoryChanged)
     /// </summary>
     public class QuickSlotBarUI : MonoBehaviour
     {
         [SerializeField] private List<QuickSlotSlotUI> _slots = new List<QuickSlotSlotUI>();
+        [Tooltip("4번째 DASH 칸(DashCooldownUI). 대시가 없는 허브에서는 끈다")]
+        [SerializeField] private GameObject _dashSlot;
+        [SerializeField] private bool _showDashSlot = true;
 
         private QuickSlotManager _manager;
 
         private void Awake()
         {
+            if (_dashSlot != null) _dashSlot.SetActive(_showDashSlot);
             QuickSlotManager.OnManagerCreated += Bind;
             var existing = FindObjectOfType<QuickSlotManager>();
             if (existing != null) Bind(existing);

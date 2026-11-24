@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using BagBack100.Player;
 using BagBack100.Hub;
 using BagBack100.Data.Core;
@@ -25,6 +26,28 @@ namespace BagBack100.UI
         [SerializeField] private ItemContextMenuUI _contextMenu;
         [SerializeField] private ItemQuantityDialogUI _quantityDialog;
         [SerializeField] private UIToast _toast;
+
+        [Header("Bag Header")]
+        [Tooltip("BAG (사용 칸/현재 최대 칸) 표시. 비우면 표시 안 함")]
+        [SerializeField] private TextMeshProUGUI _bagHeaderText;
+
+        private int _shownItemCount = -1;
+        private int _shownMaxSlots = -1;
+
+        // 아직 못 쓰는 배낭 칸까지 잠금으로 그려, 배낭을 바꿔도 그리드 모양이 흔들리지 않게 한다
+        protected override int DisplaySlotCount =>
+            _inventoryManager != null ? Mathf.Max(_inventoryManager.MaxSlots, _inventoryManager.MaxPossibleSlots) : base.DisplaySlotCount;
+
+        protected override void OnRefreshed()
+        {
+            if (_bagHeaderText == null || _inventoryManager == null) return;
+            int count = _inventoryManager.ItemCount;
+            int max = _inventoryManager.MaxSlots;
+            if (count == _shownItemCount && max == _shownMaxSlots) return;
+            _shownItemCount = count;
+            _shownMaxSlots = max;
+            _bagHeaderText.text = $"BAG ({count}/{max})";
+        }
 
         private void Awake()
         {
