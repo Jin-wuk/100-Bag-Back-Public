@@ -193,5 +193,5 @@ graph TD
 ### 2.16. 정렬 순서 규칙
 *   Graphics `Transparency Sort Mode = Custom Axis (0,1,0)`. 바닥 타일맵 -20, 체크무늬 -19, 바닥에 붙은 것(계단·함정) -10, 외곽 벽 타일맵 0(`WallBack`)/2(`WallFront`), 서 있는 것(플레이어·몬스터·상자·귀환 포털·바닥 전리품) 1 + `spriteSortPoint = Pivot`(기준점 = 서 있는 칸 중심), 방 안 벽 `WallInner` 1 + Individual(앵커 0.75), 이동 미리보기 3·경고 장판 5·조준선 9·공격 이펙트 11·타격 플래시 45·피해 숫자 60, 안개 50.
 *   한계: Y 정렬은 칸 이동 홉 높이를 포함해 몬스터(홉 0.5칸)가 위아래로 움직이는 순간 옆 줄과 앞뒤가 잠깐 바뀔 수 있다.
-*   메뉴 `BagBack100/Floor/Setup Stairs And Floor HUD`: 회색 박스 계단 프리팹(`FloorStairs_GrayBox`) 생성·`DungeonGenerator._stairsPrefab` 연결, 켜진 Overlay 캔버스 아래 `FloorHUD` 생성 후 저장.
+*   메뉴 `BagBack100/Floor/Setup Stairs And Floor HUD`: 계단 프리팹(`FloorStairs_GrayBox`) 생성(계단 아트 `Art/Sprites/Dungeon/obj_dungeon-next-stairs_S`가 있으면 아트, 없으면 회색 박스)·`DungeonGenerator._stairsPrefab` 연결, 켜진 Overlay 캔버스 아래 `FloorHUD` 생성 후 저장.
 *   메뉴 `BagBack100/Floor/Setup Dungeon Scene For Floors`: `FloorGrid` 생성, `DungeonGenerator._regionConfig` 연결, 함정 풀이 비어 있으면 `Hazard_Spike` 지정 후 저장.
