@@ -52,12 +52,15 @@
 
 | 스크립트 | 역할 |
 | --- | --- |
-| `ItemContainerUIBase.cs` / `IItemContainerUI.cs` / `IItemDropTarget.cs` | 컨테이너 UI 공통: 드래그 앤 드롭, 더블클릭, `E` 빠른 이동, 드롭 대상(휴지통·판매 칸·퀵슬롯). 다른 컨테이너로의 이동은 모두 `SlotItemTransfer`(일부만 들어가도 이동, 드래그는 이동 전 아이콘 원위치). `IItemContainerUI.SlotContainer`로 원본 컨테이너를 넘김 |
-| `InventoryUIController.cs` | 가방 뷰. `TryOpenItemMenu`로 우클릭 메뉴(`ItemContextMenuUI`)를 연다 — 가방 아이템은 버리기·판매·나누기, 창고·파우치 아이템은 나누기만(두 UI가 이 메서드를 호출). 나누기는 `InventoryManager.TrySplitFrom`(가방 앞쪽 빈칸에만, 합치지 않음), 최대치 1이면 수량 창 생략. `CloseItemActions`로 창고 패널이 닫힐 때 메뉴·수량 창 정리 |
+| `ItemContainerUIBase.cs` / `IItemContainerUI.cs` / `IItemDropTarget.cs` | 컨테이너 UI 공통: 드래그 앤 드롭, 더블클릭, `E` 빠른 이동, 드롭 대상(휴지통·판매 칸·퀵슬롯). 다른 컨테이너로의 이동은 모두 `SlotItemTransfer`(일부만 들어가도 이동, 드래그는 이동 전 아이콘 원위치). `IItemContainerUI.SlotContainer`로 원본 컨테이너를 넘김. `DisplaySlotCount`(기본 `MaxSlots`)만큼 칸을 그리고 `MaxSlots` 이상은 잠금 칸(`GridCellUI.SetLocked`)으로 `_cells`에서 빼 드롭·`E` 대상에서 제외. `_slotViewport`가 있으면 그 밖의 마우스 위치는 칸으로 보지 않음(스크롤로 가려진 칸 보호). 아이템 아이콘은 `FitToCell`로 칸 크기를 따르고, 드래그 시작 때 화면상 크기를 유지. 그린 뒤 `OnRefreshed` 호출 |
+| `GridCellUI.cs` | 그리드 칸 배경. 보통/잠금 스프라이트 교체(잠금은 Simple, 보통은 Sliced). `Slot.prefab`(가방·창고, 얇은 테두리)·`Slot_Pouch.prefab`(파우치, 두꺼운 테두리) |
+| `InventoryUIController.cs` | 가방 뷰. `TryOpenItemMenu`로 우클릭 메뉴(`ItemContextMenuUI`)를 연다 — 가방 아이템은 버리기·판매·나누기, 창고·파우치 아이템은 나누기만(두 UI가 이 메서드를 호출). 나누기는 `InventoryManager.TrySplitFrom`(가방 앞쪽 빈칸에만, 합치지 않음), 최대치 1이면 수량 창 생략. `CloseItemActions`로 창고 패널이 닫힐 때 메뉴·수량 창 정리. `DisplaySlotCount` = `InventoryManager.MaxPossibleSlots`(기본 칸 + 가장 큰 `BackpackDataSO.bagAddedSlots`, `Resources.LoadAll` 1회 캐시), `OnRefreshed`에서 `BAG (n/max)` 헤더를 값이 바뀔 때만 갱신 |
 | `StorageUIController.cs` / `SecurePouchUIController.cs` / `EquipmentUIController.cs` / `EquipmentSlotUI.cs` / `DraggableItemUI.cs` | 창고, 파우치, 장비창, 장비 칸, 끌리는 아이템 |
 | `ItemQuantityDialogUI.cs` / `TrashSlotUI.cs` / `SellSlotUI.cs` | 수량 선택 확인창, 휴지통(확인 후 영구 삭제), 판매 칸 |
-| `QuickSlotBarUI.cs` / `QuickSlotSlotUI.cs` | 퀵슬롯 HUD: 아이콘, 가방 내 총 수량, 공용 쿨타임 |
-| `DashCooldownUI.cs` | 대시 쿨타임 HUD(`DashSlot`, 퀵슬롯 바 오른쪽). `PlayerInput.OnInputCreated`로 플레이어를 찾아 `DashCooldownNormalized`를 Filled 이미지에 채움 |
+| `QuickSlotBarUI.cs` / `QuickSlotSlotUI.cs` | 퀵슬롯 HUD: 아이콘, 가방 내 총 수량, 공용 쿨타임. 4번째 `DashSlot`은 `_showDashSlot`으로 표시 여부만 정함(기지 씬은 끔) |
+| `DashCooldownUI.cs` | 대시 쿨타임 HUD(`QuickSlotBar.prefab`의 `DashSlot`). `PlayerInput.OnInputCreated`로 플레이어를 찾아 `DashCooldownNormalized`를 Filled 이미지에 채움 |
+| `EquipmentSlotUI.cs` | 장비 칸. 아이콘(자식 `Icon`), 빈 칸이면 부위 실루엣(`_hintOverlay`, 자식 `Hint`), 더블클릭 해제 |
+| 에디터 `UIKitImportSettings` / `UIKitLayoutBuilder` | `Tools/UI Kit/Apply Import Settings`(키트·기지 스프라이트 임포트 설정), `Build Inventory And Hotbar`(프리팹 재구성), `Apply To Scenes`(인벤토리 루트 왼쪽 절반, 씬 하위 RectTransform 오버라이드 되돌림, DASH 표시), `Apply Hub`(창고 패널 재구성, 잡화상·대장간 스킨, 기지 오브젝트 스프라이트·콜라이더). 새 패널은 1024×576 기준 단위 + 배율 1080/576(12 설계안) |
 | `ShopPanelUI.cs` / `GoldDisplayUI.cs` / `RunResultUI.cs` / `UIToast.cs` | 잡화상 목록(스크롤 영역, 하단에 판매 칸), 지갑 골드, 결과 화면(한 번 표시 후 비움), 알림 |
 | `DungeonUIManager.cs` | 던전 가방 패널. 열려 있는 동안 이동 차단 + `GamePauseService` 일시정지 요청. 플레이어의 `PlayerCombatState`를 캐싱해 전투 중이면 Tab·보상 화면 열기를 거부하고 `UIToast`(던전 HUD의 FloorToast)로 안내. 소모품 사용 실패 사유(`ConsumableController.OnUseFailed`)도 같은 토스트로 표시. 닫기는 항상 허용(단 확인창·층 전환의 입력 잠금 중에는 Esc 무시) |
 | `PlayerStatsUIController.cs` | HP·MP·스탯 텍스트 |
