@@ -5,7 +5,7 @@
 
 ![플레이 화면](Docs/Images/gameplay.gif)
 
-▶ 전체 플레이 영상: [영상 링크]
+▶ [전체 플레이 영상 보기 (Google Drive)](https://drive.google.com/file/d/18TEKzDzADUNUeY7j2v0o-A_lCcQ03sIT/view)
 
 - **개발 형태**: 1인 개인 프로젝트 (기획·개발), 2026.07 ~
 - **엔진**: Unity 2022.3.62f3 (2D), C#
