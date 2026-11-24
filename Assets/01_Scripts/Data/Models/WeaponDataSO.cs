@@ -25,6 +25,12 @@ namespace BagBack100.Data.Models
         [Tooltip("우클릭 차징 강공격 전용 이펙트 프리팹 (비워두면 weaponPrefab을 확대하여 사용)")]
         public GameObject chargedEffectPrefab;
 
+        [Header("Player Animation")]
+        [Tooltip("이 무기를 들었을 때 재생할 플레이어 애니 세트. 비우면 PlayerSpriteVisual의 기본 무기 세트를 쓴다")]
+        [SerializeField] private SpriteAnimSetSO _playerAnimSet;
+
+        public SpriteAnimSetSO PlayerAnimSet => _playerAnimSet;
+
         public GameObject GetComboEffectPrefab(int comboStep)
         {
             if (comboEffectPrefabs != null && comboStep >= 0 && comboStep < comboEffectPrefabs.Length && comboEffectPrefabs[comboStep] != null)

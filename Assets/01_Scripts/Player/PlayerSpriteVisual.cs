@@ -1,5 +1,7 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 using BagBack100.Combat;
+using BagBack100.Data.Core;
 using BagBack100.Data.Models;
 
 namespace BagBack100.Player
@@ -7,18 +9,25 @@ namespace BagBack100.Player
     /// <summary>
     /// Role: 플레이어 상태와 방향에 맞춰 SpriteRenderer의 스프라이트 프레임만 바꾼다 (대기·이동·대시·공격). 색·스케일 연출은 건드리지 않는다.
     ///       대기 방향은 마우스 조준이 아니라 마지막 행동(걸음·대시·공격) 방향을 따른다.
-    /// Dependencies: SpriteAnimSetSO, DirectionalSpriteSO.FromVector(방향 변환), PlayerController(상태), PlayerMovement(걸음 방향·이동 시간), EntityCombat(공격 시작 이벤트)
-    /// Events: 없음 (구독: EntityCombat.OnMeleeAttack, EntityCombat.OnRangedAttack)
+    ///       재생할 애니 세트는 장착 무기로 고른다: 맨손 = _unarmedAnimSet, 무기 = WeaponDataSO.PlayerAnimSet → 비면 _defaultArmedAnimSet → 비면 맨손 세트.
+    /// Dependencies: SpriteAnimSetSO, DirectionalSpriteSO.FromVector(방향 변환), PlayerController(상태), PlayerMovement(걸음 방향·이동 시간), EntityCombat(공격 시작 이벤트), EquipmentManager(장착 무기, 없으면 맨손)
+    /// Events: 없음 (구독: EntityCombat.OnMeleeAttack, EntityCombat.OnRangedAttack, EquipmentManager.OnEquipmentChanged)
     /// </summary>
     [RequireComponent(typeof(SpriteRenderer))]
     public class PlayerSpriteVisual : MonoBehaviour
     {
-        [SerializeField] private SpriteAnimSetSO _animSet;
+        [FormerlySerializedAs("_animSet")]
+        [Tooltip("무기 슬롯이 비어 있을 때(맨손) 재생할 애니 세트")]
+        [SerializeField] private SpriteAnimSetSO _unarmedAnimSet;
+        [Tooltip("무기를 들었는데 그 무기 SO에 전용 애니 세트가 없을 때 쓰는 기본 무기(칼) 세트. 비우면 맨손 세트를 쓴다")]
+        [SerializeField] private SpriteAnimSetSO _defaultArmedAnimSet;
 
+        private SpriteAnimSetSO _animSet;
         private SpriteRenderer _renderer;
         private PlayerController _controller;
         private PlayerMovement _movement;
         private EntityCombat _combat;
+        private EquipmentManager _equipment;
 
         private FacingDir4 _lookDir = FacingDir4.South;
         private FacingDir4 _attackDir = FacingDir4.South;
@@ -37,16 +46,19 @@ namespace BagBack100.Player
             _controller = GetComponentInParent<PlayerController>();
             _movement = GetComponentInParent<PlayerMovement>();
             _combat = GetComponentInParent<EntityCombat>();
+            _equipment = GetComponentInParent<EquipmentManager>();
+            _animSet = _unarmedAnimSet;
 
-            if (_animSet == null || _controller == null || _movement == null || _combat == null)
+            if (_unarmedAnimSet == null || _controller == null || _movement == null || _combat == null)
             {
-                Debug.LogError($"[PlayerSpriteVisual] {name}: 애니메이션 SO 또는 PlayerController·PlayerMovement·EntityCombat이 없어 비활성화합니다.", this);
+                Debug.LogError($"[PlayerSpriteVisual] {name}: 맨손 애니메이션 SO 또는 PlayerController·PlayerMovement·EntityCombat이 없어 비활성화합니다.", this);
                 enabled = false;
             }
         }
 
         private void OnEnable()
         {
+            if (_equipment != null) _equipment.OnEquipmentChanged += RefreshAnimSet;
             if (_combat == null) return;
             _combat.OnMeleeAttack += HandleAttackStarted;
             _combat.OnRangedAttack += HandleAttackStarted;
@@ -54,9 +66,43 @@ namespace BagBack100.Player
 
         private void OnDisable()
         {
+            if (_equipment != null) _equipment.OnEquipmentChanged -= RefreshAnimSet;
             if (_combat == null) return;
             _combat.OnMeleeAttack -= HandleAttackStarted;
             _combat.OnRangedAttack -= HandleAttackStarted;
+        }
+
+        // EquipmentManager는 Awake에서 세션 장비를 복원하므로, 실행 순서와 무관하게 복원이 끝난 Start에서 처음 고른다
+        private void Start()
+        {
+            RefreshAnimSet();
+        }
+
+        private void RefreshAnimSet()
+        {
+            if (_unarmedAnimSet == null) return;
+
+            WeaponDataSO weapon = null;
+            if (_equipment != null)
+            {
+                RuntimeItem weaponItem = _equipment.GetEquippedItem(EquipType.Weapon);
+                if (weaponItem != null) weapon = weaponItem.ItemData as WeaponDataSO;
+            }
+
+            SpriteAnimSetSO next = _unarmedAnimSet;
+            if (weapon != null)
+            {
+                if (weapon.PlayerAnimSet != null) next = weapon.PlayerAnimSet;
+                else if (_defaultArmedAnimSet != null) next = _defaultArmedAnimSet;
+            }
+
+            if (next == _animSet) return;
+            _animSet = next;
+
+            // 세트마다 프레임 수가 달라 이어 재생하면 인덱스가 어긋난다. 새 세트의 대기부터 시작한다
+            _idleTime = 0f;
+            _attackElapsed = float.MaxValue;
+            _lastSprite = null;
         }
 
         // 선입력 연속 공격은 Attacking → Idle → Attacking이 한 프레임 안에 일어나 상태 폴링으로는 다음 타격을 놓친다. 공격 이벤트로 매 타격을 받는다
