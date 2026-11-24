@@ -317,11 +317,12 @@ flowchart TD
 | `TechNodeSO` / `TechTreeSO` | 제작소 노드(결과 장비, 단계, 지역, 선행, 재료·골드)와 트리(노드 목록, 제작 장비 판매 비율 0.3, 트리 검증). 판매가 동기화 메뉴 `BagBack100/Tech/Sync Crafted Sell Prices`(`TechTreeEditorMenu`) |
 | `StorageManager` | 기지 창고. 가방과 별도 겹침 한도(10) |
 | `InteractableController` / `OutlineEffect` / `HubObjectType` | 기지 오브젝트 클릭·외곽선·종류 |
-| `ItemContainerUIBase` / `IItemContainerUI` / `IItemDropTarget` | 가방·창고·파우치 UI의 드래그 앤 드롭 공통 처리 |
+| `ItemContainerUIBase` / `IItemContainerUI` / `IItemDropTarget` | 가방·창고·파우치 UI의 드래그 앤 드롭 공통 처리 (잠금 칸, 스크롤 영역 밖 드롭 차단) |
+| `GridCellUI` | 그리드 칸 배경(보통/잠금) |
 | `InventoryUIController` / `StorageUIController` / `SecurePouchUIController` / `EquipmentUIController` | 각 컨테이너 뷰 (`DraggableItemUI`, `EquipmentSlotUI`) |
 | `ItemContextMenuUI` / `ItemQuantityDialogUI` / `TrashSlotUI` / `SellSlotUI` | 우클릭 메뉴(버리기·판매·나누기, 가방 패널에 하나를 창고·파우치도 공용), 수량 선택 확인창, 휴지통, 판매 칸 |
 | `QuickSlotBarUI` / `QuickSlotSlotUI` | 퀵슬롯 HUD (수량, 쿨타임) |
-| `DashCooldownUI` | 대시 쿨타임 HUD |
+| `DashCooldownUI` | 대시 쿨타임 HUD (핫바 4번째 칸) |
 | `ShopPanelUI` / `GoldDisplayUI` / `RunResultUI` / `UIToast` | 잡화상 목록(스크롤), 지갑 골드, 결과 화면, 알림 |
 | `TechTreePanelUI` | 제작소 화면. 탭별 장비 줄·노드·연결선, 노드 상세와 `Unlock`/`Craft`. `CraftingSystem`에만 묻고 갱신 플래그로 `LateUpdate`에서 1회 갱신 |
 | `DungeonUIManager` | 던전 가방 패널 열기·닫기와 일시정지 요청. 전투 중(`PlayerCombatState`)이면 열기 거부 + HUD 토스트. 소모품 사용 실패 사유(`ConsumableController.OnUseFailed`)도 토스트로 표시 |

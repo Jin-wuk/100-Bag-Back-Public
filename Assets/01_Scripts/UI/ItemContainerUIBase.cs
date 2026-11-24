@@ -19,6 +19,8 @@ namespace BagBack100.UI
         [SerializeField] private GameObject _panelRoot;
         [SerializeField] private RectTransform _gridContainer;
         [SerializeField] private RectTransform _dragContainer; // 드래그 중인 아이템이 표시될 최상단 부모
+        [Tooltip("그리드가 스크롤되는 경우의 Viewport(RectMask2D). 마우스가 이 밖이면 가려진 칸에 드롭하지 않는다. 비우면 검사 생략")]
+        [SerializeField] private RectTransform _slotViewport;
 
         [Header("Prefabs")]
         [SerializeField] private GameObject _gridCellPrefab;
@@ -32,9 +34,16 @@ namespace BagBack100.UI
         private ISlotItemContainer _container;
         private DraggableItemUI _heldItemUI;
         private int _lastMaxSlots = -1;
+        private int _lastDisplaySlots = -1;
 
         protected ISlotItemContainer Container => _container;
         protected bool IsHoldingItem => _heldItemUI != null;
+
+        /// <summary>그릴 칸 수. MaxSlots를 넘는 칸은 잠금으로 그린다. 기본은 MaxSlots(잠금 칸 없음), 가방만 최대 가능 칸 수로 재정의</summary>
+        protected virtual int DisplaySlotCount => _container != null ? _container.MaxSlots : 0;
+
+        /// <summary>RefreshUI가 끝난 뒤 호출. 칸 수·아이템 수 표시 같은 부가 UI를 갱신한다</summary>
+        protected virtual void OnRefreshed() { }
 
         /// <summary>E키 빠른 이동 대상 컨테이너. 대상 패널이 닫혀 있으면 null.</summary>
         protected abstract ISlotItemContainer ResolveQuickTransferTarget();
@@ -102,13 +111,16 @@ namespace BagBack100.UI
         {
             if (_container == null || _gridContainer == null || _gridCellPrefab == null || _draggableItemPrefab == null) return;
 
-            if (_lastMaxSlots != _container.MaxSlots || _cells.Count != _container.MaxSlots)
+            int displaySlots = DisplaySlotCount;
+            if (_lastMaxSlots != _container.MaxSlots || _lastDisplaySlots != displaySlots || _cells.Count != _container.MaxSlots)
             {
                 DrawGrid();
                 _lastMaxSlots = _container.MaxSlots;
+                _lastDisplaySlots = displaySlots;
             }
 
             DrawItems();
+            OnRefreshed();
         }
 
         private void DrawGrid()
@@ -117,11 +129,16 @@ namespace BagBack100.UI
             _cells.Clear();
             _itemUIs.Clear(); // 슬롯 파괴 시 하위 아이템 객체도 파괴되므로 딕셔너리 초기화 필수
 
-            for (int i = 0; i < _container.MaxSlots; i++)
+            // 잠긴 칸(MaxSlots 이상)은 _cells에 넣지 않아 GetSlotIndex·드롭·E키 이동에서 자동으로 빠진다
+            int maxSlots = _container.MaxSlots;
+            int total = Mathf.Max(maxSlots, DisplaySlotCount);
+            for (int i = 0; i < total; i++)
             {
                 var cell = Instantiate(_gridCellPrefab, _gridContainer);
-                cell.name = $"Slot_{i}";
-                _cells.Add(cell.transform);
+                bool locked = i >= maxSlots;
+                cell.name = locked ? $"Locked_{i}" : $"Slot_{i}";
+                if (cell.TryGetComponent(out GridCellUI cellUI)) cellUI.SetLocked(locked);
+                if (!locked) _cells.Add(cell.transform);
             }
         }
 
@@ -158,10 +175,20 @@ namespace BagBack100.UI
                 {
                     itemGo.transform.SetParent(_cells[item.SlotIndex], false);
                     draggable.Setup(item, this);
-                    draggable.rectTransform.anchoredPosition = Vector2.zero;
-                    draggable.rectTransform.localPosition = Vector3.zero;
+                    FitToCell(draggable.rectTransform);
                 }
             }
+        }
+
+        // 아이콘이 칸(GridLayout 셀) 크기를 그대로 따르게 해, 컨테이너마다 칸 크기가 달라도 프리팹 하나로 쓴다
+        private static void FitToCell(RectTransform itemRect)
+        {
+            itemRect.anchorMin = Vector2.zero;
+            itemRect.anchorMax = Vector2.one;
+            itemRect.pivot = new Vector2(0.5f, 0.5f);
+            itemRect.sizeDelta = Vector2.zero;
+            itemRect.anchoredPosition = Vector2.zero;
+            itemRect.localScale = Vector3.one;
         }
 
         private static bool ContainsItem(IReadOnlyList<RuntimeItem> items, RuntimeItem target)
@@ -178,6 +205,10 @@ namespace BagBack100.UI
         public void OnItemBeginDrag(DraggableItemUI draggedItem, PointerEventData eventData)
         {
             _heldItemUI = draggedItem;
+            // 칸 크기·배율이 컨테이너마다 달라서, 옮긴 부모 아래에서도 칸에 있을 때와 같은 화면상 크기로 맞춘다.
+            // SetHeldState가 크기를 바꾸므로 그 전에 잰다
+            RectTransform heldRect = _heldItemUI.rectTransform;
+            Vector2 worldSize = Vector2.Scale(heldRect.rect.size, heldRect.lossyScale);
             _heldItemUI.SetHeldState(true);
 
             // 패널 잘림(Mask) 및 타 패널에 가려짐 방지를 위해 최상단 캔버스를 우선 부모로 설정합니다.
@@ -190,6 +221,9 @@ namespace BagBack100.UI
             }
 
             _heldItemUI.transform.SetParent(targetParent, false);
+            Vector3 parentScale = targetParent.lossyScale;
+            heldRect.anchorMin = heldRect.anchorMax = new Vector2(0.5f, 0.5f);
+            heldRect.sizeDelta = new Vector2(worldSize.x / Mathf.Max(parentScale.x, 0.0001f), worldSize.y / Mathf.Max(parentScale.y, 0.0001f));
 
             if (_dragContainer != null && targetParent == _dragContainer) _dragContainer.SetAsLastSibling();
             _heldItemUI.transform.SetAsLastSibling();
@@ -290,8 +324,7 @@ namespace BagBack100.UI
             if (item != null && item.SlotIndex >= 0 && item.SlotIndex < _cells.Count)
             {
                 held.transform.SetParent(_cells[item.SlotIndex], false);
-                held.rectTransform.anchoredPosition = Vector2.zero;
-                held.rectTransform.localPosition = Vector3.zero;
+                FitToCell(held.rectTransform);
             }
             else
             {
@@ -340,6 +373,9 @@ namespace BagBack100.UI
 
         private int GetSlotIndexAtScreenPos(Vector2 screenPosition, Camera cam)
         {
+            // 스크롤로 가려진 칸은 화면 좌표상 Viewport 밖에 있으므로 먼저 걸러낸다
+            if (_slotViewport != null && !RectTransformUtility.RectangleContainsScreenPoint(_slotViewport, screenPosition, cam)) return -1;
+
             for (int i = 0; i < _cells.Count; i++)
             {
                 if (_cells[i] != null && RectTransformUtility.RectangleContainsScreenPoint((RectTransform)_cells[i], screenPosition, cam))

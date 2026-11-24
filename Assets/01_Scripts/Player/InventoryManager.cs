@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using BagBack100.Data.Core;
+using BagBack100.Data.Models;
 
 namespace BagBack100.Player
 {
@@ -35,15 +36,35 @@ namespace BagBack100.Player
 
         public int MaxSlots => _container != null ? _container.Capacity : _baseMaxSlots;
         public int BaseMaxSlots => _baseMaxSlots;
+        /// <summary>기본 칸 + 가장 큰 배낭 보너스. 가방 UI가 아직 못 쓰는 칸을 잠금으로 미리 그릴 때 쓴다</summary>
+        public int MaxPossibleSlots => _baseMaxSlots + GetLargestBackpackBonus();
         public int ItemCount => _container != null ? _container.ItemCount : 0;
 
         private SlotContainer _container;
+        // 배낭 SO는 런타임에 바뀌지 않으므로 처음 한 번만 찾는다 (-1 = 아직 안 찾음)
+        private static int s_largestBackpackBonus = -1;
+
+        // 도메인 리로드를 끈 Enter Play Mode에서도 플레이마다 배낭 SO 값을 다시 읽게 한다
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticCache() => s_largestBackpackBonus = -1;
         private readonly List<RuntimeItem> _overflowBuffer = new List<RuntimeItem>();
 
         private void Awake()
         {
             RestoreFromSession();
             OnManagerCreated?.Invoke(this);
+        }
+
+        private static int GetLargestBackpackBonus()
+        {
+            if (s_largestBackpackBonus >= 0) return s_largestBackpackBonus;
+            int largest = 0;
+            foreach (var backpack in Resources.LoadAll<BackpackDataSO>(""))
+            {
+                if (backpack != null && backpack.bagAddedSlots > largest) largest = backpack.bagAddedSlots;
+            }
+            s_largestBackpackBonus = largest;
+            return largest;
         }
 
         private void RestoreFromSession()

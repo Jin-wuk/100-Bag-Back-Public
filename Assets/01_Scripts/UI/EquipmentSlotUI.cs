@@ -6,11 +6,18 @@ using BagBack100.Player;
 
 namespace BagBack100.UI
 {
+    /// <summary>
+    /// Role: 장비 칸 한 개. 장착 아이템 아이콘 표시, 빈 칸이면 부위 실루엣 표시, 더블클릭 해제 요청.
+    /// Dependencies: EquipmentManager
+    /// Events: 없음
+    /// </summary>
     public class EquipmentSlotUI : MonoBehaviour, IPointerClickHandler
     {
         [SerializeField] private EquipType _slotType;
         [SerializeField] private Image _itemIcon;
         [SerializeField] private Sprite _defaultIcon;
+        [Tooltip("빈 칸일 때만 보이는 부위 실루엣(ui_equip_hint_*). 비우면 생략")]
+        [SerializeField] private Image _hintOverlay;
 
         private EquipmentManager _equipmentManager;
         private RuntimeItem _currentItem;
@@ -25,6 +32,7 @@ namespace BagBack100.UI
         public void UpdateSlot(RuntimeItem item)
         {
             _currentItem = item;
+            if (_hintOverlay != null) _hintOverlay.enabled = _currentItem == null;
             
             if (_currentItem != null)
             {
