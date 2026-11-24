@@ -20,9 +20,9 @@ MonoBehaviour:
   _materials:
   - _item: {fileID: 11400000, guid: 582d5350e37598644924275514bfe549, type: 2}
     _amount: 1
-  - _item: {fileID: 11400000, guid: 868a76e56fae669429e0fbf6a6d55547, type: 2}
+  - _item: {fileID: 11400000, guid: e4eaaa4d42c32ee459421738939bda4b, type: 2}
     _amount: 3
-  - _item: {fileID: 11400000, guid: 8f199b9f24592bc47baf179ebdd2bca5, type: 2}
+  - _item: {fileID: 11400000, guid: 1580dbea71066f64ca26271e144bb680, type: 2}
     _amount: 1
   _unlockGold: 400
   _recraftGold: 250

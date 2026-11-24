@@ -18,9 +18,9 @@ MonoBehaviour:
   _regionId: 1
   _prerequisite: {fileID: 11400000, guid: 71592afeb380aa34c8e7dc039ba0c53d, type: 2}
   _materials:
-  - _item: {fileID: 11400000, guid: 868a76e56fae669429e0fbf6a6d55547, type: 2}
+  - _item: {fileID: 11400000, guid: e4eaaa4d42c32ee459421738939bda4b, type: 2}
     _amount: 3
-  - _item: {fileID: 11400000, guid: d6e25629ae8d5494ab475e84e5357a5a, type: 2}
+  - _item: {fileID: 11400000, guid: 82126795eebf0c64ab01d313176a1124, type: 2}
     _amount: 1
   _unlockGold: 400
   _recraftGold: 250
