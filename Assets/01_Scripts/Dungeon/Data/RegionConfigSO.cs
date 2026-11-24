@@ -70,7 +70,7 @@ namespace BagBack100.Dungeon.Data
     }
 
     /// <summary>
-    /// Role: 지역 1곳의 층 구성 정적 데이터 (디자인 풀, 일반 몬스터 풀, 보스층 디자인, 층별 몬스터 배율·드랍 등급 비율, 1~9층 탈출구·상자 표, 상자 드랍 풀, 디버그 옵션).
+    /// Role: 지역 1곳의 정적 데이터. 월드맵 표시(이름·설명·아이콘·좌표)와 층 구성(디자인 풀, 일반 몬스터 풀, 보스층 디자인, 층별 몬스터 배율·드랍 등급 비율, 1~9층 탈출구·상자 표, 상자 드랍 풀, 디버그 옵션).
     /// Dependencies: FloorDesignSO
     /// Events: 없음
     /// </summary>
@@ -84,7 +84,16 @@ namespace BagBack100.Dungeon.Data
 
         [Header("Region Identity")]
         [SerializeField] private int _regionId = 1;
-        [SerializeField] private string _regionName = "지역 1";
+        [Tooltip("게임 UI에 나오는 지역 이름 (층 HUD, 월드맵 입장 패널)")]
+        [SerializeField] private string _regionName = "Ancient Forest";
+
+        [Header("World Map")]
+        [Tooltip("월드맵 입장 패널의 지역 설명")]
+        [SerializeField, TextArea(2, 4)] private string _description;
+        [Tooltip("월드맵 위에 놓는 던전 아이콘 (탑 등)")]
+        [SerializeField] private Sprite _mapIcon;
+        [Tooltip("월드맵 캔버스(344×192) 기준 아이콘 좌상단 픽셀 좌표. 위쪽이 0")]
+        [SerializeField] private Vector2Int _mapIconPosition;
 
         [Header("Design Pools")]
         [Tooltip("1~5층 구간 풀 (5층은 보스층 고정이라 실제 추첨은 1~4층)")]
@@ -129,6 +138,9 @@ namespace BagBack100.Dungeon.Data
 
         public int RegionId => _regionId;
         public string RegionName => _regionName;
+        public string Description => _description;
+        public Sprite MapIcon => _mapIcon;
+        public Vector2Int MapIconPosition => _mapIconPosition;
         public IReadOnlyList<FloorDesignSO> EarlyPool => _earlyPool;
         public IReadOnlyList<FloorDesignSO> LatePool => _latePool;
         public FloorDesignSO MidBossFloorDesign => _midBossFloor;

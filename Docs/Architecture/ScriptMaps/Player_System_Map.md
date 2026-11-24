@@ -43,7 +43,7 @@
 
 | 스크립트 | 역할 |
 | --- | --- |
-| `HubSystem.cs` | `OnHubObjectClicked` 분기(던전 포탈, 창고, 대장간 = 제작소, 잡화상). 플레이어가 없는 기지에서도 가방·장비·창고·파우치·퀵슬롯 매니저 존재 보장 |
+| `HubSystem.cs` | `OnHubObjectClicked` 분기(던전 포탈 = 월드맵, 창고, 대장간 = 제작소, 잡화상). `Esc`는 월드맵이 열려 있으면 `DungeonEntranceUI.TryCloseTopLayer()`로 한 겹씩 닫고, 월드맵이 열려 있으면 `Tab`(가방)을 무시. 플레이어가 없는 기지에서도 가방·장비·창고·파우치·퀵슬롯 매니저 존재 보장 |
 | `HubTradeSystem.cs` | 잡화상 판매: `baseValue` × 수량 → 지갑 골드. 구매: `ShopCatalogSO` 가격, 가방 → 창고 순으로 넣고 둘 다 차면 취소. `OnTradeFailed`, `OnTradeCompleted` |
 | `CraftingSystem.cs` 외 제작소 | 테크트리 해금·재제작. 상세는 [Hub_System_Map.md](Hub_System_Map.md) |
 | `StorageManager.cs` | 창고(30칸). `StorageItems`와 동기화. `_stackLimit`(10)을 `SlotContainer` 최소 겹침 한도로 넘겨 재료를 등급과 무관하게 겹침 |
@@ -60,7 +60,7 @@
 | `QuickSlotBarUI.cs` / `QuickSlotSlotUI.cs` | 퀵슬롯 HUD: 아이콘, 가방 내 총 수량, 공용 쿨타임. 4번째 `DashSlot`은 `_showDashSlot`으로 표시 여부만 정함(기지 씬은 끔) |
 | `DashCooldownUI.cs` | 대시 쿨타임 HUD(`QuickSlotBar.prefab`의 `DashSlot`). `PlayerInput.OnInputCreated`로 플레이어를 찾아 `DashCooldownNormalized`를 Filled 이미지에 채움 |
 | `EquipmentSlotUI.cs` | 장비 칸. 아이콘(자식 `Icon`), 빈 칸이면 부위 실루엣(`_hintOverlay`, 자식 `Hint`), 더블클릭 해제 |
-| 에디터 `UIKitImportSettings` / `UIKitLayoutBuilder` | `Tools/UI Kit/Apply Import Settings`(키트·기지 스프라이트 임포트 설정), `Build Inventory And Hotbar`(프리팹 재구성), `Apply To Scenes`(인벤토리 루트 왼쪽 절반, 씬 하위 RectTransform 오버라이드 되돌림, DASH 표시), `Apply Hub`(창고 패널 재구성, 잡화상·대장간 스킨, 기지 오브젝트 스프라이트·콜라이더). 새 패널은 1024×576 기준 단위 + 배율 1080/576(12 설계안) |
+| 에디터 `UIKitImportSettings` / `UIKitLayoutBuilder` | `Tools/UI Kit/Apply Import Settings`(키트·월드맵·기지 스프라이트 임포트 설정. 기지 배경 `hub_bg_camp`만 PPU 16·가운데 피벗, 월드맵 안개만 Read/Write), `Build Inventory And Hotbar`(프리팹 재구성), `Apply To Scenes`(인벤토리 루트 왼쪽 절반, 씬 하위 RectTransform 오버라이드 되돌림, DASH 표시), `Apply Hub`(창고 패널 재구성, 잡화상·대장간 스킨, 기지 오브젝트 스프라이트·콜라이더, 포탈 `hub_portal`). 새 패널은 1024×576 기준 단위 + 배율 1080/576(12 설계안) |
 | `ShopPanelUI.cs` / `GoldDisplayUI.cs` / `RunResultUI.cs` / `UIToast.cs` | 잡화상 목록(스크롤 영역, 하단에 판매 칸), 지갑 골드, 결과 화면(한 번 표시 후 비움), 알림 |
 | `DungeonUIManager.cs` | 던전 가방 패널. 열려 있는 동안 이동 차단 + `GamePauseService` 일시정지 요청. 플레이어의 `PlayerCombatState`를 캐싱해 전투 중이면 Tab·보상 화면 열기를 거부하고 `UIToast`(던전 HUD의 FloorToast)로 안내. 소모품 사용 실패 사유(`ConsumableController.OnUseFailed`)도 같은 토스트로 표시. 닫기는 항상 허용(단 확인창·층 전환의 입력 잠금 중에는 Esc 무시) |
 | `PlayerStatsUIController.cs` | HP·MP·스탯 텍스트 |

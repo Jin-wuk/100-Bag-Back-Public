@@ -200,7 +200,7 @@ namespace BagBack100.EditorTools
                 AssetDatabase.CreateAsset(region, RegionConfigPath);
             }
             region.EditorInitialize(
-                1, "지역 1",
+                1, "Ancient Forest",
                 new List<FloorDesignSO> { normal01, normal02 },
                 new List<FloorDesignSO> { late01, late02 },
                 boss01, boss01,

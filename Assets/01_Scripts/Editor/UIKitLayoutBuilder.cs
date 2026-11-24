@@ -417,6 +417,7 @@ namespace BagBack100.EditorTools
                         case "GeneralStore": ApplyHubObject(t, "hub_shop"); break;
                         case "Storage": if (t.GetComponent<SpriteRenderer>() != null) ApplyHubObject(t, "hub_stash"); break;
                         case "BlackSmith": ApplyHubObject(t, "hub_forge"); break;
+                        case "Dungeon": if (t.GetComponent<SpriteRenderer>() != null) ApplyHubObject(t, "hub_portal"); break;
                     }
                 }
             }
