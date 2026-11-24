@@ -191,7 +191,7 @@ flowchart LR
 | `PlayerInput` | 입력을 읽어 이벤트로 전달 (로직 없음) |
 | `PlayerController` | 상태 관리, 선입력 버퍼, 3타 콤보·차징 공격, 무기 히트박스 계산 |
 | `PlayerMovement` | 셀 단위 이동과 보행 연출(칸마다 뛰는 포물선. 틸트·스쿼시는 프리팹에서 끔) |
-| `PlayerSpriteVisual` / `SpriteAnimSetSO` | 상태·방향에 맞춰 스프라이트 프레임 교체(4방향 대기·이동·대시·공격, 대기 방향은 마지막 행동 방향). 이동은 `MoveCycleMode`(한 칸에 반 사이클/전체). 공격은 `EntityCombat` 공격 이벤트마다 처음부터 재생 |
+| `PlayerSpriteVisual` / `SpriteAnimSetSO` | 상태·방향에 맞춰 스프라이트 프레임 교체(4방향 대기·이동·대시·공격, 대기 방향은 마지막 행동 방향). 이동은 `MoveCycleMode`(한 칸에 반 사이클/전체). 공격은 `EntityCombat` 공격 이벤트마다 처음부터 재생. 세트는 장착 무기로 고름(맨손 세트 / 무기 SO의 `PlayerAnimSet` → 기본 칼 세트 → 맨손 세트) |
 | `EntityCombat` | 공격 판정과 후딜레이. 후딜레이는 `Time.unscaledDeltaTime`으로 계산해 히트스톱 영향을 받지 않음 |
 | `PlayerStatManager` | HP/MP, 장비 스탯 합산, 피격(`CombatMath`로 방어력 경감, 피격 무적·보스 처치 후 무적이면 무시), 사망 처리 |
 | `PlayerCombatState` | 마지막 타격·피격 후 5초간 전투 중 판정 |
