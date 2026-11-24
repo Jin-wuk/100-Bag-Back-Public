@@ -4,6 +4,11 @@ using BagBack100.Player;
 
 namespace BagBack100.UI
 {
+    /// <summary>
+    /// Role: 장비 패널의 플레이어 스탯 텍스트(HP·MP·ATK·DEF·SPD) 표시. 던전은 Player.prefab, 허브는 Manager 오브젝트의 PlayerStatManager에 붙는다.
+    /// Dependencies: PlayerStatManager
+    /// Events: 없음 (구독: PlayerStatManager.OnManagerCreated, PlayerStatManager.OnStatsChanged)
+    /// </summary>
     public class PlayerStatsUIController : MonoBehaviour
     {
         [SerializeField] private TextMeshProUGUI _hpText;
@@ -17,30 +22,44 @@ namespace BagBack100.UI
         private void Awake()
         {
             PlayerStatManager.OnManagerCreated += OnManagerCreated;
+            BindExisting();
+        }
 
-            if (_statManager == null)
-            {
-                var existing = FindObjectOfType<PlayerStatManager>();
-                if (existing != null) OnManagerCreated(existing);
-            }
+        // 패널이 꺼진 채 시작하면 매니저 생성 이벤트를 놓치므로, 켜질 때마다 현재 매니저를 찾아 다시 붙인다
+        private void OnEnable()
+        {
+            BindExisting();
         }
 
         private void OnDestroy()
         {
             PlayerStatManager.OnManagerCreated -= OnManagerCreated;
-            
+
             if (_statManager != null)
             {
                 _statManager.OnStatsChanged -= UpdateStats;
             }
         }
 
+        // ??는 파괴된 UnityEngine.Object를 null로 보지 않으므로 != null 오버로드로 확인한다
+        private void BindExisting()
+        {
+            var existing = _statManager != null ? _statManager : FindObjectOfType<PlayerStatManager>();
+            if (existing != null) OnManagerCreated(existing);
+        }
+
         private void OnManagerCreated(PlayerStatManager manager)
         {
-            _statManager = manager;
-            _statManager.OnStatsChanged += UpdateStats;
-            
-            // UI가 나중에 활성화(지연 생성)되었을 때를 대비해, 구독 즉시 현재 스탯으로 화면을 1회 강제 동기화합니다.
+            if (manager == null) return;
+
+            if (_statManager != manager)
+            {
+                if (_statManager != null) _statManager.OnStatsChanged -= UpdateStats;
+                _statManager = manager;
+                _statManager.OnStatsChanged += UpdateStats;
+            }
+
+            // 구독 직후 현재 스탯으로 한 번 맞춘다 (패널이 나중에 켜졌을 때 대비)
             UpdateStats(_statManager.CurrentHp, _statManager.CurrentMp, _statManager.CurrentAttack, _statManager.CurrentDefense, _statManager.CurrentSpeed, _statManager.CurrentRange);
         }
 
