@@ -134,7 +134,7 @@ namespace BagBack100.Player
         // Zero-GC 단일 슬롯 덮어쓰기 선입력 버퍼
         private BufferedCommand _inputBuffer;
 
-        // 3타 콤보 상태
+        // 콤보 상태 (타수는 _comboHitCount)
         private int _comboStep = 0; // 0: 1타, 1: 2타, 2: 3타(_comboHitCount ≥ 3일 때)
         private float _lastComboAttackTime = -99f;
 
@@ -311,7 +311,7 @@ namespace BagBack100.Player
             _movement.MoveTo(targetPos);
         }
 
-        #region Left-Click: 3-Hit Combo Attack & Weapon Grid Hitbox
+        #region Left-Click: Combo Attack (_comboHitCount) & Weapon Grid Hitbox
 
         private void HandleAttackInput(Vector3Int targetCell)
         {
@@ -411,7 +411,7 @@ namespace BagBack100.Player
                 }
             }
 
-            // 타수별 데미지 배율 및 스케일 변형 (1타: 정방향 1.0x / 2타: Y축 반전 1.15x / 3타: 확대 강타 1.5x)
+            // 타수별 데미지 배율 및 스케일 변형 (1타: 정방향 1.0x / 2타: 1.15x, 전용 이펙트가 없으면 Y축 반전 / 3타(_comboHitCount ≥ 3): 확대 강타 1.5x)
             float dmgMultiplier = 1.0f;
             Vector3 comboScale = _meleeScale;
             bool isFinisher = (currentCombo == 2);
