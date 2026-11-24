@@ -75,7 +75,7 @@ namespace BagBack100.Player
     [RequireComponent(typeof(EntityCombat))]
     [RequireComponent(typeof(PlayerStatManager))]
     /// <summary>
-    /// Role: 플레이어 상태(Idle/Moving/Attacking/Charging/Dashing)와 전투 입력 총괄. 선입력 버퍼, 3타 콤보, 우클릭 차징, 2칸 대시(쿨타임, 공격 후 잠금·걸음·차징 끊기), 일시정지 시 입력·차징 정리.
+    /// Role: 플레이어 상태(Idle/Moving/Attacking/Charging/Dashing)와 전투 입력 총괄. 선입력 버퍼, N타 콤보(기본 2타), 우클릭 차징(_chargeAttackEnabled 스위치, 기본 꺼짐), 2칸 대시(쿨타임, 공격 후 잠금·걸음·차징 끊기), 일시정지 시 입력·차징 정리.
     /// Dependencies: PlayerInput, PlayerMovement, EntityCombat, PlayerStatManager, EquipmentManager, GamePauseService, TileSystem
     /// Events: GlobalEvents.OnPlayerCellChanged (구독: GamePauseService.OnPauseChanged)
     /// </summary>
@@ -88,7 +88,9 @@ namespace BagBack100.Player
         [SerializeField] private Vector3 _meleeScale = Vector3.one;
         [Tooltip("무기 미장착 시 사용할 기본 근접 이펙트 프리팹")]
         [SerializeField] private GameObject _defaultMeleeEffectPrefab;
-        [Tooltip("이동 중에도 콤보(1~3타)가 유지되는 최대 시간(초)")]
+        [Tooltip("기본 공격 콤보 타수. 2 = 1타·2타 반복(마무리 강타 없음), 3 이상이면 3타가 마무리 강타(1.5배)")]
+        [SerializeField, Min(1)] private int _comboHitCount = 2;
+        [Tooltip("이동 중에도 콤보가 유지되는 최대 시간(초)")]
         [SerializeField] private float _comboResetTime = 1.5f;
         [Tooltip("기본 공격 판정 칸을 몬스터 길찾기의 위험 칸으로 표시하는 시간(초). 공격 간격(약 0.55초)보다 짧아야 연타 사이에 몬스터가 들어올 틈이 생긴다")]
         [SerializeField] private float _meleeDangerDuration = 0.3f;
@@ -98,6 +100,8 @@ namespace BagBack100.Player
         [SerializeField] private float _inputBufferWindow = 0.22f;
 
         [Header("Right-Click Charge Attack Settings")]
+        [Tooltip("우클릭 차징 공격 사용 여부. 꺼 두면 우클릭 입력(선입력 포함)을 무시한다")]
+        [SerializeField] private bool _chargeAttackEnabled = false;
         [Tooltip("우클릭 차징 완충까지 걸리는 시간(초) - 완충 전 손을 떼면 무효")]
         [SerializeField] private float _chargeDuration = 0.6f;
         [Tooltip("차징 강공격 전방 직선 타일 사거리")]
@@ -130,8 +134,8 @@ namespace BagBack100.Player
         // Zero-GC 단일 슬롯 덮어쓰기 선입력 버퍼
         private BufferedCommand _inputBuffer;
 
-        // 3타 콤보 상태
-        private int _comboStep = 0; // 0: 1타, 1: 2타, 2: 3타
+        // 콤보 상태 (타수는 _comboHitCount)
+        private int _comboStep = 0; // 0: 1타, 1: 2타, 2: 3타(_comboHitCount ≥ 3일 때)
         private float _lastComboAttackTime = -99f;
 
         // 우클릭 홀드 차징 및 무기 히트박스 버퍼 (GC Zero를 위해 사전 할당)
@@ -307,7 +311,7 @@ namespace BagBack100.Player
             _movement.MoveTo(targetPos);
         }
 
-        #region Left-Click: 3-Hit Combo Attack & Weapon Grid Hitbox
+        #region Left-Click: Combo Attack (_comboHitCount) & Weapon Grid Hitbox
 
         private void HandleAttackInput(Vector3Int targetCell)
         {
@@ -354,8 +358,10 @@ namespace BagBack100.Player
                 _comboStep = 0;
             }
 
-            int currentCombo = _comboStep;
-            _comboStep = (_comboStep + 1) % 3;
+            // 플레이 중 인스펙터에서 타수를 줄여도 범위를 벗어나지 않게 매번 나머지를 취한다
+            int hitCount = Mathf.Max(1, _comboHitCount);
+            int currentCombo = _comboStep % hitCount;
+            _comboStep = (currentCombo + 1) % hitCount;
             _lastComboAttackTime = Time.time;
 
             CurrentState = PlayerState.Attacking;
@@ -405,7 +411,7 @@ namespace BagBack100.Player
                 }
             }
 
-            // 타수별 데미지 배율 및 스케일 변형 (1타: 정방향 1.0x / 2타: Y축 반전 1.15x / 3타: 확대 강타 1.5x)
+            // 타수별 데미지 배율 및 스케일 변형 (1타: 정방향 1.0x / 2타: 1.15x, 전용 이펙트가 없으면 Y축 반전 / 3타(_comboHitCount ≥ 3): 확대 강타 1.5x)
             float dmgMultiplier = 1.0f;
             Vector3 comboScale = _meleeScale;
             bool isFinisher = (currentCombo == 2);
@@ -413,7 +419,9 @@ namespace BagBack100.Player
             if (currentCombo == 1)
             {
                 dmgMultiplier = 1.15f;
-                comboScale = new Vector3(_meleeScale.x * 1.08f, -_meleeScale.y * 1.08f, _meleeScale.z);
+                bool hasDedicatedEffect = equippedWeapon != null && equippedWeapon.HasComboEffectPrefab(currentCombo);
+                float flipY = hasDedicatedEffect ? 1f : -1f;
+                comboScale = new Vector3(_meleeScale.x * 1.08f, flipY * _meleeScale.y * 1.08f, _meleeScale.z);
             }
             else if (currentCombo == 2)
             {
@@ -543,6 +551,7 @@ namespace BagBack100.Player
 
         private void HandleChargeStartInput()
         {
+            if (!_chargeAttackEnabled) return;
             if (CurrentState == PlayerState.Charging) return;
 
             if (CurrentState == PlayerState.Moving || CurrentState == PlayerState.Attacking || CurrentState == PlayerState.Dashing || _combat.IsAttackOnCooldown)

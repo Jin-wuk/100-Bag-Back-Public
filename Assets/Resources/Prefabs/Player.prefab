@@ -93,9 +93,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _meleeOffset: 0.7
   _meleeScale: {x: 2, y: 2, z: 1}
-  _defaultMeleeEffectPrefab: {fileID: 0}
+  _defaultMeleeEffectPrefab: {fileID: 4332407523970665850, guid: 75193bdefeb30a741a274a7382f13eaf, type: 3}
+  _comboHitCount: 2
   _comboResetTime: 1.5
+  _meleeDangerDuration: 0.3
   _inputBufferWindow: 0.22
+  _chargeAttackEnabled: 0
   _chargeDuration: 0.6
   _chargeLineLength: 2
   _chargeDamageMultiplier: 2
@@ -356,4 +359,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aa5ecf20b6c801046bde3b54380be1cf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _animSet: {fileID: 11400000, guid: 8ff3c152fabd09548b7569cef49bb184, type: 2}
+  _unarmedAnimSet: {fileID: 11400000, guid: 8ff3c152fabd09548b7569cef49bb184, type: 2}
+  _defaultArmedAnimSet: {fileID: 11400000, guid: 5d58b021583d99f42a28ddc45dede0e9, type: 2}
