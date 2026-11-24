@@ -75,7 +75,7 @@ namespace BagBack100.Player
     [RequireComponent(typeof(EntityCombat))]
     [RequireComponent(typeof(PlayerStatManager))]
     /// <summary>
-    /// Role: 플레이어 상태(Idle/Moving/Attacking/Charging/Dashing)와 전투 입력 총괄. 선입력 버퍼, N타 콤보(기본 2타), 우클릭 차징, 2칸 대시(쿨타임, 공격 후 잠금·걸음·차징 끊기), 일시정지 시 입력·차징 정리.
+    /// Role: 플레이어 상태(Idle/Moving/Attacking/Charging/Dashing)와 전투 입력 총괄. 선입력 버퍼, N타 콤보(기본 2타), 우클릭 차징(_chargeAttackEnabled 스위치, 기본 꺼짐), 2칸 대시(쿨타임, 공격 후 잠금·걸음·차징 끊기), 일시정지 시 입력·차징 정리.
     /// Dependencies: PlayerInput, PlayerMovement, EntityCombat, PlayerStatManager, EquipmentManager, GamePauseService, TileSystem
     /// Events: GlobalEvents.OnPlayerCellChanged (구독: GamePauseService.OnPauseChanged)
     /// </summary>
@@ -100,6 +100,8 @@ namespace BagBack100.Player
         [SerializeField] private float _inputBufferWindow = 0.22f;
 
         [Header("Right-Click Charge Attack Settings")]
+        [Tooltip("우클릭 차징 공격 사용 여부. 꺼 두면 우클릭 입력(선입력 포함)을 무시한다")]
+        [SerializeField] private bool _chargeAttackEnabled = false;
         [Tooltip("우클릭 차징 완충까지 걸리는 시간(초) - 완충 전 손을 떼면 무효")]
         [SerializeField] private float _chargeDuration = 0.6f;
         [Tooltip("차징 강공격 전방 직선 타일 사거리")]
@@ -549,6 +551,7 @@ namespace BagBack100.Player
 
         private void HandleChargeStartInput()
         {
+            if (!_chargeAttackEnabled) return;
             if (CurrentState == PlayerState.Charging) return;
 
             if (CurrentState == PlayerState.Moving || CurrentState == PlayerState.Attacking || CurrentState == PlayerState.Dashing || _combat.IsAttackOnCooldown)
