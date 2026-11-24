@@ -45,22 +45,38 @@
 
 | 줄 | 1단계 | 2단계 | 3단계 |
 | --- | --- | --- | --- |
-| 무기 | Basic Sword 공격력 10 | Iron Sword 16 | Steel Sword 26 |
-| 투구 | Basic Helmet 방어 10 / HP 50 | Iron Helmet 16 / 80 | Steel Helmet 26 / 130 |
-| 갑옷 | Basic Armor 15 / 100 | Iron Armor 24 / 160 | Steel Armor 38 / 260 |
-| 신발 | Basic Boots 5 / 30 | Iron Boots 8 / 48 | Steel Boots 13 / 78 |
+| 무기 | Basic Sword 공격력 10 | Iron Sword 16 | Amber Sword 26 |
+| 투구 | Basic Helmet 방어 10 / HP 50 | Iron Helmet 16 / 80 | Amber Helmet 26 / 130 |
+| 갑옷 | Basic Armor 15 / 100 | Iron Armor 24 / 160 | Amber Armor 38 / 260 |
+| 신발 | Basic Boots 5 / 30 | Iron Boots 8 / 48 | Amber Boots 13 / 78 |
 | 배낭 | Basic Backpack +5칸 | - | - |
 
 - 무기는 이번 단계에서 공격력만 오릅니다. 무기 종류별 전투 양상은 제작소 이후 과제입니다([Roadmap](Roadmap.md)).
-- 2·3단계 아이콘은 같은 줄 1단계 아이콘을 임시로 씁니다.
+- 아이콘(2026-11-24): 1단계 가죽·나무, 2단계 철, 3단계 호박. 3단계 이름은 Steel에서 Amber로 바꿨습니다(에셋 파일명 `Steel*Data`는 그대로). 배낭은 Basic이 가죽, Sturdy·Expedition이 호박 탐험가 배낭 아이콘을 같이 씁니다.
 
 ### 2.2 설계도
 
 - 무기 2단계 이상을 해금하려면 그 무기의 설계도가 1장 필요합니다. 설계도 1장은 노드 하나를 영구 해금하며, 이후 재제작에는 쓰지 않습니다.
-- **획득**: 던전 드랍. 2단계 검 설계도는 3~7층 몬스터(Leaf Mantis)와 5·10층 임시 보스, 3단계 검 설계도는 5~10층 몬스터(Pinecone Owl)에서 나옵니다. 확률은 [Monsters.md](Monsters.md) 4절.
+- **획득**: 던전 드랍. 2단계 검 설계도는 3~7층 몬스터(Leaf Mantis)와 5층 보스(Moss Boar), 3단계 검 설계도는 5~10층 몬스터(Pinecone Owl)와 10층 보스(Amber Treant)에서 나옵니다. 확률은 [Monsters.md](Monsters.md) 4절.
 - 기지까지 들고 와야 씁니다. 사망하면 가방의 설계도는 잃고 보안 파우치의 설계도는 남습니다(장비가 아니라 파우치에 넣을 수 있음).
 - 이미 해금한 노드의 설계도는 잡화상에서 팝니다. 판매가 = 그 노드 해금 골드의 30%(2단계 120G, 3단계 270G).
-- 등급은 2단계 희귀, 3단계 전설입니다. 아이콘은 임시로 두루마리 전리품 아이콘을 씁니다.
+- 등급은 2단계 희귀, 3단계 전설입니다. 이름은 Iron Sword Blueprint, Amber Sword Blueprint(에셋 파일명 `SteelSwordBlueprint`는 그대로)이고 아이콘은 마법 두루마리입니다.
+
+### 2.3 지역 1 전리품 (2026-11-24)
+
+몬스터마다 전용 2종 + 숲 공용 3종으로 5종(일반 2·희귀 2·전설 1)입니다. 보스는 전용 2종(희귀·전설) + 철광석·호박 원석입니다. 에셋은 `Data_SO/ItemSO/LootSO/Region1/`, 아이콘은 `Art/Sprites/Items/`(32px, PPU 32)입니다. 판매가는 일반 20 / 희귀 80 / 전설 300G입니다.
+
+| 몬스터 (드랍 풀) | 일반 | 희귀 | 전설 |
+| --- | --- | --- | --- |
+| Bramble Hog (101) | Bramble Hog Pelt(501), Wood Log Bundle(521) | Bramble Hog Spine(502), Iron Ore(523) | Amber Gem (Uncut)(524) |
+| Leaf Mantis (102) | Leaf Mantis Chitin(503), Forest Berries(522) | Leaf Mantis Scythe(504), Iron Ore | Amber Gem |
+| Pinecone Owl (103) | Pinecone Scale(505), Forest Berries | Pinecone Leaf Fin(506), Iron Ore | Amber Gem |
+| Amber Snail (104) | Amber Snail Slime(507), Wood Log Bundle | Amber Snail Shard(508), Iron Ore | Amber Gem |
+| Moss Boar (902, 5층 보스) | - | Moss Boar Bark(509), Iron Ore | Moss Boar Tusk(510), Amber Gem |
+| Amber Treant (903, 10층 보스) | - | Amber Treant Branch(511), Iron Ore | Amber Treant Core(512), Amber Gem |
+
+- 예전 테마 전리품(Brute·Spider·Wizard 등 55종, ID 101~205)은 에셋만 남아 있고 드랍 풀·제작소·잡화상 어디에도 연결되지 않습니다. 쓰지 않는 `DropPool_TempBoss`(901)만 예전 ID(103~105)를 가리킵니다.
+- 아이템 아트 중 큰 HP 포션, 해독제, 붕대, 구운 고기, 추가 반지 3·목걸이 2·귀걸이 1, 동전·금화 더미·금화 주머니, 나무 상자는 스프라이트만 들여왔고 아이템 데이터는 없습니다(기능을 기획할 때 연결).
 
 ## 3. 획득과 버리기
 

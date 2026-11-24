@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemID: 332
   itemName: Iron Boots
-  itemIcon: {fileID: 21300000, guid: dab27892d8b2c2a45befe2e33b99d2ea, type: 3}
+  itemIcon: {fileID: 21300000, guid: c9b07795d16a1894e95ae57ca3a02c45, type: 3}
   category: 0
   maxStack: 1
   baseValue: 75

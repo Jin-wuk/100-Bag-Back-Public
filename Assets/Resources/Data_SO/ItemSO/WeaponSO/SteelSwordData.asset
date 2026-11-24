@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: SteelSwordData
   m_EditorClassIdentifier: 
   itemID: 303
-  itemName: Steel Sword
-  itemIcon: {fileID: 21300000, guid: a5a8294771a44124fa8e15dde513c4e9, type: 3}
+  itemName: Amber Sword
+  itemIcon: {fileID: 21300000, guid: a86801e31a0f5b84993e2f7f7ffc3559, type: 3}
   category: 0
   maxStack: 1
   baseValue: 150

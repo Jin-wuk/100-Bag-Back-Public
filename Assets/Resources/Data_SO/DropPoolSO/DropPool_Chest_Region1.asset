@@ -45,27 +45,27 @@ MonoBehaviour:
     useFloorRarity: 0
     dropChance: 1
     entries:
-    - itemID: 101
+    - itemID: 501
       dropWeight: 1
       minAmount: 1
       maxAmount: 1
-    - itemID: 102
+    - itemID: 521
       dropWeight: 1
       minAmount: 1
       maxAmount: 1
-    - itemID: 111
+    - itemID: 503
       dropWeight: 1
       minAmount: 1
       maxAmount: 1
-    - itemID: 112
+    - itemID: 522
       dropWeight: 1
       minAmount: 1
       maxAmount: 1
-    - itemID: 121
+    - itemID: 505
       dropWeight: 1
       minAmount: 1
       maxAmount: 1
-    - itemID: 122
+    - itemID: 507
       dropWeight: 1
       minAmount: 1
       maxAmount: 1

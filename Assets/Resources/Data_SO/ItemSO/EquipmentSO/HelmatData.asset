@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemID: 13
   itemName: Basic Helmet
-  itemIcon: {fileID: 21300000, guid: 5f6f45a2eae51e44c931dafdccd0f3ce, type: 3}
+  itemIcon: {fileID: 21300000, guid: f6b8533dcd99adf45b7fa69456de84ac, type: 3}
   category: 0
   maxStack: 1
   baseValue: 30

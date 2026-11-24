@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemID: 11
   itemName: Basic Armor
-  itemIcon: {fileID: 21300000, guid: 2c7ffa6d92ed34a4abd532a26e6bb712, type: 3}
+  itemIcon: {fileID: 21300000, guid: 85b7b426f6944594da2a11720c11562c, type: 3}
   category: 0
   maxStack: 1
   baseValue: 30

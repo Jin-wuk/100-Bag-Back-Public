@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: SteelArmorData
   m_EditorClassIdentifier: 
   itemID: 323
-  itemName: Steel Armor
-  itemIcon: {fileID: 21300000, guid: 2c7ffa6d92ed34a4abd532a26e6bb712, type: 3}
+  itemName: Amber Armor
+  itemIcon: {fileID: 21300000, guid: 4952e4759b37b804480a657f010f43ab, type: 3}
   category: 0
   maxStack: 1
   baseValue: 150

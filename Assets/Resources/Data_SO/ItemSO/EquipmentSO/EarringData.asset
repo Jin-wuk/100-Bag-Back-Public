@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemID: 17
   itemName: Earring
-  itemIcon: {fileID: 21300000, guid: 44bd80fd6c7dbb04d8bcee649dec87a7, type: 3}
+  itemIcon: {fileID: 21300000, guid: 054bf1d052202fb49bc6863a6d82a91b, type: 3}
   category: 0
   maxStack: 1
   baseValue: 0

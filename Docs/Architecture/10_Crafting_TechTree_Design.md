@@ -243,6 +243,8 @@ flowchart LR
 
 **비용 초안 (노드 1개 기준)**
 
+> 2026-11-24 재료 교체: 몬스터 전리품을 지역 1 숲 전리품으로 바꾸면서 노드 재료를 같은 몬스터·같은 등급의 새 아이템으로 옮겼습니다(Brute→Bramble Hog, Spider→Leaf Mantis, Wizard→Pinecone Owl, 두 번째 일반 재료는 Wood Log Bundle·Forest Berries, 희귀 공용은 Iron Ore). 3단계 신발은 희귀 2종이 모두 Iron Ore가 되어 `Iron Ore ×2`로 합쳐졌습니다. 잡화상 테스트 재료도 Bramble Hog Pelt·Wood Log Bundle로 바꿨습니다. 아래 표의 Brute·Spider·Wizard 표기는 결정 당시 기록입니다. 1:1 교체 직후 3단계 투구·신발이 5~10층 재료를 쓰지 않고 공용 재료(Forest Berries·Iron Ore)에 수요가 몰려(Gemini 검토), 유저 결정으로 1단계 투구·신발 = Amber Snail Slime ×3, 3단계 투구·신발 일반 = Pinecone Scale ×3, 3단계 신발 희귀 = Iron Ore + Pinecone Leaf Fin으로 조정했습니다. 이로써 '같은 단계 노드끼리 재료 종류를 나눈다' 원칙은 3단계 일반 재료에서 완화됐습니다. 보스 드랍 풀은 B3 메모와 달리 5층 902(2단계 설계도)·10층 903(3단계 설계도)으로 나눴습니다. 실제 목록은 [Items.md](../GDD/Items.md) 2.3절.
+
 | 단계 | 재료 | 해금 골드 | 재제작 골드 | 판매가(30%) |
 | --- | --- | --- | --- | --- |
 | 1 | Brute 일반 ×3 | 150G | 100G | 30G |

@@ -18,11 +18,11 @@ MonoBehaviour:
   _regionId: 1
   _prerequisite: {fileID: 11400000, guid: 6ba81bc618fb05f488be15291e461ffb, type: 2}
   _materials:
-  - _item: {fileID: 11400000, guid: ae1101dca682121428787b7a2e56f7ab, type: 2}
+  - _item: {fileID: 11400000, guid: 60241cb77f77d3847bff21a0b7399b37, type: 2}
     _amount: 3
-  - _item: {fileID: 11400000, guid: 829dd75d4ef50194585912297f44f576, type: 2}
+  - _item: {fileID: 11400000, guid: ece44f0776edc3a44a1716ac03f3b0e3, type: 2}
     _amount: 1
-  - _item: {fileID: 11400000, guid: 92c4889731d49874fb08cadb19e1120b, type: 2}
+  - _item: {fileID: 11400000, guid: a48561890d7a9ea45a1fce4d25912b88, type: 2}
     _amount: 1
   _unlockGold: 900
   _recraftGold: 500

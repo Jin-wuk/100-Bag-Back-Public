@@ -29,6 +29,7 @@ MonoBehaviour:
   walkBurstSteps: 2
   burstRestDuration: 0.8
   holdWhenInRange: 1
+  dangerDetourLimit: 3
   globalPatternCooldown: 2
   telegraphTime: 0.8
   evasiveStepCooldown: 0
@@ -37,7 +38,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f8de3dd39cca980459d370879cb8faf0, type: 2}
   - {fileID: 11400000, guid: b028ec8f9fd34f149a014ce6e16aec6a, type: 2}
   traits: []
-  dropPoolID: 901
+  dropPoolID: 903
   goldDropBase: 15
   _minFloor: 1
   _maxFloor: 10
