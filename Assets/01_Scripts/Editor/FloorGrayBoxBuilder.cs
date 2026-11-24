@@ -514,6 +514,7 @@ namespace BagBack100.EditorTools
         }
 
         private const string StairsPrefabPath = FloorPrefabFolder + "/FloorStairs_GrayBox.prefab";
+        private const string StairsArtPath = "Assets/Art/Sprites/Dungeon/obj_dungeon-next-stairs_S.png";
         // 정렬: 바닥 타일맵 -20, 체크무늬 -19, 바닥에 붙은 것(계단·함정) -10, 외곽 벽 0(상·좌·우)/2(하),
         // 서 있는 것(플레이어·몬스터·상자·포털·전리품·내부 장애물) 1 + Y 정렬(기준점 = 칸 중심), 조준선·경고·이펙트·숫자 3 이상
         private const int StairsSortingOrder = -10;
@@ -526,10 +527,19 @@ namespace BagBack100.EditorTools
             try
             {
                 var renderer = go.AddComponent<SpriteRenderer>();
-                renderer.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
-                renderer.color = new Color(0.65f, 0.4f, 1f, 0.9f);
                 renderer.sortingOrder = StairsSortingOrder;
-                go.transform.localScale = new Vector3(0.8f, 0.8f, 1f);
+                // 계단 아트가 있으면 그것을 쓰고(PPU 40 = 1칸), 없을 때만 회색 박스로 만든다. 메뉴를 다시 돌려도 아트가 덮어써지지 않게 한다
+                Sprite stairsArt = AssetDatabase.LoadAssetAtPath<Sprite>(StairsArtPath);
+                if (stairsArt != null)
+                {
+                    renderer.sprite = stairsArt;
+                }
+                else
+                {
+                    renderer.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+                    renderer.color = new Color(0.65f, 0.4f, 1f, 0.9f);
+                    go.transform.localScale = new Vector3(0.8f, 0.8f, 1f);
+                }
 
                 // 진입은 칸 도착(OnPlayerCellChanged)으로 판정하므로 콜라이더를 두지 않는다
                 go.AddComponent<FloorStairs>();
