@@ -13,7 +13,10 @@ MonoBehaviour:
   m_Name: Region1Config
   m_EditorClassIdentifier: 
   _regionId: 1
-  _regionName: "\uC9C0\uC5ED 1"
+  _regionName: Ancient Forest
+  _description: An ancient forest swallowed by amber. Beasts guard the old tower.
+  _mapIcon: {fileID: 21300000, guid: 90ee46e990ca0914d882803e13163a35, type: 3}
+  _mapIconPosition: {x: 84, y: 58}
   _earlyPool:
   - {fileID: 11400000, guid: 748afffcfe4a6ae49986f608685be1d1, type: 2}
   - {fileID: 11400000, guid: 28397cb7010779b49b475823cc27c075, type: 2}
