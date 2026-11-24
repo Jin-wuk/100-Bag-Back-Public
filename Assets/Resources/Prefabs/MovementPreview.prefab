@@ -97,8 +97,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f7818f6dbdfc89d47a378e1dd18620e5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _movableColor: {r: 1, g: 1, b: 1, a: 0.5}
-  _unmovableColor: {r: 1, g: 0, b: 0, a: 0.5}
+  _movableColor: {r: 1, g: 1, b: 1, a: 0.21568628}
+  _unmovableColor: {r: 1, g: 0, b: 0, a: 0.21568628}
   _chargingLockedColor: {r: 1, g: 0.85, b: 0.2, a: 0.65}
   _chargingProgressColor: {r: 1, g: 0.9, b: 0.4, a: 0.35}
   _chargeReadyColor: {r: 1, g: 0.55, b: 0.1, a: 0.8}
