@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: SteelHelmetData
   m_EditorClassIdentifier: 
   itemID: 313
-  itemName: Steel Helmet
-  itemIcon: {fileID: 21300000, guid: 5f6f45a2eae51e44c931dafdccd0f3ce, type: 3}
+  itemName: Amber Helmet
+  itemIcon: {fileID: 21300000, guid: 54e49e1535d3ccc44a0d9d9bece00aed, type: 3}
   category: 0
   maxStack: 1
   baseValue: 150

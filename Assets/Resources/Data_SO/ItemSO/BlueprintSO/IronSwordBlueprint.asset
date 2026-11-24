@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemID: 401
   itemName: Iron Sword Blueprint
-  itemIcon: {fileID: 21300000, guid: a582513710b476646a84e4b929ba827e, type: 3}
+  itemIcon: {fileID: 21300000, guid: b06014adfbabb894ca178a2ae3bf7b94, type: 3}
   category: 5
   maxStack: 1
   baseValue: 120

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemID: 31
   itemName: Copper Key
-  itemIcon: {fileID: 21300000, guid: db24af5b6ef863442987c7898d5d05d4, type: 3}
+  itemIcon: {fileID: 21300000, guid: 7c88f5563b545b442b36f6a231a29676, type: 3}
   category: 3
   maxStack: 10
   baseValue: 0

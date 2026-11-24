@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemID: 12
   itemName: Basic Backpack
-  itemIcon: {fileID: 21300000, guid: 04e9338fef607564f966d614ef6391e9, type: 3}
+  itemIcon: {fileID: 21300000, guid: 2da21bf19175d7c4fa1dc119a58744e0, type: 3}
   category: 0
   maxStack: 1
   baseValue: 30

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemID: 18
   itemName: Sturdy Backpack
-  itemIcon: {fileID: 21300000, guid: 04e9338fef607564f966d614ef6391e9, type: 3}
+  itemIcon: {fileID: 21300000, guid: 3aee1b91c6498174bb7fc4d5aa0d34dd, type: 3}
   category: 0
   maxStack: 1
   baseValue: 0
