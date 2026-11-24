@@ -3,7 +3,7 @@
 기지에서 가방을 챙겨 층계 던전을 한 층씩 올라가며 전리품을 모으고, 탈출 포탈까지 살아서 돌아오면 전리품을 지키는 **익스트랙션 실시간 타일 액션 RPG**입니다.
 던전에서 죽으면 가져간 아이템을 잃기 때문에, 칸 수가 제한된 가방을 떠안고 더 올라갈지 지금 나갈지 판단하는 것이 핵심입니다.
 
-▶ [전체 플레이 영상 보기 (Google Drive)](https://drive.google.com/file/d/18TEKzDzADUNUeY7j2v0o-A_lCcQ03sIT/view)
+▶ [전체 플레이 영상 보기 (Google Drive)](https://drive.google.com/file/d/18TEKzDzADUNUeY7j2v0o-A_lCcQ03sIT/view?usp=sharing)
 
 - **개발 형태**: 1인 개인 프로젝트 (기획·개발), 2026.07 ~
 - **엔진**: Unity 2022.3.62f3 (2D), C#
