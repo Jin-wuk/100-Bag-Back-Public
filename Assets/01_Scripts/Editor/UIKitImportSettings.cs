@@ -5,7 +5,7 @@ using UnityEngine;
 namespace BagBack100.EditorTools
 {
     /// <summary>
-    /// Role: UI 키트(Assets/Art/Sprites/UI/Kit)와 허브 오브젝트(Assets/Art/Sprites/Hub) 스프라이트의 임포트 설정을 일괄 적용하는 에디터 메뉴.
+    /// Role: UI 키트(Assets/Art/Sprites/UI/Kit), 월드맵(Assets/Art/Sprites/UI/WorldMap), 허브 오브젝트·배경(Assets/Art/Sprites/Hub) 스프라이트의 임포트 설정을 일괄 적용하는 에디터 메뉴.
     ///       원본을 다시 복사해 덮어써도 메뉴 한 번으로 같은 결과가 나오게 한다 (12 설계안 3절).
     /// Dependencies: 없음
     /// Events: 없음
@@ -14,6 +14,12 @@ namespace BagBack100.EditorTools
     {
         private const string UIKitFolder = "Assets/Art/Sprites/UI/Kit";
         private const string HubFolder = "Assets/Art/Sprites/Hub";
+        private const string WorldMapFolder = "Assets/Art/Sprites/UI/WorldMap";
+        // 허브 통짜 배경은 오브젝트의 2배 크기 아트라 PPU를 절반으로 둔다 (배경 1px = 오브젝트 2px)
+        private const string HubBackgroundName = "hub_bg_camp";
+        private const float HubBackgroundPixelsPerUnit = 16f;
+        // 안개는 불투명한 곳만 마우스에 반응하도록(Image.alphaHitTestMinimumThreshold) 텍스처를 읽을 수 있어야 한다
+        private const string WorldMapFogName = "ui_map_layer_fog";
         // UI 키트는 Image.pixelsPerUnitMultiplier 0.5와 짝을 이뤄 화면에 2배로 보인다
         private const float UIKitPixelsPerUnit = 100f;
         // 허브 오브젝트는 타일과 같은 PPU라야 크기가 맞는다
@@ -24,6 +30,7 @@ namespace BagBack100.EditorTools
         {
             int count = 0;
             count += ApplyFolder(UIKitFolder, UIKitPixelsPerUnit, SpriteAlignment.Center);
+            count += ApplyFolder(WorldMapFolder, UIKitPixelsPerUnit, SpriteAlignment.Center);
             count += ApplyFolder(HubFolder, HubPixelsPerUnit, SpriteAlignment.BottomCenter);
             AssetDatabase.Refresh();
             Debug.Log($"[UIKitImportSettings] {count}개 스프라이트 임포트 설정 적용");
@@ -50,16 +57,19 @@ namespace BagBack100.EditorTools
                 importer.textureCompression = TextureImporterCompression.Uncompressed;
                 importer.mipmapEnabled = false;
                 importer.alphaIsTransparency = true;
-                importer.spritePixelsPerUnit = pixelsPerUnit;
+                string fileName = Path.GetFileNameWithoutExtension(path);
+                bool isHubBackground = fileName == HubBackgroundName;
+                importer.spritePixelsPerUnit = isHubBackground ? HubBackgroundPixelsPerUnit : pixelsPerUnit;
+                importer.isReadable = fileName == WorldMapFogName;
 
                 var settings = new TextureImporterSettings();
                 importer.ReadTextureSettings(settings);
-                settings.spriteAlignment = (int)alignment;
+                settings.spriteAlignment = (int)(isHubBackground ? SpriteAlignment.Center : alignment);
                 // 9-slice는 Full Rect라야 Sliced 표시가 테두리를 정확히 지킨다
                 settings.spriteMeshType = SpriteMeshType.FullRect;
                 importer.SetTextureSettings(settings);
 
-                importer.spriteBorder = GetBorder(Path.GetFileNameWithoutExtension(path));
+                importer.spriteBorder = GetBorder(fileName);
                 importer.SaveAndReimport();
                 count++;
             }
